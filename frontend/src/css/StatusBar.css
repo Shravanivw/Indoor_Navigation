@@ -1,0 +1,19 @@
+.statusbar {
+  padding: 10px 16px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.statusbar-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+}
+
+.statusbar-icons {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}

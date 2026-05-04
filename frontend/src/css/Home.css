@@ -1,0 +1,134 @@
+.home-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  background: #fff;
+}
+
+.home-hero {
+  background: #0C447C;
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+.home-hero-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+
+.home-hero-loc {
+  font-size: 15px;
+  font-weight: 600;
+  color: #E6F1FB;
+  margin-bottom: 12px;
+}
+
+.home-hero-search {
+  background: rgba(255,255,255,0.12);
+  border: 0.5px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.65);
+  font-size: 13px;
+}
+
+.home-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.home-scroll::-webkit-scrollbar { display: none; }
+
+.home-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.home-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.home-quick-card {
+  background: #fff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.home-quick-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-quick-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+}
+
+.home-quick-dist {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.home-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.home-recent-item:last-child { border-bottom: none; }
+
+.home-recent-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-recent-info { flex: 1; }
+
+.home-recent-name {
+  font-size: 13px;
+  color: #111;
+}
+
+.home-recent-sub {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.home-recent-arr {
+  color: #9ca3af;
+  font-size: 18px;
+}
