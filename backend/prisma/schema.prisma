@@ -1,0 +1,193 @@
+// Prisma Schema — Indoor Navigation System
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── BUILDING ────────────────────────────────────────────────────────────────
+
+model Building {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  floors Floor[]
+
+  @@map("buildings")
+}
+
+// ─── FLOOR ───────────────────────────────────────────────────────────────────
+
+model Floor {
+  id         String   @id @default(cuid())
+  buildingId String
+  level      Int                        // 0 = Ground, 1 = First, -1 = Basement
+  name       String                     // "Ground Floor", "First Floor"
+  svgData    String?  @db.Text          // Raw SVG of the floor plan
+  gridData   Json?                      // 2D walkability grid as JSON
+  widthM     Float?                     // Real-world width in metres
+  heightM    Float?                     // Real-world height in metres
+  gridCols   Int?                       // Grid columns count
+  gridRows   Int?                       // Grid rows count
+  scaleX     Float?   @default(1)       // pixels per metre X
+  scaleY     Float?   @default(1)       // pixels per metre Y
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  building Building @relation(fields: [buildingId], references: [id])
+  rooms    Room[]
+  nodes    Node[]
+
+  @@unique([buildingId, level])
+  @@index([buildingId])
+  @@map("floors")
+}
+
+// ─── ROOM ────────────────────────────────────────────────────────────────────
+
+model Room {
+  id          String    @id @default(cuid())
+  floorId     String
+  code        String                     // "BOARDROOM", "MR-01", "WC-F1"
+  name        String                     // "Boardroom", "Meeting Room 1"
+  type        RoomType
+  capacity    Int?
+  // Bounding box in grid coordinates
+  gridX       Int                        // top-left grid column
+  gridY       Int                        // top-left grid row
+  gridW       Int                        // width in grid cells
+  gridH       Int                        // height in grid cells
+  // Real-world centre point
+  centreX     Float                      // metres from floor origin
+  centreY     Float
+  // QR code
+  qrCode      String?   @unique          // e.g. "LOC-GF-BOARDROOM"
+  description String?
+  isAccessible Boolean  @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  floor    Floor     @relation(fields: [floorId], references: [id])
+  nodes    Node[]                        // entry nodes for this room
+  fromSessions NavSession[] @relation("FromRoom")
+  toSessions   NavSession[] @relation("ToRoom")
+
+  @@index([floorId])
+  @@index([type])
+  @@index([qrCode])
+  @@map("rooms")
+}
+
+enum RoomType {
+  OFFICE
+  MEETING_ROOM
+  BOARDROOM
+  RECEPTION
+  TOILET
+  PANTRY
+  STORAGE
+  SERVER_ROOM
+  OPEN_WORKSPACE
+  CORRIDOR
+  STAIRCASE
+  LIFT
+  ENTRANCE
+  EXIT
+  OTHER
+}
+
+// ─── NODE ────────────────────────────────────────────────────────────────────
+// A node is a point in the navigation graph (room entry, corridor junction, etc.)
+
+model Node {
+  id       String   @id @default(cuid())
+  floorId  String
+  roomId   String?                        // null if corridor/junction node
+  gridX    Int                            // column in walkability grid
+  gridY    Int                            // row in walkability grid
+  realX    Float                          // metres from floor origin
+  realY    Float
+  type     NodeType @default(WAYPOINT)
+  label    String?                        // human-readable label
+  createdAt DateTime @default(now())
+
+  floor Floor  @relation(fields: [floorId], references: [id])
+  room  Room?  @relation(fields: [roomId], references: [id])
+
+  // Edges — both directions stored for fast lookup
+  edgesFrom Edge[] @relation("EdgeFrom")
+  edgesTo   Edge[] @relation("EdgeTo")
+
+  @@index([floorId])
+  @@index([roomId])
+  @@index([gridX, gridY])
+  @@map("nodes")
+}
+
+enum NodeType {
+  ROOM_ENTRY      // door/entry point of a room
+  CORRIDOR_JUNCTION
+  STAIRCASE_LANDING
+  LIFT_LOBBY
+  WAYPOINT        // intermediate path point
+}
+
+// ─── EDGE ────────────────────────────────────────────────────────────────────
+// Edges connect nodes. Bidirectional edges stored as two records.
+
+model Edge {
+  id         String  @id @default(cuid())
+  fromNodeId String
+  toNodeId   String
+  weight     Float                        // distance in metres
+  isBidirectional Boolean @default(true)
+  isAccessible    Boolean @default(true)  // false = stairs only
+  type       EdgeType @default(CORRIDOR)
+
+  fromNode Node @relation("EdgeFrom", fields: [fromNodeId], references: [id])
+  toNode   Node @relation("EdgeTo",   fields: [toNodeId],   references: [id])
+
+  @@unique([fromNodeId, toNodeId])
+  @@index([fromNodeId])
+  @@index([toNodeId])
+  @@map("edges")
+}
+
+enum EdgeType {
+  CORRIDOR
+  STAIRCASE
+  LIFT
+  RAMP
+  DOOR
+}
+
+// ─── NAVIGATION SESSION ───────────────────────────────────────────────────────
+
+model NavSession {
+  id           String   @id @default(cuid())
+  fromRoomId   String
+  toRoomId     String
+  pathNodeIds  Json                       // ordered array of node IDs
+  pathGridCells Json                      // ordered array of {x,y} grid cells
+  distanceM    Float                      // total route distance in metres
+  estimatedSec Int                        // estimated walk time in seconds
+  floorChanges Int      @default(0)
+  accessible   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  fromRoom Room @relation("FromRoom", fields: [fromRoomId], references: [id])
+  toRoom   Room @relation("ToRoom",   fields: [toRoomId],   references: [id])
+
+  @@index([fromRoomId, toRoomId])
+  @@index([createdAt])
+  @@map("nav_sessions")
+}
