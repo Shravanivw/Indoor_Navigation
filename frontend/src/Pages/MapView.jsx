@@ -5,12 +5,19 @@ import { routeSteps } from "../data/locations";
 import "../css/MapView.css";
 
 export default function MapView({ destination, userLocation, onBack }) {
+  const userLocationText =
+    typeof userLocation === "string"
+      ? userLocation
+      : userLocation
+      ? `${userLocation.name}${userLocation.floor ? ` — Floor ${userLocation.floor}` : ""}`
+      : "Unknown";
+
   return (
     <div className="map-page">
       <StatusBar />
       <TopBar
         title={destination ? `Route to ${destination.name}` : "Map"}
-        subtitle={`From ${userLocation}`}
+        subtitle={`From ${userLocationText}`}
         onBack={onBack}
       />
       <div className="map-canvas">

@@ -4,12 +4,19 @@ import { quickFind, recentLocations, locations } from "../data/locations";
 import "../css/Home.css";
 
 export default function Home({ userLocation, onSearch, onSelectQuick, onSelectRecent }) {
+  const userLocationText =
+    typeof userLocation === "string"
+      ? userLocation
+      : userLocation
+      ? `${userLocation.name}${userLocation.floor ? ` — Floor ${userLocation.floor}` : ""}`
+      : "Unknown location";
+
   return (
     <div className="home-page">
       <StatusBar />
       <div className="home-hero">
         <div className="home-hero-label">Your location</div>
-        <div className="home-hero-loc">{userLocation}</div>
+        <div className="home-hero-loc">{userLocationText}</div>
         <div className="home-hero-search" onClick={onSearch}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <span>Where do you want to go?</span>
