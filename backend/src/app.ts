@@ -10,12 +10,19 @@ import { createRouter } from './api/routes';
 
 export function createApp(prisma: PrismaClient) {
   const app = express();
+  const allowedOrigins = (
+    process.env.FRONTEND_URLS
+    ?? `${process.env.FRONTEND_URL ?? ''},http://localhost:5173,http://localhost:5174`
+  )
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
 
   // ─── SECURITY & MIDDLEWARE ──────────────────────────────────────────────────
   app.use(helmet());
   app.use(cors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
-    methods: ['GET', 'POST'],
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'OPTIONS'],
   }));
   app.use(compression());
   app.use(express.json({ limit: '1mb' }));

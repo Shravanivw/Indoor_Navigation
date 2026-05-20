@@ -37,7 +37,7 @@ export async function getFloorMap(
     name: floor.name,
     gridRows: floor.gridRows ?? 50,
     gridCols: floor.gridCols ?? 50,
-    grid: (floor.gridData as number[][]) ?? [],
+    grid: floor.gridData ? JSON.parse(floor.gridData) : [],
     scaleX: floor.scaleX ?? 1,
     scaleY: floor.scaleY ?? 1,
     rooms,
@@ -67,9 +67,9 @@ export async function searchRooms(
         floorId ? { floorId } : {},
         {
           OR: [
-            { name:  { contains: query, mode: 'insensitive' } },
-            { code:  { contains: query, mode: 'insensitive' } },
-            { qrCode:{ contains: query, mode: 'insensitive' } },
+            { name:  { contains: query } },
+            { code:  { contains: query } },
+            { qrCode:{ contains: query } },
           ],
         },
       ],
