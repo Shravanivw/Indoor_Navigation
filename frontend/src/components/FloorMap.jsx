@@ -26,6 +26,8 @@ export default function FloorMap({
   destination,
   pathGridCells = [],
   userRoom,
+  livePosition = null,   // { gx, gy } in grid cells when dead-reckoning is on
+  heading      = null,   // degrees, 0 = north, clockwise
   view3D = false,
 }) {
   const svgRef = useRef(null);
@@ -275,6 +277,38 @@ export default function FloorMap({
                 >
                   {destination.name}
                 </text>
+              )}
+            </g>
+          )}
+          {/* Live tracked position (dead-reckoning) */}
+          {livePosition && (
+            <g>
+              <circle
+                cx={px(livePosition.gx) + CELL / 2}
+                cy={py(livePosition.gy) + CELL / 2}
+                r="12"
+                fill="#2563eb"
+                opacity="0.18"
+              >
+                <animate attributeName="r" values="8;16;8" dur="1.6s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.28;0.05;0.28" dur="1.6s" repeatCount="indefinite" />
+              </circle>
+              <circle
+                cx={px(livePosition.gx) + CELL / 2}
+                cy={py(livePosition.gy) + CELL / 2}
+                r="4.5"
+                fill="#2563eb"
+                stroke="#fff"
+                strokeWidth="1.8"
+              />
+              {heading != null && (
+                <polygon
+                  points="0,-9 4,-3 -4,-3"
+                  fill="#2563eb"
+                  stroke="#fff"
+                  strokeWidth="0.6"
+                  transform={`translate(${px(livePosition.gx) + CELL / 2}, ${py(livePosition.gy) + CELL / 2}) rotate(${heading})`}
+                />
               )}
             </g>
           )}

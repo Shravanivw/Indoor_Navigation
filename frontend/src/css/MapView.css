@@ -35,6 +35,41 @@
   border-color: #0C447C;
 }
 
+.map-track-toggle {
+  position: absolute;
+  top: 10px;
+  right: 110px;
+  z-index: 5;
+  background: #fff;
+  color: #111;
+  border: 1px solid #d6dbe1;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.map-track-toggle.on {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+.map-track-warn {
+  position: absolute;
+  top: 46px;
+  right: 10px;
+  z-index: 5;
+  background: #fff3cd;
+  color: #664d03;
+  border: 1px solid #ffe69c;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  max-width: 240px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
 .route-sheet {
   background: #fff;
   border-top: 0.5px solid #e5e7eb;

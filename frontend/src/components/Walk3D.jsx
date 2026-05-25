@@ -19,8 +19,7 @@ const ROOM_COLOURS = {
 
 const WALL_HEIGHT  = 2.7;     // metres
 const EYE_HEIGHT   = 1.65;
-const WALK_SPEED   = 1.5;     // metres / second along the path
-const SPRINT_MULT  = 2.2;
+const WALK_SPEED   = 1.4;     // metres / second auto-advance along the path
 
 function makeLabelSprite(text, colorHex = "#0C447C") {
   const canvas = document.createElement("canvas");
@@ -43,12 +42,13 @@ function makeLabelSprite(text, colorHex = "#0C447C") {
   return sprite;
 }
 
-export default function Walk3D({ floorMap, pathGridCells = [], destination, userRoom }) {
+export default function Walk3D({ floorMap, pathGridCells = [], destination, userRoom, livePosition = null }) {
   const mountRef = useRef(null);
+  const livePosRef = useRef(livePosition);
+  useEffect(() => { livePosRef.current = livePosition; }, [livePosition]);
   const stateRef = useRef({
     raf: 0,
-    keys: { forward: 0, back: 0, sprint: 0 },
-    progress: 0,         // 0..1 along the path
+    progress: 0,         // 0..1 along the path (auto-advanced)
     pathLengthM: 1,
     cumDist: [0],
     pathPoints: [],
@@ -262,6 +262,32 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       return { pos: last, yaw: 0 };
     }
 
+    // Project a live (gx, gy) grid position onto the polyline path and
+    // return the progress (0..1) of the closest point. Used when the
+    // dead-reckoning hook is active so the 3D camera follows the user
+    // instead of auto-walking.
+    function progressFromLive(gx, gy) {
+      if (pathPoints.length < 2) return 0;
+      const { x: wx, z: wz } = toWorld(gx, gy);
+      let bestDist = Infinity;
+      let bestArc  = 0;
+      for (let i = 1; i < pathPoints.length; i++) {
+        const a = pathPoints[i - 1], b = pathPoints[i];
+        const dx = b.x - a.x, dz = b.z - a.z;
+        const segLen2 = dx * dx + dz * dz;
+        if (segLen2 < 1e-9) continue;
+        let t = ((wx - a.x) * dx + (wz - a.z) * dz) / segLen2;
+        t = Math.max(0, Math.min(1, t));
+        const px = a.x + t * dx, pz = a.z + t * dz;
+        const d2 = (wx - px) ** 2 + (wz - pz) ** 2;
+        if (d2 < bestDist) {
+          bestDist = d2;
+          bestArc  = cumDist[i - 1] + t * Math.sqrt(segLen2);
+        }
+      }
+      return bestArc / pathLengthM;
+    }
+
     stateRef.current.progress = 0;
     setArrived(false);
     setProgressPct(0);
@@ -270,16 +296,19 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       const s = stateRef.current;
       const dt = Math.min(0.05, (t - (s.lastT || t)) / 1000);
       s.lastT = t;
-      const k = s.keys;
 
-      // Advance along path. Speed is metres/sec; progress is 0..1.
+      // If the dead-reckoning hook is feeding us a live position, drive the
+      // camera from that (projected onto the route). Otherwise fall back to
+      // the constant-speed auto-walk so the demo still moves on a desktop.
       if (pathPoints.length >= 2 && pathLengthM > 0) {
-        const speed = WALK_SPEED * (k.sprint ? SPRINT_MULT : 1);
-        const dp = ((k.forward - k.back) * speed * dt) / pathLengthM;
-        if (dp !== 0) {
-          s.progress = Math.max(0, Math.min(1, s.progress + dp));
-          setProgressPct(Math.round(s.progress * 100));
+        const live = livePosRef.current;
+        if (live && typeof live.gx === "number" && typeof live.gy === "number") {
+          s.progress = progressFromLive(live.gx, live.gy);
+        } else if (s.progress < 1) {
+          const dp = (WALK_SPEED * dt) / pathLengthM;
+          s.progress = Math.min(1, s.progress + dp);
         }
+        setProgressPct(Math.round(s.progress * 100));
         const { pos, yaw } = sampleAt(s.progress);
         camera.position.set(pos.x, EYE_HEIGHT, pos.z);
         camera.lookAt(
@@ -299,20 +328,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     }
     stateRef.current.raf = requestAnimationFrame(tick);
 
-    function setKey(code, value) {
-      const k = stateRef.current.keys;
-      switch (code) {
-        case "ArrowUp":    case "KeyW": k.forward = value; return true;
-        case "ArrowDown":  case "KeyS": k.back    = value; return true;
-        case "ShiftLeft":  case "ShiftRight": k.sprint = value; return true;
-      }
-      return false;
-    }
-    function onKeyDown(e) { if (setKey(e.code, 1)) e.preventDefault(); }
-    function onKeyUp(e)   { if (setKey(e.code, 0)) e.preventDefault(); }
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup",   onKeyUp);
-
     function handleResize() {
       const w = mount.clientWidth, h = mount.clientHeight;
       renderer.setSize(w, h);
@@ -323,8 +338,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     stateRef.current.cleanup = () => {
       cancelAnimationFrame(stateRef.current.raf);
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup",   onKeyUp);
       window.removeEventListener("resize",  handleResize);
       renderer.dispose();
       scene.traverse(obj => {
@@ -340,30 +353,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     };
     return () => stateRef.current.cleanup?.();
   }, [floorMap, pathGridCells, destination, userRoom]);
-
-  function holdHandlers(name) {
-    const press   = () => { stateRef.current.keys[name] = 1; };
-    const release = () => { stateRef.current.keys[name] = 0; };
-    return {
-      onMouseDown:   press,
-      onMouseUp:     release,
-      onMouseLeave:  release,
-      onTouchStart:  (e) => { e.preventDefault(); press(); },
-      onTouchEnd:    (e) => { e.preventDefault(); release(); },
-      onTouchCancel: release,
-    };
-  }
-
-  function recenterToStart() {
-    stateRef.current.progress = 0;
-    setProgressPct(0);
-    setArrived(false);
-  }
-
-  function jumpToEnd() {
-    stateRef.current.progress = 1;
-    setProgressPct(100);
-  }
 
   const hasPath = pathGridCells.length >= 2;
 
@@ -385,18 +374,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           <div className="walk3d-progress-label">{progressPct}%</div>
         </div>
       )}
-
-      <div className="walk3d-pad" aria-label="Movement controls">
-        <button className="pad-btn pad-up"   {...holdHandlers("forward")} aria-label="Forward">▲</button>
-        <button className="pad-btn pad-down" {...holdHandlers("back")}    aria-label="Back">▼</button>
-        <button className="pad-recenter" onClick={recenterToStart} title="Return to start" aria-label="Reset position">⟲</button>
-      </div>
-
-      {hasPath && (
-        <button className="walk3d-skip" onClick={jumpToEnd} title="Skip to destination">Skip ⤳</button>
-      )}
-
-      <div className="walk3d-help">↑ ↓ to walk · Shift to sprint</div>
     </div>
   );
 }
