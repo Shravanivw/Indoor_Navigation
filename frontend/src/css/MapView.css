@@ -10,6 +10,29 @@
   flex: 1;
   overflow: hidden;
   min-height: 0;
+  position: relative;
+}
+
+.map-view-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  background: #fff;
+  color: #111;
+  border: 1px solid #d6dbe1;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.map-view-toggle[aria-pressed="true"] {
+  background: #0C447C;
+  color: #fff;
+  border-color: #0C447C;
 }
 
 .route-sheet {
@@ -100,7 +123,35 @@
   margin-top: 2px;
 }
 
-.route-steps { display: flex; flex-direction: column; }
+.route-steps-section { margin-top: 4px; }
+
+.route-steps-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  background: transparent;
+  border: none;
+  border-top: 0.5px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+}
+
+.route-steps-chevron {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.route-steps {
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
 
 .route-step {
   display: flex;

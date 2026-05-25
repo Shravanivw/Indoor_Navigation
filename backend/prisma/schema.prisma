@@ -1,5 +1,5 @@
 // Prisma Schema — Indoor Navigation System
-// Database: PostgreSQL
+// Database: SQLite
 
 generator client {
   provider = "prisma-client-js"
@@ -32,8 +32,8 @@ model Floor {
   buildingId String
   level      Int                        // 0 = Ground, 1 = First, -1 = Basement
   name       String                     // "Ground Floor", "First Floor"
-  svgData    String?  @db.Text          // Raw SVG of the floor plan
-  gridData   Json?                      // 2D walkability grid as JSON
+  svgData    String?                    // Raw SVG of the floor plan
+  gridData   String?                    // 2D walkability grid stored as JSON string
   widthM     Float?                     // Real-world width in metres
   heightM    Float?                     // Real-world height in metres
   gridCols   Int?                       // Grid columns count
@@ -57,9 +57,9 @@ model Floor {
 model Room {
   id          String    @id @default(cuid())
   floorId     String
-  code        String                     // "BOARDROOM", "MR-01", "WC-F1"
+  code        String    @unique                 // "BOARDROOM", "MR-01", "WC-F1"
   name        String                     // "Boardroom", "Meeting Room 1"
-  type        RoomType
+  type        String
   capacity    Int?
   // Bounding box in grid coordinates
   gridX       Int                        // top-left grid column
@@ -87,24 +87,6 @@ model Room {
   @@map("rooms")
 }
 
-enum RoomType {
-  OFFICE
-  MEETING_ROOM
-  BOARDROOM
-  RECEPTION
-  TOILET
-  PANTRY
-  STORAGE
-  SERVER_ROOM
-  OPEN_WORKSPACE
-  CORRIDOR
-  STAIRCASE
-  LIFT
-  ENTRANCE
-  EXIT
-  OTHER
-}
-
 // ─── NODE ────────────────────────────────────────────────────────────────────
 // A node is a point in the navigation graph (room entry, corridor junction, etc.)
 
@@ -116,7 +98,7 @@ model Node {
   gridY    Int                            // row in walkability grid
   realX    Float                          // metres from floor origin
   realY    Float
-  type     NodeType @default(WAYPOINT)
+  type     String   @default("WAYPOINT")
   label    String?                        // human-readable label
   createdAt DateTime @default(now())
 
@@ -133,14 +115,6 @@ model Node {
   @@map("nodes")
 }
 
-enum NodeType {
-  ROOM_ENTRY      // door/entry point of a room
-  CORRIDOR_JUNCTION
-  STAIRCASE_LANDING
-  LIFT_LOBBY
-  WAYPOINT        // intermediate path point
-}
-
 // ─── EDGE ────────────────────────────────────────────────────────────────────
 // Edges connect nodes. Bidirectional edges stored as two records.
 
@@ -151,7 +125,7 @@ model Edge {
   weight     Float                        // distance in metres
   isBidirectional Boolean @default(true)
   isAccessible    Boolean @default(true)  // false = stairs only
-  type       EdgeType @default(CORRIDOR)
+  type       String @default("CORRIDOR")
 
   fromNode Node @relation("EdgeFrom", fields: [fromNodeId], references: [id])
   toNode   Node @relation("EdgeTo",   fields: [toNodeId],   references: [id])
@@ -162,22 +136,14 @@ model Edge {
   @@map("edges")
 }
 
-enum EdgeType {
-  CORRIDOR
-  STAIRCASE
-  LIFT
-  RAMP
-  DOOR
-}
-
 // ─── NAVIGATION SESSION ───────────────────────────────────────────────────────
 
 model NavSession {
   id           String   @id @default(cuid())
   fromRoomId   String
   toRoomId     String
-  pathNodeIds  Json                       // ordered array of node IDs
-  pathGridCells Json                      // ordered array of {x,y} grid cells
+  pathNodeIds  String                     // ordered array of node IDs (JSON string)
+  pathGridCells String                    // ordered array of {x,y} grid cells (JSON string)
   distanceM    Float                      // total route distance in metres
   estimatedSec Int                        // estimated walk time in seconds
   floorChanges Int      @default(0)

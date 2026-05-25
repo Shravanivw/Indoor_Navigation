@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { getRoute, getRoomByQR } from '../../services/routingService';
-import { getFloorMap, getAllFloors, searchRooms, getRoomById } from '../../services/mapService';
+import { getFloorMap, getFloorGeometry, getAllFloors, searchRooms, getRoomById } from '../../services/mapService';
 import type { ApiResponse } from '../../types';
 
 const ok  = <T>(data: T): ApiResponse<T> => ({ success: true,  data, meta: { timestamp: new Date().toISOString() } });
@@ -70,6 +70,20 @@ export function createRouter(prisma: PrismaClient): Router {
       const map = await getFloorMap(prisma, req.params.floorId);
       if (!map) return res.status(404).json(err('Floor not found', 404));
       res.json(ok(map));
+    } catch (e: any) {
+      res.status(500).json(err(e.message));
+    }
+  });
+
+  /**
+   * GET /floors/:floorId/geometry
+   * Returns floor wall geometry parsed from DXF source files.
+   */
+  router.get('/floors/:floorId/geometry', async (req, res) => {
+    try {
+      const geometry = await getFloorGeometry(prisma, req.params.floorId);
+      if (!geometry) return res.status(404).json(err('Floor geometry not found', 404));
+      res.json(ok(geometry));
     } catch (e: any) {
       res.status(500).json(err(e.message));
     }

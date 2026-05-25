@@ -36,7 +36,7 @@ async function main() {
     data: {
       gridCols: generated.cols,
       gridRows: generated.rows,
-      gridData: generated.grid as any,
+      gridData: JSON.stringify(generated.grid),
       scaleX: generated.cellSizeM,
       scaleY: generated.cellSizeM,
       widthM:  floorplan.boundingBox.widthM,

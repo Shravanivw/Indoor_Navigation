@@ -12,6 +12,7 @@ const DEFAULT_LOCATION_ID = "room-gf-reception";
 
 export default function App() {
   const [page, setPage]                 = useState("home");
+  const [prevPage, setPrevPage]         = useState("home");
   const [destination, setDestination]   = useState(null);
   const [route, setRoute]               = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -60,15 +61,41 @@ export default function App() {
   }, []);
 
   function goTo(p) {
+    setPrevPage(prev => (p === page ? prev : page));
     setPage(p);
+  }
+
+  // Used by sub-page back buttons so they always return to the screen the user
+  // actually came from instead of a hard-coded default.
+  function goBack(fallback = "home") {
+    setPage(prevPage && prevPage !== page ? prevPage : fallback);
   }
 
   // Called by Search when user taps "Get directions"
   // Search sends { destination, route } — both stored separately
-  function selectDestination({ destination, route }) {
+  async function selectDestination({ destination, route }) {
     setDestination(destination);
     setRoute(route);
+    setPrevPage(page);
     setPage("map");
+
+    // If the caller didn't compute a route (e.g. Quick Find / Recent), fetch it now
+    if (destination && !route && userLocation?.id && destination.id && userLocation.id !== destination.id) {
+      try {
+        const res = await fetch(`${API_BASE}/route`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fromRoomId: userLocation.id,
+            toRoomId:   destination.id,
+          }),
+        });
+        const json = await res.json();
+        if (json.success && json.data) setRoute(json.data);
+      } catch (err) {
+        console.error("Auto-route fetch failed:", err);
+      }
+    }
   }
 
   // Called by QR scanner page when user confirms their location
@@ -93,7 +120,7 @@ export default function App() {
         {page === "search" && (
           <Search
             userLocation={userLocation}
-            onBack={() => goTo("home")}
+            onBack={() => goBack("home")}
             onSelectDestination={selectDestination}
           />
         )}
@@ -110,7 +137,7 @@ export default function App() {
             destination={destination}
             userLocation={userLocation}
             route={route}
-            onBack={() => goTo("search")}
+            onBack={() => goBack("home")}
           />
         )}
 

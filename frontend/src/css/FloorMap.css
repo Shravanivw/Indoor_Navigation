@@ -2,13 +2,36 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: #F1EFE8;
+  background: #eef1f4;
   overflow: hidden;
+  perspective: 1100px;
+}
+
+.floormap-stage {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 70%;
+  transition: transform 350ms ease;
+  transform-style: preserve-3d;
+}
+
+.floormap-wrap.is-3d .floormap-stage {
+  transform: rotateX(55deg) scale(1.05);
 }
 
 .floormap-svg {
   width: 100%;
   height: 100%;
+  display: block;
+}
+
+.map-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .map-floor-pills {
@@ -23,11 +46,10 @@
 .map-floor-pill {
   padding: 3px 9px;
   background: #fff;
-  border: 0.5px solid #e5e7eb;
+  border: 1px solid #d6dbe1;
   border-radius: 20px;
   font-size: 10px;
-  color: #6b7280;
-  cursor: pointer;
+  color: #4b5563;
 }
 
 .map-floor-pill.active {
@@ -49,7 +71,7 @@
   width: 26px;
   height: 26px;
   background: #fff;
-  border: 0.5px solid #e5e7eb;
+  border: 1px solid #d6dbe1;
   border-radius: 6px;
   font-size: 16px;
   display: flex;
@@ -59,18 +81,49 @@
   color: #111;
 }
 
-.map-recalc {
+.map-legend {
   position: absolute;
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: #0C447C;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.92);
+  color: #334155;
   font-size: 10px;
-  padding: 5px 12px;
+  padding: 5px 10px;
   border-radius: 20px;
   white-space: nowrap;
   display: flex;
   align-items: center;
+  gap: 12px;
+  border: 1px solid #d6dbe1;
+}
+
+.map-legend span {
+  display: flex;
+  align-items: center;
   gap: 5px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-start {
+  background: #005bb5;
+}
+
+.dot-end {
+  background: #0a7a29;
+}
+
+.map-destination-label {
+  font-size: 900px;
+  font-weight: 700;
+  fill: #0b4e9e;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 220px;
 }

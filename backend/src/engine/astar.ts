@@ -306,12 +306,8 @@ export function buildRouteSteps(
 ): RouteStep[] {
   if (pathCells.length < 2) return [];
 
-  const steps: RouteStep[] = [];
-  let dir: string | null = null;
-  let segStart = 0;
-  let distAccum = 0;
-
-  const getDir = (a: GridCell, b: GridCell): string => {
+  type Dir = 'north' | 'south' | 'east' | 'west';
+  const getDir = (a: GridCell, b: GridCell): Dir => {
     if (b.y < a.y) return 'north';
     if (b.y > a.y) return 'south';
     if (b.x > a.x) return 'east';
@@ -321,44 +317,78 @@ export function buildRouteSteps(
   const cellDist = (a: GridCell, b: GridCell) =>
     Math.sqrt(((b.x - a.x) * scaleX) ** 2 + ((b.y - a.y) * scaleY) ** 2);
 
-  for (let i = 1; i < pathCells.length; i++) {
-    const d = getDir(pathCells[i - 1], pathCells[i]);
-    const segDist = cellDist(pathCells[i - 1], pathCells[i]);
-    distAccum += segDist;
+  // Relative turn (independent of compass) — what the user actually does.
+  const relativeTurn = (prev: Dir, next: Dir): 'straight' | 'left' | 'right' | 'around' => {
+    const order: Dir[] = ['north', 'east', 'south', 'west'];
+    const d = (order.indexOf(next) - order.indexOf(prev) + 4) % 4;
+    if (d === 0) return 'straight';
+    if (d === 1) return 'right';
+    if (d === 2) return 'around';
+    return 'left';
+  };
 
-    if (d !== dir) {
-      if (dir !== null) {
-        steps.push({
-          instruction: formatInstruction(dir, distAccum - segDist, i === 1),
-          distanceM: Math.round((distAccum - segDist) * 10) / 10,
-          nodeId: '',
-          gridCell: pathCells[segStart],
-        });
-        distAccum = segDist;
-        segStart = i - 1;
-      }
-      dir = d;
+  // 1) Collapse the cell-by-cell path into directional segments.
+  type Seg = { dir: Dir; distM: number; startIdx: number; endIdx: number };
+  const segments: Seg[] = [];
+  let segStart = 0;
+  let segDir = getDir(pathCells[0], pathCells[1]);
+  let segDist = cellDist(pathCells[0], pathCells[1]);
+
+  for (let i = 2; i < pathCells.length; i++) {
+    const d = getDir(pathCells[i - 1], pathCells[i]);
+    const step = cellDist(pathCells[i - 1], pathCells[i]);
+    if (d === segDir) {
+      segDist += step;
+    } else {
+      segments.push({ dir: segDir, distM: segDist, startIdx: segStart, endIdx: i - 1 });
+      segStart = i - 1;
+      segDir = d;
+      segDist = step;
     }
   }
+  segments.push({
+    dir: segDir,
+    distM: segDist,
+    startIdx: segStart,
+    endIdx: pathCells.length - 1,
+  });
 
-  // Final segment
-  if (dir) {
+  // 2) Build human-readable steps from segments using relative turns.
+  const steps: RouteStep[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const m = Math.max(1, Math.round(seg.distM));
+    let instruction: string;
+    if (i === 0) {
+      instruction = `Walk forward for ${m} m`;
+    } else {
+      const turn = relativeTurn(segments[i - 1].dir, seg.dir);
+      if (turn === 'straight')      instruction = `Continue straight for ${m} m`;
+      else if (turn === 'around')   instruction = `Turn around and walk ${m} m`;
+      else                          instruction = `Turn ${turn} and walk ${m} m`;
+    }
     steps.push({
-      instruction: 'Arrived at destination',
-      distanceM: Math.round(distAccum * 10) / 10,
+      instruction,
+      distanceM: Math.round(seg.distM * 10) / 10,
       nodeId: '',
-      gridCell: pathCells[pathCells.length - 1],
+      gridCell: pathCells[seg.startIdx],
     });
   }
+
+  // 3) Final "arrived" step.
+  steps.push({
+    instruction: 'Arrived at destination',
+    distanceM: 0,
+    nodeId: '',
+    gridCell: pathCells[pathCells.length - 1],
+  });
 
   return steps;
 }
 
-function formatInstruction(dir: string, dist: number, isFirst: boolean): string {
-  const m = Math.round(dist);
-  if (isFirst) return `Head ${dir} for ${m}m`;
-  if (dir === 'north' || dir === 'south') return `Turn ${dir === 'north' ? 'left' : 'right'}, continue for ${m}m`;
-  return `Turn ${dir}, continue for ${m}m`;
+function formatInstruction(_dir: string, _dist: number, _isFirst: boolean): string {
+  // Retained for backward compatibility; new logic lives in buildRouteSteps.
+  return '';
 }
 
 export function estimateSeconds(distanceM: number): number {
