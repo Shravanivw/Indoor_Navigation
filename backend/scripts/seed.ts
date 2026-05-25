@@ -1,4 +1,5 @@
 // scripts/seed.ts
+/// <reference types="node" />
 // Auto-generated from nav_floor_data.json + COORDINATED_LAYOUT.dwg floor plan analysis.
 // All gridX/gridY values verified against the 80x80 walkability grid.
 // All room entry nodes confirmed on walkable cells.
@@ -30,11 +31,11 @@ async function main() {
   // Grid: 80×80  |  scaleX = 1.005m/cell  |  scaleY = 0.637m/cell
   // Real dimensions: 80.4m wide × 50.95m tall
   const groundFloor = await prisma.floor.upsert({
-    where: { buildingId_level: { buildingId: building.id, level: 0 } },
+    where: { buildingId_level: { buildingId: building.id, level: 'G' } },
     create: {
       id:          'floor-gf',
       buildingId:  building.id,
-      level:       0,
+      level:       'G',
       name:        'Ground Floor',
       gridCols:    80,
       gridRows:    80,
@@ -528,8 +529,7 @@ async function main() {
         fromNodeId:     edge.from,
         toNodeId:       edge.to,
         weight,
-        type:           edge.type ?? EdgeType.CORRIDOR,
-        isAccessible:   edge.accessible ?? true,
+        isAccessible:   (edge as any).accessible ?? true,
         isBidirectional: true,
       },
       update: {},

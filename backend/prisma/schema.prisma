@@ -1,6 +1,3 @@
-// Prisma Schema — Indoor Navigation System
-// Database: PostgreSQL
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,8 +6,6 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
-
-// ─── BUILDING ────────────────────────────────────────────────────────────────
 
 model Building {
   id          String   @id @default(cuid())
@@ -25,21 +20,19 @@ model Building {
   @@map("buildings")
 }
 
-// ─── FLOOR ───────────────────────────────────────────────────────────────────
-
 model Floor {
   id         String   @id @default(cuid())
   buildingId String
-  level      Int                        // 0 = Ground, 1 = First, -1 = Basement
-  name       String                     // "Ground Floor", "First Floor"
-  svgData    String?  @db.Text          // Raw SVG of the floor plan
-  gridData   Json?                      // 2D walkability grid as JSON
-  widthM     Float?                     // Real-world width in metres
-  heightM    Float?                     // Real-world height in metres
-  gridCols   Int?                       // Grid columns count
-  gridRows   Int?                       // Grid rows count
-  scaleX     Float?   @default(1)       // pixels per metre X
-  scaleY     Float?   @default(1)       // pixels per metre Y
+  level      String                     // ← String not Int for SQLite ("G", "1", "2")
+  name       String
+  svgData    String?                    // ← removed @db.Text (not supported in SQLite)
+  gridData   String?                    // ← Json → String for SQLite
+  widthM     Float?
+  heightM    Float?
+  gridCols   Int?
+  gridRows   Int?
+  scaleX     Float?   @default(1)
+  scaleY     Float?   @default(1)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -52,32 +45,27 @@ model Floor {
   @@map("floors")
 }
 
-// ─── ROOM ────────────────────────────────────────────────────────────────────
-
 model Room {
-  id          String    @id @default(cuid())
-  floorId     String
-  code        String                     // "BOARDROOM", "MR-01", "WC-F1"
-  name        String                     // "Boardroom", "Meeting Room 1"
-  type        RoomType
-  capacity    Int?
-  // Bounding box in grid coordinates
-  gridX       Int                        // top-left grid column
-  gridY       Int                        // top-left grid row
-  gridW       Int                        // width in grid cells
-  gridH       Int                        // height in grid cells
-  // Real-world centre point
-  centreX     Float                      // metres from floor origin
-  centreY     Float
-  // QR code
-  qrCode      String?   @unique          // e.g. "LOC-GF-BOARDROOM"
-  description String?
+  id           String   @id @default(cuid())
+  floorId      String
+  code         String   @unique
+  name         String
+  type         String                   // ← enum → String for SQLite
+  capacity     Int?
+  gridX        Int      @default(0)
+  gridY        Int      @default(0)
+  gridW        Int      @default(10)
+  gridH        Int      @default(10)
+  centreX      Float    @default(0)
+  centreY      Float    @default(0)
+  qrCode       String?  @unique
+  description  String?
   isAccessible Boolean  @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  floor    Floor     @relation(fields: [floorId], references: [id])
-  nodes    Node[]                        // entry nodes for this room
+  floor        Floor        @relation(fields: [floorId], references: [id])
+  nodes        Node[]
   fromSessions NavSession[] @relation("FromRoom")
   toSessions   NavSession[] @relation("ToRoom")
 
@@ -87,43 +75,20 @@ model Room {
   @@map("rooms")
 }
 
-enum RoomType {
-  OFFICE
-  MEETING_ROOM
-  BOARDROOM
-  RECEPTION
-  TOILET
-  PANTRY
-  STORAGE
-  SERVER_ROOM
-  OPEN_WORKSPACE
-  CORRIDOR
-  STAIRCASE
-  LIFT
-  ENTRANCE
-  EXIT
-  OTHER
-}
-
-// ─── NODE ────────────────────────────────────────────────────────────────────
-// A node is a point in the navigation graph (room entry, corridor junction, etc.)
-
 model Node {
-  id       String   @id @default(cuid())
-  floorId  String
-  roomId   String?                        // null if corridor/junction node
-  gridX    Int                            // column in walkability grid
-  gridY    Int                            // row in walkability grid
-  realX    Float                          // metres from floor origin
-  realY    Float
-  type     NodeType @default(WAYPOINT)
-  label    String?                        // human-readable label
+  id        String   @id @default(cuid())
+  floorId   String
+  roomId    String?
+  gridX     Int
+  gridY     Int
+  realX     Float
+  realY     Float
+  type      String   @default("WAYPOINT") // ← enum → String for SQLite
+  label     String?
   createdAt DateTime @default(now())
 
-  floor Floor  @relation(fields: [floorId], references: [id])
-  room  Room?  @relation(fields: [roomId], references: [id])
-
-  // Edges — both directions stored for fast lookup
+  floor     Floor  @relation(fields: [floorId], references: [id])
+  room      Room?  @relation(fields: [roomId], references: [id])
   edgesFrom Edge[] @relation("EdgeFrom")
   edgesTo   Edge[] @relation("EdgeTo")
 
@@ -133,28 +98,17 @@ model Node {
   @@map("nodes")
 }
 
-enum NodeType {
-  ROOM_ENTRY      // door/entry point of a room
-  CORRIDOR_JUNCTION
-  STAIRCASE_LANDING
-  LIFT_LOBBY
-  WAYPOINT        // intermediate path point
-}
-
-// ─── EDGE ────────────────────────────────────────────────────────────────────
-// Edges connect nodes. Bidirectional edges stored as two records.
-
 model Edge {
-  id         String  @id @default(cuid())
-  fromNodeId String
-  toNodeId   String
-  weight     Float                        // distance in metres
+  id              String  @id @default(cuid())
+  fromNodeId      String
+  toNodeId        String
+  weight          Float
   isBidirectional Boolean @default(true)
-  isAccessible    Boolean @default(true)  // false = stairs only
-  type       EdgeType @default(CORRIDOR)
+  isAccessible    Boolean @default(true)
+  createdAt       DateTime @default(now())
 
   fromNode Node @relation("EdgeFrom", fields: [fromNodeId], references: [id])
-  toNode   Node @relation("EdgeTo",   fields: [toNodeId],   references: [id])
+  toNode   Node @relation("EdgeTo", fields: [toNodeId], references: [id])
 
   @@unique([fromNodeId, toNodeId])
   @@index([fromNodeId])
@@ -162,32 +116,19 @@ model Edge {
   @@map("edges")
 }
 
-enum EdgeType {
-  CORRIDOR
-  STAIRCASE
-  LIFT
-  RAMP
-  DOOR
-}
-
-// ─── NAVIGATION SESSION ───────────────────────────────────────────────────────
-
 model NavSession {
-  id           String   @id @default(cuid())
-  fromRoomId   String
-  toRoomId     String
-  pathNodeIds  Json                       // ordered array of node IDs
-  pathGridCells Json                      // ordered array of {x,y} grid cells
-  distanceM    Float                      // total route distance in metres
-  estimatedSec Int                        // estimated walk time in seconds
-  floorChanges Int      @default(0)
-  accessible   Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id         String   @id @default(cuid())
+  fromRoomId String
+  toRoomId   String
+  path       String?
+  distance   Float?
+  duration   Float?
+  createdAt  DateTime @default(now())
 
   fromRoom Room @relation("FromRoom", fields: [fromRoomId], references: [id])
-  toRoom   Room @relation("ToRoom",   fields: [toRoomId],   references: [id])
+  toRoom   Room @relation("ToRoom", fields: [toRoomId], references: [id])
 
-  @@index([fromRoomId, toRoomId])
-  @@index([createdAt])
+  @@index([fromRoomId])
+  @@index([toRoomId])
   @@map("nav_sessions")
 }

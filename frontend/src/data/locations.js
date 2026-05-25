@@ -1,4 +1,4 @@
-// ✅ Main Locations Data (QR-enabled)
+// Main Locations Data (QR-enabled)
 export const locations = [
   { id: 1, code: "CRA", name: "Conference Room A", type: "Meeting room", seats: 8, status: "Booked", floor: 5, color: "#5F5E5A" },
   { id: 2, code: "CRB", name: "Conference Room B", type: "Meeting room", seats: 12, status: "Available", floor: 5, color: "#185FA5" },

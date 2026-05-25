@@ -30,6 +30,7 @@ body {
   flex-direction: column;
   border: 1px solid #e0e0e0;
   position: relative;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
 @media (max-width: 420px) {
@@ -38,5 +39,6 @@ body {
     height: 100vh;
     border-radius: 0;
     border: none;
+    box-shadow: none;
   }
 }

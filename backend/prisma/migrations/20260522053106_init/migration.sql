@@ -12,7 +12,7 @@ CREATE TABLE "buildings" (
 CREATE TABLE "floors" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "buildingId" TEXT NOT NULL,
-    "level" INTEGER NOT NULL,
+    "level" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "svgData" TEXT,
     "gridData" TEXT,
@@ -35,12 +35,12 @@ CREATE TABLE "rooms" (
     "name" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "capacity" INTEGER,
-    "gridX" INTEGER NOT NULL,
-    "gridY" INTEGER NOT NULL,
-    "gridW" INTEGER NOT NULL,
-    "gridH" INTEGER NOT NULL,
-    "centreX" REAL NOT NULL,
-    "centreY" REAL NOT NULL,
+    "gridX" INTEGER NOT NULL DEFAULT 0,
+    "gridY" INTEGER NOT NULL DEFAULT 0,
+    "gridW" INTEGER NOT NULL DEFAULT 10,
+    "gridH" INTEGER NOT NULL DEFAULT 10,
+    "centreX" REAL NOT NULL DEFAULT 0,
+    "centreY" REAL NOT NULL DEFAULT 0,
     "qrCode" TEXT,
     "description" TEXT,
     "isAccessible" BOOLEAN NOT NULL DEFAULT true,
@@ -73,7 +73,7 @@ CREATE TABLE "edges" (
     "weight" REAL NOT NULL,
     "isBidirectional" BOOLEAN NOT NULL DEFAULT true,
     "isAccessible" BOOLEAN NOT NULL DEFAULT true,
-    "type" TEXT NOT NULL DEFAULT 'CORRIDOR',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "edges_fromNodeId_fkey" FOREIGN KEY ("fromNodeId") REFERENCES "nodes" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "edges_toNodeId_fkey" FOREIGN KEY ("toNodeId") REFERENCES "nodes" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -83,12 +83,9 @@ CREATE TABLE "nav_sessions" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "fromRoomId" TEXT NOT NULL,
     "toRoomId" TEXT NOT NULL,
-    "pathNodeIds" TEXT NOT NULL,
-    "pathGridCells" TEXT NOT NULL,
-    "distanceM" REAL NOT NULL,
-    "estimatedSec" INTEGER NOT NULL,
-    "floorChanges" INTEGER NOT NULL DEFAULT 0,
-    "accessible" BOOLEAN NOT NULL DEFAULT false,
+    "path" TEXT,
+    "distance" REAL,
+    "duration" REAL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "nav_sessions_fromRoomId_fkey" FOREIGN KEY ("fromRoomId") REFERENCES "rooms" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "nav_sessions_toRoomId_fkey" FOREIGN KEY ("toRoomId") REFERENCES "rooms" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
@@ -131,7 +128,7 @@ CREATE INDEX "edges_toNodeId_idx" ON "edges"("toNodeId");
 CREATE UNIQUE INDEX "edges_fromNodeId_toNodeId_key" ON "edges"("fromNodeId", "toNodeId");
 
 -- CreateIndex
-CREATE INDEX "nav_sessions_fromRoomId_toRoomId_idx" ON "nav_sessions"("fromRoomId", "toRoomId");
+CREATE INDEX "nav_sessions_fromRoomId_idx" ON "nav_sessions"("fromRoomId");
 
 -- CreateIndex
-CREATE INDEX "nav_sessions_createdAt_idx" ON "nav_sessions"("createdAt");
+CREATE INDEX "nav_sessions_toRoomId_idx" ON "nav_sessions"("toRoomId");

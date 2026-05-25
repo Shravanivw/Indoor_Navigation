@@ -45,7 +45,6 @@ export async function buildGraphCache(prisma: PrismaClient): Promise<void> {
     toNodeId: e.toNodeId,
     weight: e.weight,
     isAccessible: e.isAccessible,
-    type: e.type,
   }));
 
   globalGraph = buildGraph(graphNodes, graphEdges);
@@ -159,19 +158,20 @@ export async function getRoute(
   // Add floor change instructions
   const enrichedSteps = enrichWithFloorChanges(steps, pathNodes, graph);
 
-  // Persist the session
-  await prisma.navSession.create({
-    data: {
-      fromRoomId,
-      toRoomId,
-      pathNodeIds: JSON.stringify(pathNodeIds),
-      pathGridCells: JSON.stringify(pathGridCells),
-      distanceM: totalDistanceM,
-      estimatedSec: estimateSeconds(totalDistanceM),
-      floorChanges,
-      accessible: options.accessibleOnly ?? false,
-    },
-  });
+  // Persist the session (best-effort — don't fail the request if persistence errors)
+  try {
+    await prisma.navSession.create({
+      data: {
+        fromRoomId,
+        toRoomId,
+        path: JSON.stringify({ nodeIds: pathNodeIds, gridCells: pathGridCells }),
+        distance: totalDistanceM,
+        duration: estimateSeconds(totalDistanceM),
+      },
+    });
+  } catch (e) {
+    console.warn('[RoutingService] Failed to persist NavSession:', (e as Error).message);
+  }
 
   return {
     found: true,

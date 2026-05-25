@@ -6,72 +6,90 @@ import BottomNav from "./components/BottomNav";
 import "./app.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
-
-// Default starting location — replaced the moment a QR code is scanned
 const DEFAULT_LOCATION_ID = "room-gf-reception";
 
 export default function App() {
-  const [page, setPage]                 = useState("home");
-  const [destination, setDestination]   = useState(null);
-  const [route, setRoute]               = useState(null);
+  const [page, setPage]               = useState("home");
+  const [destination, setDestination] = useState(null);
+  const [route, setRoute]             = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
-  // Load the default user location from the API on startup
+  // Load default location on startup
   useEffect(() => {
     async function loadDefaultLocation() {
       try {
         const res  = await fetch(`${API_BASE}/rooms/${DEFAULT_LOCATION_ID}`);
         const json = await res.json();
-        if (json.success && json.data) {
-          setUserLocation(json.data);
-        }
-      } catch (err) {
-        console.error("Could not load default location:", err);
-        // Fallback so the app still renders if the backend is unreachable
+        if (json.success && json.data) setUserLocation(json.data);
+      } catch {
         setUserLocation({ id: DEFAULT_LOCATION_ID, name: "Reception", floor: { level: "G" } });
       }
     }
     loadDefaultLocation();
   }, []);
 
-  // QR code handler — reads ?qr=LOC-GF-BOARDROOM from the URL
-  // Fires when a user scans a physical QR sticker placed in the office
+  // Handle QR code scan from URL
   useEffect(() => {
     async function handleQRParam() {
       const params = new URLSearchParams(window.location.search);
-      const qrCode = params.get("qr");
+      const qrCode = params.get("qr") || params.get("location");
       if (!qrCode) return;
 
       try {
+        // Try QR endpoint first, then by code
         const res  = await fetch(`${API_BASE}/rooms/qr/${encodeURIComponent(qrCode)}`);
         const json = await res.json();
         if (json.success && json.data) {
           setUserLocation(json.data);
-          setPage("search"); // take them straight to Search to pick a destination
+          setPage("search");
         }
       } catch (err) {
         console.error("QR lookup failed:", err);
       }
-
-      // Clean the URL so a refresh does not re-trigger
       window.history.replaceState({}, "", "/");
     }
     handleQRParam();
   }, []);
 
-  function goTo(p) {
-    setPage(p);
+  // ✅ Fetch route from backend
+  async function fetchRoute(fromRoom, toRoom) {
+    if (!fromRoom || !toRoom) return null;
+    try {
+      setRouteLoading(true);
+      const res  = await fetch(`${API_BASE}/route`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fromRoomId: fromRoom.id,
+          toRoomId:   toRoom.id,
+        }),
+      });
+      const json = await res.json();
+      return json.success ? json.data : null;
+    } catch (err) {
+      console.error("Route fetch failed:", err);
+      return null;
+    } finally {
+      setRouteLoading(false);
+    }
   }
 
   // Called by Search when user taps "Get directions"
-  // Search sends { destination, route } — both stored separately
   function selectDestination({ destination, route }) {
     setDestination(destination);
     setRoute(route);
     setPage("map");
   }
 
-  // Called by QR scanner page when user confirms their location
+  // Called by Quick Find and Recent — fetch route automatically
+  async function selectDestinationWithRoute(dest) {
+    setDestination(dest);
+    setPage("map");
+    const fetchedRoute = await fetchRoute(userLocation, dest);
+    setRoute(fetchedRoute);
+  }
+
   function confirmLocation(loc) {
     setUserLocation(loc);
     setPage("home");
@@ -84,25 +102,18 @@ export default function App() {
         {page === "home" && (
           <Home
             userLocation={userLocation}
-            onSearch={() => goTo("search")}
-            onSelectQuick={(loc) => selectDestination({ destination: loc, route: null })}
-            onSelectRecent={(loc) => selectDestination({ destination: loc, route: null })}
+            onSearch={() => setPage("search")}
+            onSelectQuick={selectDestinationWithRoute}
+            onSelectRecent={selectDestinationWithRoute}
           />
         )}
 
         {page === "search" && (
           <Search
             userLocation={userLocation}
-            onBack={() => goTo("home")}
+            onBack={() => setPage("home")}
             onSelectDestination={selectDestination}
           />
-        )}
-
-        {page === "qr" && (
-          // Uncomment the ScanQR import and component when the QR page is ready
-          <div style={{ padding: 24, color: "#9ca3af", fontSize: 13 }}>
-            QR scanner coming soon.
-          </div>
         )}
 
         {page === "map" && (
@@ -110,11 +121,12 @@ export default function App() {
             destination={destination}
             userLocation={userLocation}
             route={route}
-            onBack={() => goTo("search")}
+            routeLoading={routeLoading}
+            onBack={() => setPage("search")}
           />
         )}
 
-        <BottomNav current={page} onChange={goTo} />
+        <BottomNav current={page} onChange={setPage} />
       </div>
     </div>
   );

@@ -29,7 +29,6 @@ export interface GraphEdge {
   toNodeId: string;
   weight: number;        // metres
   isAccessible: boolean;
-  type: string;
 }
 
 // Adjacency list: nodeId → list of connected nodes with weights
@@ -71,7 +70,7 @@ export type WalkabilityGrid = number[][];
 
 export interface FloorMapData {
   floorId: string;
-  level: number;
+  level: string;
   name: string;
   gridRows: number;
   gridCols: number;

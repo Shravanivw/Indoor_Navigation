@@ -1,6 +1,3 @@
-// src/services/mapService.ts
-// Handles all map/floor/room data retrieval.
-
 import { PrismaClient } from '@prisma/client';
 import type { FloorMapData, RoomMapData } from '../types';
 
@@ -16,42 +13,45 @@ export async function getFloorMap(
   if (!floor) return null;
 
   const rooms: RoomMapData[] = floor.rooms.map(r => ({
-    id: r.id,
-    code: r.code,
-    name: r.name,
-    type: r.type,
-    gridX: r.gridX,
-    gridY: r.gridY,
-    gridW: r.gridW,
-    gridH: r.gridH,
-    centreX: r.centreX,
-    centreY: r.centreY,
-    qrCode: r.qrCode,
-    capacity: r.capacity,
-    isAccessible: r.isAccessible,
+    id:          r.id,
+    code:        r.code,
+    name:        r.name,
+    type:        r.type,
+    gridX:       r.gridX,
+    gridY:       r.gridY,
+    gridW:       r.gridW,
+    gridH:       r.gridH,
+    centreX:     r.centreX,
+    centreY:     r.centreY,
+    qrCode:      r.qrCode,
+    capacity:    r.capacity,
+    isAccessible:r.isAccessible,
   }));
 
   return {
-    floorId: floor.id,
-    level: floor.level,
-    name: floor.name,
+    floorId:  floor.id,
+    level:    floor.level,
+    name:     floor.name,
     gridRows: floor.gridRows ?? 50,
     gridCols: floor.gridCols ?? 50,
-    grid: floor.gridData ? JSON.parse(floor.gridData) : [],
-    scaleX: floor.scaleX ?? 1,
-    scaleY: floor.scaleY ?? 1,
+    grid:     floor.gridData ? JSON.parse(floor.gridData) : [],
+    scaleX:   floor.scaleX ?? 1,
+    scaleY:   floor.scaleY ?? 1,
     rooms,
   };
 }
 
 export async function getAllFloors(prisma: PrismaClient, buildingId: string) {
   return prisma.floor.findMany({
-    where: { buildingId },
+    where:   { buildingId },
     orderBy: { level: 'asc' },
     select: {
-      id: true, level: true, name: true,
-      gridRows: true, gridCols: true,
-      _count: { select: { rooms: true } },
+      id:       true,
+      level:    true,
+      name:     true,
+      gridRows: true,
+      gridCols: true,
+      _count:   { select: { rooms: true } },
     },
   });
 }
@@ -59,34 +59,55 @@ export async function getAllFloors(prisma: PrismaClient, buildingId: string) {
 export async function searchRooms(
   prisma: PrismaClient,
   query: string,
-  floorId?: string
+  floorId?: string,
+  type?: string
 ) {
+  const q = query.trim();
+
   return prisma.room.findMany({
     where: {
       AND: [
         floorId ? { floorId } : {},
-        {
+        // ✅ only filter by name/code if query is not empty
+        q.length > 0 ? {
           OR: [
-            { name:  { contains: query } },
-            { code:  { contains: query } },
-            { qrCode:{ contains: query } },
+            { name:   { contains: q } },
+            { code:   { contains: q } },
+            { qrCode: { contains: q } },
           ],
-        },
+        } : {},
+        // ✅ filter by type if provided
+        type ? { type } : {},
       ],
     },
+    orderBy: [{ name: 'asc' }],
     select: {
-      id: true, code: true, name: true, type: true,
-      gridX: true, gridY: true, centreX: true, centreY: true,
-      qrCode: true, capacity: true, isAccessible: true,
-      floor: { select: { id: true, name: true, level: true } },
+      id:          true,
+      code:        true,
+      name:        true,
+      type:        true,
+      gridX:       true,
+      gridY:       true,
+      centreX:     true,
+      centreY:     true,
+      qrCode:      true,
+      capacity:    true,
+      isAccessible:true,
+      floor: {
+        select: { id: true, name: true, level: true },
+      },
     },
-    take: 20,
+    take: 50,
   });
 }
 
 export async function getRoomById(prisma: PrismaClient, id: string) {
   return prisma.room.findUnique({
     where: { id },
-    include: { floor: { select: { id: true, name: true, level: true } } },
+    include: {
+      floor: {
+        select: { id: true, name: true, level: true },
+      },
+    },
   });
 }

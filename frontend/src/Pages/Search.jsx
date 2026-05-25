@@ -4,101 +4,54 @@ import TopBar from "../components/TopBar";
 import "../css/Search.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
-const filters = ["All", "Meeting room", "Food", "Amenity", "Desk", "Exit"];
+const FILTERS = ["All", "MEETING_ROOM", "OFFICE", "PANTRY", "RECEPTION", "TOILET", "STORAGE", "SERVER_ROOM", "OTHER"];
 
-// Map API room types to filter pills
-const TYPE_TO_FILTER = {
-  MEETING_ROOM:   "Meeting room",
-  BOARDROOM:      "Meeting room",
-  PANTRY:         "Food",
-  TOILET:         "Amenity",
-  OTHER:          "Amenity",
-  STORAGE:        "Amenity",
-  SERVER_ROOM:    "Amenity",
-  OFFICE:         "Desk",
-  OPEN_WORKSPACE: "Desk",
-  RECEPTION:      "Amenity",
-  EXIT:           "Exit",
-};
-
-export default function Search({ onBack, onSelectDestination, userLocation }) {
-  const [query, setQuery]     = useState("");
-  const [filter, setFilter]   = useState("All");
+export default function Search({ userLocation, onBack, onSelectDestination }) {
+  const [query,    setQuery]    = useState("");
+  const [filter,   setFilter]   = useState("All");
+  const [results,  setResults]  = useState([]);
   const [selected, setSelected] = useState(null);
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [routeLoading, setRouteLoading] = useState(false);
-  const [error, setError]     = useState(null);
+  const [loading,  setLoading]  = useState(false);
 
-  // Search rooms via API with 250ms debounce
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (query.trim()) {
-        searchRooms(query.trim());
-      } else {
-        setResults([]);
+    const timeout = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams();
+        // ✅ always send q — even if empty string
+        params.set("q", query.trim());
+        if (filter !== "All") params.set("type", filter);
+
+        const res  = await fetch(`${API_BASE}/rooms/search?${params}`);
+        const json = await res.json();
+        if (json.success) setResults(json.data);
+      } catch (err) {
+        console.error("Search failed:", err);
+      } finally {
+        setLoading(false);
       }
-    }, 250);
+    }, 300);
     return () => clearTimeout(timeout);
-  }, [query]);
+  }, [query, filter]);
 
-  async function searchRooms(q) {
-    setLoading(true);
-    setError(null);
-    try {
-      const res  = await fetch(`${API_BASE}/rooms/search?q=${encodeURIComponent(q)}`);
-      const json = await res.json();
-      setResults(json.success ? json.data : []);
-    } catch (err) {
-      setError("Search failed. Is the backend running?");
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Filter results by selected pill
-  const filtered = filter === "All"
-    ? results
-    : results.filter(r => TYPE_TO_FILTER[r.type] === filter);
-
-  // Called when user taps "Get directions →"
-  async function handleGetDirections() {
-    if (!selected) return;
-
-    // If we don't know where the user is, just pass the destination
-    // and let the parent handle asking for a start location
-    if (!userLocation?.id) {
-      onSelectDestination({ destination: selected, route: null });
-      return;
-    }
-
-    setRouteLoading(true);
-    setError(null);
-
+  async function handleGetDirections(selectedRoom) {
+    if (!selectedRoom || !userLocation) return;
     try {
       const res  = await fetch(`${API_BASE}/route`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fromRoomId: userLocation.id,
-          toRoomId:   selected.id,
+          toRoomId:   selectedRoom.id,
         }),
       });
       const json = await res.json();
-
-      if (!json.success) {
-        setError(json.error || "Could not compute route.");
-        return;
-      }
-
-      // Pass both destination and full route data up to the parent
-      onSelectDestination({ destination: selected, route: json.data });
-
-    } catch (err) {
-      setError("Failed to get route. Is the backend running?");
-    } finally {
-      setRouteLoading(false);
+      onSelectDestination({
+        destination: selectedRoom,
+        route: json.success ? json.data : null,
+      });
+    } catch {
+      onSelectDestination({ destination: selectedRoom, route: null });
     }
   }
 
@@ -106,67 +59,71 @@ export default function Search({ onBack, onSelectDestination, userLocation }) {
     <div className="search-page">
       <StatusBar />
       <TopBar title="Search" onBack={onBack} />
-      <div className="search-body">
 
+      <div className="search-body">
         <div className="search-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="#9ca3af" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
             className="search-input"
             placeholder="Search rooms, desks, amenities…"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => { setQuery(e.target.value); setSelected(null); }}
             autoFocus
           />
           {query && (
-            <div onClick={() => { setQuery(""); setResults([]); }} style={{ cursor: "pointer" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            <div onClick={() => { setQuery(""); setSelected(null); }}
+              style={{ cursor: "pointer" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="#9ca3af" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </div>
           )}
         </div>
 
         <div className="filter-row">
-          {filters.map(f => (
+          {FILTERS.map(f => (
             <div
               key={f}
               className={`filter-pill ${filter === f ? "active" : ""}`}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); setSelected(null); }}
             >
-              {f}
+              {f === "All" ? "All" : f.replace(/_/g, " ")}
             </div>
           ))}
         </div>
 
-        {error && (
-          <div style={{ color: "#E24B4A", fontSize: 12, padding: "8px 0" }}>{error}</div>
-        )}
-
         <div className="search-section-title">
-          {loading ? "Searching…" : `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`}
+          {loading ? "Searching…" : `${results.length} result${results.length !== 1 ? "s" : ""}`}
         </div>
 
         <div className="search-results">
-          {filtered.map((loc) => (
+          {!loading && results.length === 0 && (
+            <div style={{ color: "#9ca3af", fontSize: 13, padding: "16px 0" }}>
+              No rooms found.
+            </div>
+          )}
+          {results.map(room => (
             <div
-              key={loc.id}
-              className={`result-item ${selected?.id === loc.id ? "selected" : ""}`}
-              onClick={() => setSelected(loc)}
+              key={room.id}
+              className={`result-item ${selected?.id === room.id ? "selected" : ""}`}
+              onClick={() => setSelected(room)}
             >
-              <div className="result-dot" style={{ background: "#5F5E5A" }} />
+              <div className="result-dot" style={{ background: getColor(room.type) }} />
               <div className="result-info">
-                <div className="result-name">{loc.name}</div>
+                <div className="result-name">{room.name}</div>
                 <div className="result-sub">
-                  {loc.type?.replace(/_/g, " ")}
-                  {loc.capacity ? ` · ${loc.capacity} seats` : ""}
-                  {loc.isAccessible === false ? " · Not accessible" : ""}
+                  {room.type?.replace(/_/g, " ")}
+                  {room.capacity ? ` · ${room.capacity} seats` : ""}
+                  {room.floor?.name ? ` · ${room.floor.name}` : ""}
                 </div>
               </div>
-              <div className="result-floor">
-                Floor {loc.floor?.level ?? "G"}
-              </div>
+              <div className="result-floor">F{room.floor?.level ?? "G"}</div>
               <div className="result-arr">›</div>
             </div>
           ))}
@@ -176,22 +133,32 @@ export default function Search({ onBack, onSelectDestination, userLocation }) {
           <div className="search-confirm-bar">
             <div className="search-confirm-info">
               <div className="scb-name">{selected.name}</div>
-              <div className="scb-sub">
-                Floor {selected.floor?.level ?? "G"}
-                {selected.capacity ? ` · ${selected.capacity} seats` : ""}
-              </div>
+              <div className="scb-sub">Floor {selected.floor?.level ?? "G"}</div>
             </div>
             <button
               className="search-go-btn"
-              onClick={handleGetDirections}
-              disabled={routeLoading}
+              onClick={() => handleGetDirections(selected)}
             >
-              {routeLoading ? "Finding route…" : "Get directions →"}
+              Get directions →
             </button>
           </div>
         )}
-
       </div>
     </div>
   );
+}
+
+function getColor(type) {
+  const map = {
+    MEETING_ROOM: "#185FA5",
+    PANTRY:       "#854F0B",
+    RECEPTION:    "#534AB7",
+    EXIT:         "#A32D2D",
+    LIFT:         "#185FA5",
+    RESTROOM:     "#5F5E5A",
+    CABIN:        "#3B6D11",
+    STORAGE:      "#5F5E5A",
+    GENERAL:      "#5F5E5A",
+  };
+  return map[type] ?? "#5F5E5A";
 }

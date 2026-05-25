@@ -2,75 +2,121 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: #F1EFE8;
+  background: linear-gradient(180deg, #FAFAF6 0%, #F1EFE8 100%);
   overflow: hidden;
+  border-radius: 12px;
 }
 
 .floormap-svg {
   width: 100%;
   height: 100%;
+  display: block;
 }
 
+/* ─── Floor pills ──────────────────────────────────────────────────────── */
 .map-floor-pills {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  left: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .map-floor-pill {
-  padding: 3px 9px;
-  background: #fff;
-  border: 0.5px solid #e5e7eb;
-  border-radius: 20px;
-  font-size: 10px;
+  min-width: 30px;
+  padding: 5px 11px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
   color: #6b7280;
   cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
+
+.map-floor-pill:hover { transform: translateY(-1px); }
 
 .map-floor-pill.active {
-  background: #0C447C;
+  background: #1E5FB8;
   color: #fff;
-  border-color: #0C447C;
+  border-color: #1E5FB8;
+  box-shadow: 0 2px 8px rgba(30, 95, 184, 0.35);
 }
 
+/* ─── Zoom controls ────────────────────────────────────────────────────── */
 .map-zoom {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 8px;
+  padding: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .map-zoom-btn {
-  width: 26px;
-  height: 26px;
-  background: #fff;
-  border: 0.5px solid #e5e7eb;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #111;
+  color: #1f2937;
+  transition: background 0.15s ease;
 }
 
-.map-recalc {
+.map-zoom-btn:hover { background: rgba(0, 0, 0, 0.05); }
+
+/* ─── Route legend ─────────────────────────────────────────────────────── */
+.map-legend {
   position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #0C447C;
-  color: #fff;
-  font-size: 10px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  white-space: nowrap;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.map-legend-row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
+
+.map-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid;
+  flex-shrink: 0;
+}
+
+.map-legend-dot.src  { background: #fff; border-color: #1E5FB8; }
+.map-legend-dot.dest { background: #2E7D32; border-color: #fff; box-shadow: 0 0 0 1.5px #2E7D32; }
