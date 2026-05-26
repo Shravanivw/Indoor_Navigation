@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import StatusBar from "../components/StatusBar";
 import TopBar from "../components/TopBar";
 import FloorMap from "../components/FloorMap";
+import Walk3D from "../components/Walk3D";
+import useDeadReckoning from "../hooks/useDeadReckoning";
 import "../css/MapView.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
@@ -19,7 +21,9 @@ function formatDist(metres) {
 }
 
 export default function MapView({ destination, userLocation, route, routeLoading, onBack }) {
-  const [mapData, setMapData] = useState(null);
+  const [mapData, setMapData]   = useState(null);
+  const [view3D, setView3D]     = useState(false);
+  const [tracking, setTracking] = useState(false);
 
   // ✅ Fetch real floor map from backend
   useEffect(() => {
@@ -48,6 +52,40 @@ export default function MapView({ destination, userLocation, route, routeLoading
   const steps         = route?.steps        ?? [];
   const pathGridCells = route?.pathGridCells ?? [];
 
+  // ── Dead-reckoning live tracking ─────────────────────────────────────────
+  // Compute the user's known grid cell from their current room (if any).
+  const userCell = useMemo(() => {
+    if (!userLocation) return null;
+    if (typeof userLocation.gridX === "number" && typeof userLocation.gridY === "number") {
+      return {
+        gx: userLocation.gridX + (userLocation.gridW ?? 1) / 2,
+        gy: userLocation.gridY + (userLocation.gridH ?? 1) / 2,
+      };
+    }
+    return null;
+  }, [userLocation]);
+
+  const dr = useDeadReckoning({
+    initialGridX: userCell?.gx ?? 0,
+    initialGridY: userCell?.gy ?? 0,
+    scaleX: mapData?.scaleX ?? 1,
+    scaleY: mapData?.scaleY ?? 1,
+    enabled: tracking,
+  });
+
+  // Snap dead-reckoning origin whenever a QR scan changes userLocation,
+  // cancelling accumulated drift every time the user passes a QR sticker.
+  useEffect(() => {
+    if (userCell) dr.recalibrate(userCell.gx, userCell.gy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userCell?.gx, userCell?.gy]);
+
+  async function toggleTracking() {
+    if (tracking) { setTracking(false); return; }
+    const ok = await dr.requestPermission();
+    if (ok) setTracking(true);
+  }
+
   return (
     <div className="map-page">
       <StatusBar />
@@ -58,22 +96,66 @@ export default function MapView({ destination, userLocation, route, routeLoading
       />
 
       <div className="map-canvas">
-        {/* ✅ When a route exists, only render source + destination rooms.
-            Otherwise show the full floor map. */}
-        <FloorMap
-          destination={destination}
-          userLocation={userLocation}
-          pathGridCells={pathGridCells}
-          rooms={
-            route && (userLocation || destination)
-              ? (mapData?.rooms ?? []).filter(
-                  r => r.id === destination?.id || r.id === userLocation?.id
-                )
-              : (mapData?.rooms ?? [])
-          }
-          gridCols={mapData?.gridCols ?? 80}
-          gridRows={mapData?.gridRows ?? 80}
-        />
+        {/* Bird's eye / 3D walkthrough render branch */}
+        {view3D ? (
+          <Walk3D
+            floorMap={mapData}
+            destination={destination}
+            pathGridCells={pathGridCells}
+            userRoom={userLocation}
+            livePosition={tracking ? dr.position : null}
+          />
+        ) : (
+          <FloorMap
+            destination={destination}
+            userLocation={userLocation}
+            pathGridCells={pathGridCells}
+            livePosition={tracking ? dr.position : null}
+            heading={tracking ? dr.heading : null}
+            rooms={
+              route && (userLocation || destination)
+                ? (mapData?.rooms ?? []).filter(
+                    r => r.id === destination?.id || r.id === userLocation?.id
+                  )
+                : (mapData?.rooms ?? [])
+            }
+            gridCols={mapData?.gridCols ?? 80}
+            gridRows={mapData?.gridRows ?? 80}
+          />
+        )}
+
+        {/* View toggle: bird's eye ↔ first-person 3D walkthrough */}
+        <button
+          type="button"
+          className="map-view-toggle"
+          onClick={() => setView3D(v => !v)}
+          aria-pressed={view3D}
+          title={view3D ? "Switch to bird's eye view" : "Switch to 3D walkthrough"}
+        >
+          {view3D ? "Bird's eye" : "3D walk"}
+        </button>
+
+        {/* Live tracking toggle (dead-reckoning via phone sensors) */}
+        <button
+          type="button"
+          className={`map-track-toggle ${tracking ? "on" : ""}`}
+          onClick={toggleTracking}
+          aria-pressed={tracking}
+          title={tracking ? "Stop live tracking" : "Start live tracking using phone sensors"}
+        >
+          {tracking ? `● Live · ${dr.steps} steps` : "Track me"}
+        </button>
+
+        {tracking && dr.status === "denied" && (
+          <div className="map-track-warn">
+            Sensor permission denied — tap "Track me" again to retry.
+          </div>
+        )}
+        {tracking && dr.status === "unsupported" && (
+          <div className="map-track-warn">
+            This device doesn't expose motion sensors.
+          </div>
+        )}
       </div>
 
       <div className="route-sheet">
@@ -137,6 +219,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
               </div>
             </>
           )}
+
         </div>
       </div>
     </div>

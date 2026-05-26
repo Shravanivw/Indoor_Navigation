@@ -154,7 +154,7 @@ export default function FloorMap({
             markerHeight="5"
             orient="auto-start-reverse"
           >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#1E5FB8"/>
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/>
           </marker>
 
           {/* Pulse animation for the You marker */}
@@ -260,7 +260,7 @@ export default function FloorMap({
             <polyline
               points={polylinePoints}
               fill="none"
-              stroke="#1E5FB8"
+              stroke="#0f766e"
               strokeOpacity="0.18"
               strokeWidth="9"
               strokeLinecap="round"
@@ -280,7 +280,7 @@ export default function FloorMap({
             <polyline
               points={polylinePoints}
               fill="none"
-              stroke="#1E5FB8"
+              stroke="#0f766e"
               strokeWidth="3.5"
               strokeLinecap="round"
               strokeLinejoin="round"

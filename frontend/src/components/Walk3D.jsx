@@ -53,6 +53,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     cumDist: [0],
     pathPoints: [],
     lastT: 0,
+    yaw: null,           // current (smoothed) camera yaw in radians
     cleanup: null,
   });
   const [arrived, setArrived]   = useState(false);
@@ -289,8 +290,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     }
 
     stateRef.current.progress = 0;
+    stateRef.current.yaw = null;
     setArrived(false);
     setProgressPct(0);
+
+    /* Shortest-angle interpolation toward target (handles ±π wrap). */
+    const lerpAngle = (from, to, t) => {
+      let diff = ((to - from + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      return from + diff * t;
+    };
 
     function tick(t) {
       const s = stateRef.current;
@@ -309,12 +318,30 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           s.progress = Math.min(1, s.progress + dp);
         }
         setProgressPct(Math.round(s.progress * 100));
-        const { pos, yaw } = sampleAt(s.progress);
+
+        // Look ~1.5 m ahead along the path so the camera begins rotating
+        // *before* reaching the corner (much more natural than snapping
+        // heading at the exact moment we cross into the next segment).
+        const lookAheadM = 1.5;
+        const aheadProgress = Math.min(
+          1,
+          s.progress + lookAheadM / pathLengthM,
+        );
+        const { pos } = sampleAt(s.progress);
+        const { yaw: targetYaw } = sampleAt(aheadProgress);
+
+        // Smoothly turn toward the target yaw (exponential damping ≈ 6 rad/s).
+        if (s.yaw === null) s.yaw = targetYaw;
+        else {
+          const k = 1 - Math.exp(-6 * dt);
+          s.yaw = lerpAngle(s.yaw, targetYaw, k);
+        }
+
         camera.position.set(pos.x, EYE_HEIGHT, pos.z);
         camera.lookAt(
-          pos.x + Math.sin(yaw),
+          pos.x + Math.sin(s.yaw),
           EYE_HEIGHT,
-          pos.z + Math.cos(yaw),
+          pos.z + Math.cos(s.yaw),
         );
         const here = s.progress >= 0.995;
         setArrived(prev => (prev === here ? prev : here));
@@ -365,7 +392,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       )}
 
       {arrived && (
-        <div className="walk3d-arrived">You've arrived at {destination?.name || "your destination"} 🎉</div>
+        <div className="walk3d-arrived">You've arrived at {destination?.name || "your destination"} </div>
       )}
 
       {hasPath && (
