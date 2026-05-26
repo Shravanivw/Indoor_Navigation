@@ -59,9 +59,9 @@
 }
 
 .filter-pill.active {
-  background: #185FA5;
+  background: #0f766e;
   color: #fff;
-  border-color: #185FA5;
+  border-color: #0f766e;
 }
 
 .search-section-title {
@@ -168,7 +168,7 @@
 
 .search-go-btn {
   padding: 9px 14px;
-  background: #0C447C;
+  background: #0f766e;
   border: none;
   border-radius: 10px;
   color: #fff;

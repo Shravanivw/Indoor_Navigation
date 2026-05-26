@@ -113,22 +113,16 @@ export default function FloorMap({
     totalLen += Math.sqrt(dx * dx + dy * dy);
   }
 
-  /* Zoom focal point: midpoint of route if present, else map center */
-  const focusX = hasPath
-    ? (gx(startPoint.x) + gx(endPoint.x)) / 2
-    : SVG_W / 2;
-  const focusY = hasPath
-    ? (gy(startPoint.y) + gy(endPoint.y)) / 2
-    : SVG_H / 2;
-  const contentTransform = `translate(${focusX} ${focusY}) scale(${zoom}) translate(${-focusX} ${-focusY})`;
-
   /* ─── Render ───────────────────────────────────────────────────────────── */
   return (
     <div className="floormap-wrap">
+      <div className="floormap-scroll">
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid meet"
         className="floormap-svg"
+        style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%` }}
       >
         <defs>
           {/* Subtle paper grid */}
@@ -193,9 +187,9 @@ export default function FloorMap({
           fill="url(#grid-pattern)"
         />
 
-        {/* All zoomable content lives inside this clipped + transformed group */}
+        {/* All zoomable content lives inside this clipped group */}
         <g clipPath="url(#map-clip)">
-          <g transform={contentTransform}>
+          <g>
 
         {/* Rooms */}
         {rooms.map(room => {
@@ -380,6 +374,7 @@ export default function FloorMap({
           </g>
         </g>
       </svg>
+      </div>
 
       {/* Legend (top-left) */}
       {hasPath && (

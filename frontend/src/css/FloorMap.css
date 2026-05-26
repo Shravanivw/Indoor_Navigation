@@ -7,10 +7,26 @@
   border-radius: 12px;
 }
 
+.floormap-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Slim scrollbars */
+.floormap-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.floormap-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 3px;
+}
+.floormap-scroll::-webkit-scrollbar-track { background: transparent; }
+
 .floormap-svg {
-  width: 100%;
-  height: 100%;
   display: block;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 /* ─── Floor pills ──────────────────────────────────────────────────────── */

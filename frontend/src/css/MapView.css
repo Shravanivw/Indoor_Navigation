@@ -64,7 +64,7 @@
 
 .route-dest-badge.green {
   background: #EAF3DE;
-  color: #27500A;
+  color: #0f766e;
   border: 0.5px solid #C0DD97;
 }
 
@@ -117,7 +117,7 @@
   height: 20px;
   border-radius: 50%;
   background: #E6F1FB;
-  color: #0C447C;
+  color: #0f766e;
   font-size: 10px;
   font-weight: 600;
   display: flex;

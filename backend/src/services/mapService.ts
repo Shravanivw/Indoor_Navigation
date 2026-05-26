@@ -68,7 +68,7 @@ export async function searchRooms(
     where: {
       AND: [
         floorId ? { floorId } : {},
-        // ✅ only filter by name/code if query is not empty
+        // only filter by name/code if query is not empty
         q.length > 0 ? {
           OR: [
             { name:   { contains: q } },
@@ -76,7 +76,7 @@ export async function searchRooms(
             { qrCode: { contains: q } },
           ],
         } : {},
-        // ✅ filter by type if provided
+      // filter by type if provided
         type ? { type } : {},
       ],
     },

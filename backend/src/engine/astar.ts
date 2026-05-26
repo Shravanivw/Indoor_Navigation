@@ -306,59 +306,87 @@ export function buildRouteSteps(
 ): RouteStep[] {
   if (pathCells.length < 2) return [];
 
-  const steps: RouteStep[] = [];
-  let dir: string | null = null;
-  let segStart = 0;
-  let distAccum = 0;
+  /* Compass direction of a single grid step (axis-aligned). For diagonals
+     we choose whichever axis has the larger component. */
+  const getDir = (a: GridCell, b: GridCell): 'N' | 'S' | 'E' | 'W' => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'E' : 'W';
+    return dy >= 0 ? 'S' : 'N';
+  };
 
-  const getDir = (a: GridCell, b: GridCell): string => {
-    if (b.y < a.y) return 'north';
-    if (b.y > a.y) return 'south';
-    if (b.x > a.x) return 'east';
-    return 'west';
+  /* Relative turn from one compass direction to the next. */
+  const turnFrom = (prev: string, next: string): 'straight' | 'left' | 'right' | 'around' => {
+    if (prev === next) return 'straight';
+    const order = ['N', 'E', 'S', 'W'];
+    const diff = (order.indexOf(next) - order.indexOf(prev) + 4) % 4;
+    if (diff === 1) return 'right';
+    if (diff === 3) return 'left';
+    return 'around';
   };
 
   const cellDist = (a: GridCell, b: GridCell) =>
     Math.sqrt(((b.x - a.x) * scaleX) ** 2 + ((b.y - a.y) * scaleY) ** 2);
 
+  /* 1) Per-segment direction */
+  const dirs: string[] = [];
   for (let i = 1; i < pathCells.length; i++) {
-    const d = getDir(pathCells[i - 1], pathCells[i]);
-    const segDist = cellDist(pathCells[i - 1], pathCells[i]);
-    distAccum += segDist;
-
-    if (d !== dir) {
-      if (dir !== null) {
-        steps.push({
-          instruction: formatInstruction(dir, distAccum - segDist, i === 1),
-          distanceM: Math.round((distAccum - segDist) * 10) / 10,
-          nodeId: '',
-          gridCell: pathCells[segStart],
-        });
-        distAccum = segDist;
-        segStart = i - 1;
-      }
-      dir = d;
-    }
+    dirs.push(getDir(pathCells[i - 1], pathCells[i]));
   }
 
-  // Final segment
-  if (dir) {
+  /* 2) Group consecutive same-direction segments */
+  type Group = { dir: string; startIdx: number; distance: number };
+  const groups: Group[] = [];
+  let curDir = dirs[0];
+  let curStart = 0;
+  let curDist = 0;
+  for (let i = 0; i < dirs.length; i++) {
+    const segDist = cellDist(pathCells[i], pathCells[i + 1]);
+    if (dirs[i] === curDir) {
+      curDist += segDist;
+    } else {
+      groups.push({ dir: curDir, startIdx: curStart, distance: curDist });
+      curDir = dirs[i];
+      curStart = i;
+      curDist = segDist;
+    }
+  }
+  groups.push({ dir: curDir, startIdx: curStart, distance: curDist });
+
+  /* 3) Build human-readable steps (left / right / straight only) */
+  const steps: RouteStep[] = [];
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    const m = Math.max(1, Math.round(g.distance));
+    let instruction: string;
+    if (i === 0) {
+      instruction = `Walk straight for ${m} m`;
+    } else {
+      const turn = turnFrom(groups[i - 1].dir, g.dir);
+      if (turn === 'straight') {
+        instruction = `Continue straight for ${m} m`;
+      } else if (turn === 'around') {
+        instruction = `Turn around and continue for ${m} m`;
+      } else {
+        instruction = `Turn ${turn} and continue for ${m} m`;
+      }
+    }
     steps.push({
-      instruction: 'Arrived at destination',
-      distanceM: Math.round(distAccum * 10) / 10,
+      instruction,
+      distanceM: Math.round(g.distance * 10) / 10,
       nodeId: '',
-      gridCell: pathCells[pathCells.length - 1],
+      gridCell: pathCells[g.startIdx],
     });
   }
 
-  return steps;
-}
+  steps.push({
+    instruction: 'Arrived at destination',
+    distanceM: 0,
+    nodeId: '',
+    gridCell: pathCells[pathCells.length - 1],
+  });
 
-function formatInstruction(dir: string, dist: number, isFirst: boolean): string {
-  const m = Math.round(dist);
-  if (isFirst) return `Head ${dir} for ${m}m`;
-  if (dir === 'north' || dir === 'south') return `Turn ${dir === 'north' ? 'left' : 'right'}, continue for ${m}m`;
-  return `Turn ${dir}, continue for ${m}m`;
+  return steps;
 }
 
 export function estimateSeconds(distanceM: number): number {
