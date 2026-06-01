@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { getRoute, getRoomByQR } from '../../services/routingService';
-import { getFloorMap, getAllFloors, searchRooms, getRoomById } from '../../services/mapService';
+import { getFloorMap, getFloorGeometry, getAllFloors, searchRooms, getRoomById } from '../../services/mapService';
 import type { ApiResponse } from '../../types';
 
 const ok  = <T>(data: T): ApiResponse<T> => ({ success: true,  data, meta: { timestamp: new Date().toISOString() } });
@@ -75,6 +75,20 @@ export function createRouter(prisma: PrismaClient): Router {
     }
   });
 
+  /**
+   * GET /floors/:floorId/geometry
+   * Returns floor wall geometry parsed from DXF source files.
+   */
+  router.get('/floors/:floorId/geometry', async (req, res) => {
+    try {
+      const geometry = await getFloorGeometry(prisma, req.params.floorId);
+      if (!geometry) return res.status(404).json(err('Floor geometry not found', 404));
+      res.json(ok(geometry));
+    } catch (e: any) {
+      res.status(500).json(err(e.message));
+    }
+  });
+
   // ─── ROOMS ───────────────────────────────────────────────────────────────────
 
   /**
@@ -83,27 +97,21 @@ export function createRouter(prisma: PrismaClient): Router {
    *
    * Response: Array of matching rooms with floor info.
    */
-router.get('/rooms/search', async (req, res) => {
-  const schema = z.object({
-    q:       z.string().optional(),  // ✅ optional now
-    floorId: z.string().optional(),
-    type:    z.string().optional(),  // ✅ added type filter
-  });
-  const parsed = schema.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json(err('Invalid params'));
+  router.get('/rooms/search', async (req, res) => {
+    const schema = z.object({
+      q:       z.string().min(1),
+      floorId: z.string().optional(),
+    });
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json(err('Missing query param: q'));
 
-  try {
-    const rooms = await searchRooms(
-      prisma,
-      parsed.data.q ?? '',        // ✅ empty string if no query
-      parsed.data.floorId,
-      parsed.data.type            // ✅ pass type to service
-    );
-    res.json(ok(rooms));
-  } catch (e: any) {
-    res.status(500).json(err(e.message));
-  }
-});
+    try {
+      const rooms = await searchRooms(prisma, parsed.data.q, parsed.data.floorId);
+      res.json(ok(rooms));
+    } catch (e: any) {
+      res.status(500).json(err(e.message));
+    }
+  });
 
   /**
    * GET /rooms/:roomId

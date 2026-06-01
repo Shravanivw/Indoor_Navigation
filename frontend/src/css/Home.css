@@ -132,3 +132,35 @@
   color: #9ca3af;
   font-size: 18px;
 }
+/* Building selector chips */
+.home-building-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.home-building-chip {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.home-building-chip:hover {
+  border-color: #0f766e;
+  color: #0f766e;
+}
+.home-building-chip.is-active {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+.home-quick-card.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

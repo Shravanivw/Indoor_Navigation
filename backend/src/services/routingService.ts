@@ -203,10 +203,9 @@ function enrichWithFloorChanges(
 export async function getRoomByQR(
   prisma: PrismaClient,
   qrCode: string
-): Promise<{ id: string; name: string; floorId: string; code: string } | null> {
-  const room = await prisma.room.findUnique({
+) {
+  return prisma.room.findUnique({
     where: { qrCode },
-    select: { id: true, name: true, floorId: true, code: true },
+    include: { floor: { select: { id: true, name: true, level: true, buildingId: true } } },
   });
-  return room;
 }
