@@ -3,11 +3,12 @@ import StatusBar from "../components/StatusBar";
 import TopBar from "../components/TopBar";
 import FloorMap from "../components/FloorMap";
 import Walk3D from "../components/Walk3D";
+import BuildingChips from "../components/BuildingChips";
 import useDeadReckoning from "../hooks/useDeadReckoning";
 import "../css/MapView.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
-const FLOOR_ID = "floor-gf";
+const DEFAULT_FLOOR_ID = "floor-gf";
 
 function formatTime(seconds) {
   if (!seconds) return "—";
@@ -20,16 +21,18 @@ function formatDist(metres) {
   return `${Math.round(metres)} m`;
 }
 
-export default function MapView({ destination, userLocation, route, routeLoading, onBack }) {
+export default function MapView({ destination, userLocation, route, routeLoading, buildings, buildingId, onSelectBuilding, onBack }) {
   const [mapData, setMapData]   = useState(null);
   const [view3D, setView3D]     = useState(false);
   const [tracking, setTracking] = useState(false);
+
+  const floorId = destination?.floor?.id ?? userLocation?.floor?.id ?? DEFAULT_FLOOR_ID;
 
   // ✅ Fetch real floor map from backend
   useEffect(() => {
     async function loadMap() {
       try {
-        const res  = await fetch(`${API_BASE}/floors/${FLOOR_ID}/map`);
+        const res  = await fetch(`${API_BASE}/floors/${encodeURIComponent(floorId)}/map`);
         const json = await res.json();
         if (json.success) setMapData(json.data);
       } catch (err) {
@@ -37,7 +40,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
       }
     }
     loadMap();
-  }, []);
+  }, [floorId]);
 
   const userLocationText =
     typeof userLocation === "string"
@@ -93,6 +96,11 @@ export default function MapView({ destination, userLocation, route, routeLoading
         title={destination ? `Route to ${destination.name}` : "Map"}
         subtitle={`From ${userLocationText}`}
         onBack={onBack}
+      />
+      <BuildingChips
+        buildings={buildings}
+        buildingId={buildingId}
+        onSelectBuilding={onSelectBuilding}
       />
 
       <div className="map-canvas">

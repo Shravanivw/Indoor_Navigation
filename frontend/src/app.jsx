@@ -7,8 +7,7 @@ import "./app.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
 
-// Default starting location — replaced the moment a QR code is scanned
-const DEFAULT_LOCATION_ID = "room-gf-reception";
+const BUILDING_STORAGE_KEY = "indoorNav.buildingId";
 
 export default function App() {
   const [page, setPage]                   = useState("home");
@@ -18,22 +17,59 @@ export default function App() {
   const [routeLoading, setRouteLoading]   = useState(false);
   const [userLocation, setUserLocation]   = useState(null);
 
-  // Load the default user location from the API on startup
+  // Multi-building state
+  const [buildings, setBuildings]   = useState([]);
+  const [buildingId, setBuildingId] = useState(() => localStorage.getItem(BUILDING_STORAGE_KEY) || null);
+  const [floorId, setFloorId]       = useState(null);
+
+  // Load buildings list once
   useEffect(() => {
-    async function loadDefaultLocation() {
+    (async () => {
       try {
-        const res  = await fetch(`${API_BASE}/rooms/${DEFAULT_LOCATION_ID}`);
+        const res  = await fetch(`${API_BASE}/buildings`);
         const json = await res.json();
-        if (json.success && json.data) {
-          setUserLocation(json.data);
+        if (json.success && Array.isArray(json.data) && json.data.length) {
+          setBuildings(json.data);
+          if (!buildingId || !json.data.some(b => b.id === buildingId)) {
+            setBuildingId(json.data[0].id);
+          }
         }
-      } catch {
-        // Fallback so the app still renders if the backend is unreachable
-        setUserLocation({ id: DEFAULT_LOCATION_ID, name: "Reception", floor: { level: "G" } });
+      } catch (err) {
+        console.error("Failed to load buildings:", err);
       }
-    }
-    loadDefaultLocation();
+    })();
   }, []);
+
+  // When building changes: persist, fetch its first floor, then default the
+  // user location to that floor's Reception (or first room) so routing stays
+  // within the active building.
+  useEffect(() => {
+    if (!buildingId) return;
+    localStorage.setItem(BUILDING_STORAGE_KEY, buildingId);
+    let cancelled = false;
+    (async () => {
+      try {
+        const floorsRes = await fetch(`${API_BASE}/buildings/${buildingId}/floors`);
+        const floorsJson = await floorsRes.json();
+        if (!floorsJson.success || !floorsJson.data?.length) return;
+        const firstFloorId = floorsJson.data[0].id;
+        if (cancelled) return;
+        setFloorId(firstFloorId);
+
+        const mapRes = await fetch(`${API_BASE}/floors/${firstFloorId}/map`);
+        const mapJson = await mapRes.json();
+        if (cancelled || !mapJson.success || !mapJson.data?.rooms?.length) return;
+        const rooms = mapJson.data.rooms;
+        const reception = rooms.find(r => r.type === "RECEPTION") ?? rooms[0];
+        setUserLocation(reception);
+        setDestination(null);
+        setRoute(null);
+      } catch (err) {
+        console.error("Failed to load default location for building:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [buildingId]);
 
   // QR code handler — reads ?qr=LOC-GF-BOARDROOM (or ?location=…) from the URL.
   // Fires when a user scans a physical QR sticker placed in the office.
@@ -49,6 +85,11 @@ export default function App() {
         const json = await res.json();
         if (json.success && json.data) {
           setUserLocation(json.data);   // set scanned room as start location
+          // Switch active building to wherever the QR-scanned room lives
+          if (json.data.floor?.buildingId && json.data.floor.buildingId !== buildingId) {
+            setBuildingId(json.data.floor.buildingId);
+          }
+          if (json.data.floor?.id) setFloorId(json.data.floor.id);
           setPage("search");            // take them straight to Search to pick a destination
         }
       } catch (err) {
@@ -112,6 +153,13 @@ export default function App() {
 
   // Called by Quick Find / Recent — always fetches the route automatically
   async function selectDestinationWithRoute(dest) {
+    if (!dest) return;
+    const destFloorId = dest.floor?.id ?? dest.floorId;
+    const userFloorId = userLocation?.floor?.id ?? userLocation?.floorId;
+    if (destFloorId && userFloorId && destFloorId !== userFloorId) {
+      console.warn('Cross-floor destination ignored:', dest.name);
+      return;
+    }
     setDestination(dest);
     setRoute(null);
     setPrevPage(page);
@@ -133,6 +181,10 @@ export default function App() {
         {page === "home" && (
           <Home
             userLocation={userLocation}
+            buildings={buildings}
+            buildingId={buildingId}
+            onSelectBuilding={setBuildingId}
+            floorId={floorId}
             onSearch={() => goTo("search")}
             onSelectQuick={selectDestinationWithRoute}
             onSelectRecent={selectDestinationWithRoute}
@@ -142,6 +194,10 @@ export default function App() {
         {page === "search" && (
           <Search
             userLocation={userLocation}
+            floorId={floorId}
+            buildings={buildings}
+            buildingId={buildingId}
+            onSelectBuilding={setBuildingId}
             onBack={() => goBack("home")}
             onSelectDestination={selectDestination}
           />
@@ -160,6 +216,9 @@ export default function App() {
             userLocation={userLocation}
             route={route}
             routeLoading={routeLoading}
+            buildings={buildings}
+            buildingId={buildingId}
+            onSelectBuilding={setBuildingId}
             onBack={() => goBack("search")}
           />
         )}

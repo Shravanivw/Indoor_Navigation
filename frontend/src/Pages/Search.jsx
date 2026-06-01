@@ -1,17 +1,21 @@
 import { useState, useEffect } from "react";
 import StatusBar from "../components/StatusBar";
 import TopBar from "../components/TopBar";
+import BuildingChips from "../components/BuildingChips";
 import "../css/Search.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
 const FILTERS = ["All", "MEETING_ROOM", "OFFICE", "PANTRY", "RECEPTION", "TOILET", "STORAGE", "SERVER_ROOM", "OTHER"];
 
-export default function Search({ userLocation, onBack, onSelectDestination }) {
+export default function Search({ userLocation, floorId, buildings, buildingId, onSelectBuilding, onBack, onSelectDestination }) {
   const [query,    setQuery]    = useState("");
   const [filter,   setFilter]   = useState("All");
   const [results,  setResults]  = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading,  setLoading]  = useState(false);
+
+  // Prefer explicit floorId prop; fall back to the user's current floor.
+  const activeFloorId = floorId ?? userLocation?.floor?.id ?? userLocation?.floorId ?? null;
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
@@ -21,6 +25,7 @@ export default function Search({ userLocation, onBack, onSelectDestination }) {
         // ✅ always send q — even if empty string
         params.set("q", query.trim());
         if (filter !== "All") params.set("type", filter);
+        if (activeFloorId)    params.set("floorId", activeFloorId);
 
         const res  = await fetch(`${API_BASE}/rooms/search?${params}`);
         const json = await res.json();
@@ -32,7 +37,7 @@ export default function Search({ userLocation, onBack, onSelectDestination }) {
       }
     }, 300);
     return () => clearTimeout(timeout);
-  }, [query, filter]);
+  }, [query, filter, activeFloorId]);
 
   async function handleGetDirections(selectedRoom) {
     if (!selectedRoom || !userLocation) return;
@@ -59,6 +64,11 @@ export default function Search({ userLocation, onBack, onSelectDestination }) {
     <div className="search-page">
       <StatusBar />
       <TopBar title="Search" onBack={onBack} />
+      <BuildingChips
+        buildings={buildings}
+        buildingId={buildingId}
+        onSelectBuilding={onSelectBuilding}
+      />
 
       <div className="search-body">
         <div className="search-bar">

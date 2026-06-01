@@ -65,6 +65,7 @@ from pathlib import Path
 # Only structural / partition layers that define navigable space.
 
 KEEP_WALL_LAYERS = {
+    # Generic / legacy (kept for backwards-compat with prior DWGs)
     "WALL",
     "0- WALL",
     "A-PLAN-WALL",
@@ -77,6 +78,13 @@ KEEP_WALL_LAYERS = {
     "PARTITION GLASS",
     "682-GLASS PARTITION",
     "682-WALL",
+    # VWITS Pune 5th-floor layout layer names
+    "AR_01_WALL",
+    "AR_01_PARTITION FULL HT",
+    "SW-PARTITION GYPSUM",
+    "SWA- GLASS PARTITION",
+    "150 mm WALL",
+    "IN-WALL",
 }
 
 # Walls shorter than this (mm) are noise — hatch lines, artefacts, dim ticks

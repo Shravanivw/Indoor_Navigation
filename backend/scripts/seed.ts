@@ -6,6 +6,8 @@
 // Junction nodes placed at real corridor intersections visible in the floor plan image.
 
 import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const RoomType = { STORAGE:'STORAGE', SERVER_ROOM:'SERVER_ROOM', MEETING_ROOM:'MEETING_ROOM', OFFICE:'OFFICE', PANTRY:'PANTRY', OTHER:'OTHER', TOILET:'TOILET', RECEPTION:'RECEPTION', BOARDROOM:'BOARDROOM', OPEN_WORKSPACE:'OPEN_WORKSPACE' } as const;
 const NodeType = { ROOM_ENTRY:'ROOM_ENTRY', CORRIDOR_JUNCTION:'CORRIDOR_JUNCTION', WAYPOINT:'WAYPOINT' } as const;
@@ -16,15 +18,15 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // ── Building ────────────────────────────────────────────────────────────────
+  // ── Building: Ganges ──────────────────────────────────────────────────────
   const building = await prisma.building.upsert({
     where: { id: 'building-main' },
     create: {
       id:      'building-main',
-      name:    'Pinakiin Designs Office',
+      name:    'Ganges',
       address: 'Update with your address',
     },
-    update: {},
+    update: { name: 'Ganges' },
   });
 
   // ── Ground Floor ─────────────────────────────────────────────────────────────
@@ -537,12 +539,154 @@ async function main() {
   }
   console.log(`  Edges seeded: ${gfEdges.length}`);
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUILDING 2: HUDSON (VWITS Pune — 5th Floor)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Rooms/nodes auto-generated from nav_hudson_f5.json (build_nav_data.py).
+  // Room codes are namespaced with HUDSON_ to avoid collisions with Ganges.
+  // Nav graph uses a simple star topology: one central hub + per-room entries.
+
+  const hudsonBuilding = await prisma.building.upsert({
+    where: { id: 'building-hudson' },
+    create: { id: 'building-hudson', name: 'Hudson', address: 'VWITS Pune' },
+    update: { name: 'Hudson' },
+  });
+
+  const navPath = path.resolve(__dirname, '..', 'src', 'data', 'nav_hudson_f5.json');
+  const navRaw  = JSON.parse(fs.readFileSync(navPath, 'utf-8'));
+
+  const hudsonFloor = await prisma.floor.upsert({
+    where: { buildingId_level: { buildingId: hudsonBuilding.id, level: '5' } },
+    create: {
+      id:         'floor-hudson-f5',
+      buildingId: hudsonBuilding.id,
+      level:      '5',
+      name:       '5th Floor',
+      gridCols:   navRaw.gridCols,
+      gridRows:   navRaw.gridRows,
+      scaleX:     navRaw.scaleX,
+      scaleY:     navRaw.scaleY,
+      widthM:     navRaw.realWidthM,
+      heightM:    navRaw.realHeightM,
+      gridData:   JSON.stringify(navRaw.grid),
+    },
+    update: {
+      gridCols:   navRaw.gridCols,
+      gridRows:   navRaw.gridRows,
+      scaleX:     navRaw.scaleX,
+      scaleY:     navRaw.scaleY,
+      widthM:     navRaw.realWidthM,
+      heightM:    navRaw.realHeightM,
+      gridData:   JSON.stringify(navRaw.grid),
+    },
+  });
+
+  // Infer a coarse RoomType from the room code
+  const inferType = (code: string): string => {
+    if (code.startsWith('BOARD'))                            return RoomType.BOARDROOM;
+    if (code === 'RECEPTION')                                return RoomType.RECEPTION;
+    if (code.includes('PANTRY'))                             return RoomType.PANTRY;
+    if (code.includes('DISCUSSION') || code.includes('INFORMAL') || code === 'PHONE_BOOTH') return RoomType.MEETING_ROOM;
+    if (code.includes('CABIN'))                              return RoomType.OFFICE;
+    if (code.includes('STORE') || code === 'STORAGE' || code === 'MAIL_ROOM')               return RoomType.STORAGE;
+    if (code === 'SHOWER' || code === 'CHANGING_ROOMS')      return RoomType.TOILET;
+    return RoomType.OTHER;
+  };
+
+  for (const r of navRaw.rooms as Array<any>) {
+    const code = `HUDSON_${r.code}`;
+    await prisma.room.upsert({
+      where: { code },
+      create: {
+        id:           `room-h5-${r.code.toLowerCase()}`,
+        floorId:      hudsonFloor.id,
+        code,
+        name:         r.name,
+        type:         inferType(r.code),
+        gridX:        r.gridX,
+        gridY:        r.gridY,
+        gridW:        r.gridW,
+        gridH:        r.gridH,
+        centreX:      r.centreX,
+        centreY:      r.centreY,
+        qrCode:       r.qrCode,
+        isAccessible: true,
+      },
+      update: {
+        name:    r.name,
+        gridX:   r.gridX,
+        gridY:   r.gridY,
+        gridW:   r.gridW,
+        gridH:   r.gridH,
+        centreX: r.centreX,
+        centreY: r.centreY,
+        qrCode:  r.qrCode,
+      },
+    });
+  }
+
+  // Central hub node + per-room entries (auto-generated via grid A*).
+  // The build_nav_graph.py script writes nav.graph = { roomEntryNodes, nodes, edges }
+  // where nodes follow the actual walkable corridors so routes don't cut walls.
+  type GraphSection = {
+    roomEntryNodes: Record<string, string>;     // room code -> node id
+    nodes: Array<{ id: string; gridX: number; gridY: number; realX: number; realY: number; type: string; label?: string }>;
+    edges: Array<{ from: string; to: string; weight: number }>;
+  };
+  const graph: GraphSection | undefined = navRaw.graph;
+  if (!graph) {
+    throw new Error('nav_hudson_f5.json is missing .graph — run build_nav_graph.py first.');
+  }
+
+  // Which node ids belong to which Hudson room (so we can mark them ROOM_ENTRY).
+  const codeToRoomId: Record<string, string> = {};
+  for (const r of navRaw.rooms as Array<any>) {
+    codeToRoomId[r.code] = `room-h5-${r.code.toLowerCase()}`;
+  }
+  const entryNodeToRoom: Record<string, string> = {};
+  for (const [code, nodeId] of Object.entries(graph.roomEntryNodes)) {
+    const rid = codeToRoomId[code];
+    if (rid) entryNodeToRoom[nodeId as string] = rid;
+  }
+
+  let hudsonNodeCount = 0;
+  for (const n of graph.nodes) {
+    const isEntry = !!entryNodeToRoom[n.id];
+    await prisma.node.upsert({
+      where: { id: n.id },
+      create: {
+        id: n.id,
+        floorId: hudsonFloor.id,
+        roomId: isEntry ? entryNodeToRoom[n.id] : null,
+        gridX: n.gridX, gridY: n.gridY,
+        realX: n.realX, realY: n.realY,
+        type: isEntry ? NodeType.ROOM_ENTRY : NodeType.WAYPOINT,
+        label: n.label ?? null,
+      },
+      update: {
+        roomId: isEntry ? entryNodeToRoom[n.id] : null,
+        gridX: n.gridX, gridY: n.gridY,
+        realX: n.realX, realY: n.realY,
+        type: isEntry ? NodeType.ROOM_ENTRY : NodeType.WAYPOINT,
+      },
+    });
+    hudsonNodeCount++;
+  }
+
+  let hudsonEdgeCount = 0;
+  for (const e of graph.edges) {
+    const edgeId = `edge-${e.from}--${e.to}`;
+    await prisma.edge.upsert({
+      where: { id: edgeId },
+      create: { id: edgeId, fromNodeId: e.from, toNodeId: e.to, weight: e.weight, isAccessible: true, isBidirectional: true },
+      update: { weight: e.weight },
+    });
+    hudsonEdgeCount++;
+  }
+
   console.log('\n✓ Database seeded successfully');
-  console.log(`  Building: ${building.name}`);
-  console.log(`  Floors:   Ground Floor`);
-  console.log(`  Rooms:    ${gfRooms.length}`);
-  console.log(`  Nodes:    ${gfNodes.length} (${gfRooms.length} room entries + 10 junctions)`);
-  console.log(`  Edges:    ${gfEdges.length}`);
+  console.log(`  Ganges (${building.name}): ${gfRooms.length} rooms, ${gfNodes.length} nodes, ${gfEdges.length} edges`);
+  console.log(`  Hudson (${hudsonBuilding.name}): ${navRaw.rooms.length} rooms, ${hudsonNodeCount} nodes, ${hudsonEdgeCount} edges`);
 }
 
 main()

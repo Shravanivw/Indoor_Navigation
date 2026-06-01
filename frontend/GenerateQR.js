@@ -1,26 +1,43 @@
+// GenerateQR.js — generate the single Reception QR sticker.
+//
+// Scope: the only physical QR sticker is at Reception. Scanning it opens
+// the app with ?qr=LOC-GF-RECEPTION; the frontend resolves that to the
+// Reception room via GET /rooms/qr/:qrCode, sets it as the user's start
+// location, and arms live tracking.
+//
+// Usage:
+//   # default (LAN dev):
+//   node GenerateQR.js
+//   # with a Cloudflare tunnel:
+//   $env:BASE_URL="https://your-tunnel.trycloudflare.com"; node GenerateQR.js
+//
+// Output: ./qrcodes/LOC-GF-RECEPTION.png
+
 import QRCode from "qrcode";
 import fs from "fs";
+import path from "path";
 
-// Floor 5 code
-const code = "FF5";
+const BASE_URL = process.env.BASE_URL ?? "http://10.104.152.169:5174";
 
-// CHANGE THIS for your intranet
-const BASE_URL = "http://10.104.152.169:5174";
-// or "http://indoor-nav-app"
+const RECEPTION = { code: "LOC-GF-RECEPTION", label: "Reception" };
 
-const url = `${BASE_URL}/?location=${code}`;
+const OUT_DIR = path.join(process.cwd(), "qrcodes");
+if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
-// create folder if needed
-if (!fs.existsSync("./qrcodes")) {
-  fs.mkdirSync("./qrcodes");
-}
+const url     = `${BASE_URL}/?qr=${encodeURIComponent(RECEPTION.code)}`;
+const outPath = path.join(OUT_DIR, `${RECEPTION.code}.png`);
 
-// generate QR
-QRCode.toFile(`./qrcodes/${code}.png`, url, (err) => {
-  if (err) {
-    console.error(err);
-    return;
-  }
-  console.log("QR created");
-  console.log("🔗", url);
-});
+QRCode.toFile(outPath, url, {
+  errorCorrectionLevel: "H",
+  margin: 2,
+  width: 600,
+  color: { dark: "#0C447C", light: "#FFFFFF" },
+})
+  .then(() => {
+    console.log(`✓ ${RECEPTION.label} QR -> ${outPath}`);
+    console.log(`  ${url}`);
+  })
+  .catch(err => {
+    console.error(`✗ Failed: ${err.message}`);
+    process.exit(1);
+  });

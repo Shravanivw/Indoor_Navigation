@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import StatusBar from "../components/StatusBar";
+import BuildingChips from "../components/BuildingChips";
 import "../css/Home.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
-const FLOOR_ID = "floor-gf";
 
 const QUICK_FIND_TYPES = [
   { label: "Meeting rooms", type: "MEETING_ROOM", icon: "grid",  color: "#EAF3DE", iconColor: "#639922" },
@@ -12,28 +12,42 @@ const QUICK_FIND_TYPES = [
   { label: "Emergency exit",type: "EXIT",           icon: "alert", color: "#FCEBEB", iconColor: "#E24B4A" },
 ];
 
-export default function Home({ userLocation, onSearch, onSelectQuick, onSelectRecent }) {
+export default function Home({
+  userLocation,
+  buildings = [],
+  buildingId,
+  onSelectBuilding,
+  floorId,
+  onSearch,
+  onSelectQuick,
+  onSelectRecent,
+}) {
   const [rooms, setRooms] = useState([]);
   const [recentRooms, setRecentRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Load rooms for the active floor (driven by App-level building selection)
   useEffect(() => {
-    async function loadRooms() {
+    if (!floorId) return;
+    setLoading(true);
+    (async () => {
       try {
-        const res  = await fetch(`${API_BASE}/floors/${FLOOR_ID}/map`);
+        const res  = await fetch(`${API_BASE}/floors/${floorId}/map`);
         const json = await res.json();
         if (json.success && json.data?.rooms) {
           setRooms(json.data.rooms);
           setRecentRooms(json.data.rooms.slice(0, 3));
+        } else {
+          setRooms([]);
+          setRecentRooms([]);
         }
       } catch (err) {
         console.error("Failed to load floor map:", err);
       } finally {
         setLoading(false);
       }
-    }
-    loadRooms();
-  }, []);
+    })();
+  }, [floorId]);
 
   const getFloorLabel = (floor) => {
     if (floor == null) return "";
@@ -62,12 +76,28 @@ export default function Home({ userLocation, onSearch, onSelectQuick, onSelectRe
       </div>
 
       <div className="home-scroll">
+        {buildings.length > 1 && (
+          <>
+            <div className="home-section-title">Building</div>
+            <BuildingChips
+              buildings={buildings}
+              buildingId={buildingId}
+              onSelectBuilding={onSelectBuilding}
+            />
+          </>
+        )}
+
         <div className="home-section-title">Quick find</div>
         <div className="home-quick-grid">
           {QUICK_FIND_TYPES.map((q, i) => {
             const match = rooms.find(r => r.type === q.type);
+            const disabled = !match;
             return (
-              <div key={i} className="home-quick-card" onClick={() => match && onSelectQuick(match)}>
+              <div
+                key={i}
+                className={`home-quick-card${disabled ? " is-disabled" : ""}`}
+                onClick={() => match && onSelectQuick(match)}
+              >
                 <div className="home-quick-icon" style={{ background: q.color }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={q.iconColor} strokeWidth="2">
                     {q.icon === "grid"   && <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></>}
