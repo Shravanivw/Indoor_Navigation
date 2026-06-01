@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import "../css/Walk3D.css";
-
+4
 // ─── ROOM TYPE COLOURS (mirrors FloorMap palette) ────────────────────────────
 const ROOM_COLOURS = {
   RECEPTION:      0xd8eafb,
@@ -58,6 +58,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
   });
   const [arrived, setArrived]   = useState(false);
   const [progressPct, setProgressPct] = useState(0);
+  const [speedMul, setSpeedMul] = useState(1);
+  const speedMulRef = useRef(1);
+  useEffect(() => { speedMulRef.current = speedMul; }, [speedMul]);
+  const SPEED_STEPS = [1, 2, 4];
+  const cycleSpeed = () => {
+    setSpeedMul(prev => {
+      const i = SPEED_STEPS.indexOf(prev);
+      return SPEED_STEPS[(i + 1) % SPEED_STEPS.length];
+    });
+  };
 
   useEffect(() => {
     if (!floorMap || !mountRef.current) return;
@@ -77,10 +87,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     const camera = new THREE.PerspectiveCamera(72, width / height, 0.05, 200);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.88));
-    const sun = new THREE.DirectionalLight(0xffffff, 0.5);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.7);
     sun.position.set(20, 40, 15);
     scene.add(sun);
+    // A second fill light from the opposite side so interiors aren't too dim
+    const fill = new THREE.DirectionalLight(0xffffff, 0.35);
+    fill.position.set(-15, 25, -10);
+    scene.add(fill);
+    // Soft hemisphere light gives an indoor "ceiling-lit" feel
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xc8ccd1, 0.45));
 
     // Coordinate helpers
     const scaleX = floorMap.scaleX ?? 1;
@@ -107,7 +123,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     // Ceiling — gives an enclosed indoor feel
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(widthM, heightM),
-      new THREE.MeshStandardMaterial({ color: 0xeaecef, roughness: 1, side: THREE.DoubleSide }),
+      new THREE.MeshStandardMaterial({ color: 0xf4f5f7, roughness: 1, side: THREE.DoubleSide, transparent: true, opacity: 0.55 }),
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.y = WALL_HEIGHT;
@@ -131,16 +147,110 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       const slab = new THREE.Mesh(
         new THREE.BoxGeometry(wM, 0.05, hM),
         new THREE.MeshStandardMaterial({
-          color: slabColour, roughness: 0.9, transparent: true, opacity: 0.55,
+          color: slabColour, roughness: 0.85, transparent: true, opacity: 0.92,
         }),
       );
       slab.position.set(x, 0.03, z);
       scene.add(slab);
 
       const label = makeLabelSprite(r.name, isDest ? "#059669" : isUser ? "#1d4ed8" : "#374151");
-      label.position.set(x, WALL_HEIGHT - 0.25, z);
-      label.scale.set(Math.min(8, Math.max(3, wM * 0.7)), 1.4, 1);
+      label.position.set(x, WALL_HEIGHT - 0.35, z);
+      label.scale.set(Math.min(8, Math.max(3.5, wM * 0.75)), 1.6, 1);
       scene.add(label);
+
+      // ── Simple furniture / props per room type so cabins, reception,
+      //    cafeteria etc. feel distinct ────────────────────────────────────
+      const isSmall = wM < 2 || hM < 2;
+      if (!isSmall) {
+        if (r.type === "OFFICE" || r.type === "BOARDROOM" || r.type === "MEETING_ROOM") {
+          // A desk/table in the middle
+          const tableW = Math.max(0.8, Math.min(wM * 0.55, 3.5));
+          const tableD = Math.max(0.6, Math.min(hM * 0.4, 1.6));
+          const table = new THREE.Mesh(
+            new THREE.BoxGeometry(tableW, 0.06, tableD),
+            new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7 }),
+          );
+          table.position.set(x, 0.75, z);
+          scene.add(table);
+          // Four short legs
+          const legGeom = new THREE.BoxGeometry(0.08, 0.72, 0.08);
+          const legMat  = new THREE.MeshStandardMaterial({ color: 0x5c4530 });
+          for (const [lx, lz] of [
+            [tableW / 2 - 0.1,  tableD / 2 - 0.1],
+            [-tableW / 2 + 0.1, tableD / 2 - 0.1],
+            [tableW / 2 - 0.1, -tableD / 2 + 0.1],
+            [-tableW / 2 + 0.1,-tableD / 2 + 0.1],
+          ]) {
+            const leg = new THREE.Mesh(legGeom, legMat);
+            leg.position.set(x + lx, 0.36, z + lz);
+            scene.add(leg);
+          }
+        } else if (r.type === "RECEPTION") {
+          // Reception desk: a long curved-ish counter
+          const dW = Math.min(wM * 0.7, 4.5);
+          const dD = 0.7;
+          const desk = new THREE.Mesh(
+            new THREE.BoxGeometry(dW, 1.1, dD),
+            new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 }),
+          );
+          desk.position.set(x, 0.55, z);
+          scene.add(desk);
+        } else if (r.type === "PANTRY") {
+          // Counter along one wall + small fridge box
+          const counterW = Math.min(wM * 0.8, 4);
+          const counter = new THREE.Mesh(
+            new THREE.BoxGeometry(counterW, 0.9, 0.6),
+            new THREE.MeshStandardMaterial({ color: 0xd4b483, roughness: 0.6 }),
+          );
+          counter.position.set(x, 0.45, z - hM / 2 + 0.35);
+          scene.add(counter);
+          const fridge = new THREE.Mesh(
+            new THREE.BoxGeometry(0.7, 1.7, 0.7),
+            new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.4 }),
+          );
+          fridge.position.set(x + counterW / 2 + 0.4, 0.85, z - hM / 2 + 0.4);
+          scene.add(fridge);
+        } else if (r.type === "OPEN_WORKSPACE") {
+          // Cluster of small desks in a 2×N grid
+          const deskW = 1.2, deskD = 0.6, gap = 0.4;
+          const cols2 = Math.max(1, Math.floor((wM - gap) / (deskW + gap)));
+          const rows2 = Math.max(1, Math.floor((hM - gap) / (deskD + gap)));
+          const startX = x - ((cols2 - 1) * (deskW + gap)) / 2;
+          const startZ = z - ((rows2 - 1) * (deskD + gap)) / 2;
+          const dMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7 });
+          for (let cc = 0; cc < cols2; cc++) {
+            for (let rr = 0; rr < rows2; rr++) {
+              const d = new THREE.Mesh(new THREE.BoxGeometry(deskW, 0.05, deskD), dMat);
+              d.position.set(startX + cc * (deskW + gap), 0.75, startZ + rr * (deskD + gap));
+              scene.add(d);
+            }
+          }
+        } else if (r.type === "TOILET") {
+          // Just a small box to suggest stalls
+          const box = new THREE.Mesh(
+            new THREE.BoxGeometry(Math.min(wM * 0.5, 1.5), 1.2, Math.min(hM * 0.4, 0.8)),
+            new THREE.MeshStandardMaterial({ color: 0xeceff3, roughness: 0.7 }),
+          );
+          box.position.set(x, 0.6, z);
+          scene.add(box);
+        } else if (r.type === "EXIT") {
+          // Bright EXIT marker pole
+          const pole = new THREE.Mesh(
+            new THREE.BoxGeometry(0.3, 2.2, 0.3),
+            new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.4 }),
+          );
+          pole.position.set(x, 1.1, z);
+          scene.add(pole);
+        } else if (r.type === "SERVER_ROOM") {
+          // A rack
+          const rack = new THREE.Mesh(
+            new THREE.BoxGeometry(Math.min(wM * 0.4, 0.8), 1.8, Math.min(hM * 0.3, 0.6)),
+            new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.5 }),
+          );
+          rack.position.set(x, 0.9, z);
+          scene.add(rack);
+        }
+      }
     }
 
     // ── REAL WALLS from the walkability grid ────────────────────────────────
@@ -165,7 +275,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     if (wallCells.length) {
       const wallGeom = new THREE.BoxGeometry(scaleX, WALL_HEIGHT, scaleY);
       const wallMat = new THREE.MeshStandardMaterial({
-        color: 0xb4bcc6, roughness: 0.92, transparent: true, opacity: 0.55,
+        color: 0x9aa3ad, roughness: 0.95,
       });
       const inst = new THREE.InstancedMesh(wallGeom, wallMat, wallCells.length);
       const m = new THREE.Matrix4();
@@ -182,7 +292,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     // Outer boundary walls (visual cap; movement is rail-bound so collision
     // isn't strictly needed but they make the scene feel enclosed).
     const boundaryMat = new THREE.MeshStandardMaterial({
-      color: 0xb0b8c2, roughness: 0.9, transparent: true, opacity: 0.45,
+      color: 0x8a939e, roughness: 0.92,
     });
     const t = 0.4;
     const boundaries = [
@@ -314,7 +424,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         if (live && typeof live.gx === "number" && typeof live.gy === "number") {
           s.progress = progressFromLive(live.gx, live.gy);
         } else if (s.progress < 1) {
-          const dp = (WALK_SPEED * dt) / pathLengthM;
+          const dp = (WALK_SPEED * speedMulRef.current * dt) / pathLengthM;
           s.progress = Math.min(1, s.progress + dp);
         }
         setProgressPct(Math.round(s.progress * 100));
@@ -400,6 +510,18 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           <div className="walk3d-progress-fill" style={{ width: `${progressPct}%` }} />
           <div className="walk3d-progress-label">{progressPct}%</div>
         </div>
+      )}
+
+      {hasPath && (
+        <button
+          type="button"
+          className="walk3d-speed"
+          onClick={cycleSpeed}
+          aria-label={`Walk speed ${speedMul}x. Click to change.`}
+          title="Change walk speed"
+        >
+          {speedMul}× Speed
+        </button>
       )}
     </div>
   );

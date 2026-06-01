@@ -113,7 +113,7 @@ export default function FloorMap({
     totalLen += Math.sqrt(dx * dx + dy * dy);
   }
 
-  /* ─── Render ───────────────────────────────────────────────────────────── */
+  /* ─── Render ─────────────────────────────────────────────────────── */
   return (
     <div className="floormap-wrap">
       <div className="floormap-scroll">

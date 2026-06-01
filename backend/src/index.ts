@@ -13,7 +13,7 @@ const prisma = new PrismaClient({
 async function main() {
   // Test DB connection
   await prisma.$connect();
-  console.log('[DB] Connected to PostgreSQL');
+  console.log('[DB] Connected to database');
 
   // Pre-build navigation graph into memory
   await buildGraphCache(prisma);

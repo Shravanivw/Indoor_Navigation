@@ -138,6 +138,26 @@
 }
 .walk3d-skip:hover { background: #e6f1fb; }
 
+/* Speed toggle (cycles 1× → 2× → 4×) */
+.walk3d-speed {
+  position: absolute;
+  top: 28px;
+  right: 14px;
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.35);
+  z-index: 4;
+  -webkit-tap-highlight-color: transparent;
+}
+.walk3d-speed:hover { background: #0c5e57; }
+.walk3d-speed:active { transform: scale(0.96); }
+
 .walk3d-hint {
   position: absolute;
   top: 50%;

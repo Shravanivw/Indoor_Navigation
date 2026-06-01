@@ -85,9 +85,9 @@ export function createRouter(prisma: PrismaClient): Router {
    */
 router.get('/rooms/search', async (req, res) => {
   const schema = z.object({
-    q:       z.string().optional(),  // ✅ optional now
+    q:       z.string().optional(),  // optional now
     floorId: z.string().optional(),
-    type:    z.string().optional(),  // ✅ added type filter
+    type:    z.string().optional(),  // added type filter
   });
   const parsed = schema.safeParse(req.query);
   if (!parsed.success) return res.status(400).json(err('Invalid params'));
@@ -95,9 +95,9 @@ router.get('/rooms/search', async (req, res) => {
   try {
     const rooms = await searchRooms(
       prisma,
-      parsed.data.q ?? '',        // ✅ empty string if no query
+      parsed.data.q ?? '',        // empty string if no query
       parsed.data.floorId,
-      parsed.data.type            // ✅ pass type to service
+      parsed.data.type            // pass type to service
     );
     res.json(ok(rooms));
   } catch (e: any) {
