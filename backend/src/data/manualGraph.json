@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "description": "Manually authored navigation graph for Hudson Floor 5",
+    "coordinateSystem": "pixel",
+    "version": "1.0"
+  },
+  "nodes": [
+    { "id": "N1",  "x": 454, "y": 140 },
+    { "id": "N2",  "x": 286, "y": 140 },
+    { "id": "N3",  "x": 69,  "y": 141 },
+    { "id": "N4",  "x": 71,  "y": 223 },
+    { "id": "N5",  "x": 71,  "y": 321 },
+    { "id": "N6",  "x": 287, "y": 322 },
+    { "id": "N7",  "x": 544, "y": 322 },
+    { "id": "N8",  "x": 739, "y": 321 },
+    { "id": "N9",  "x": 739, "y": 139 },
+    { "id": "N10", "x": 287, "y": 219 },
+    { "id": "N11", "x": 739, "y": 179 },
+    { "id": "N12", "x": 227, "y": 140 },
+    { "id": "N13", "x": 277, "y": 58  },
+    { "id": "N14", "x": 539, "y": 58  },
+    { "id": "N15", "x": 640, "y": 139 },
+    { "id": "N16", "x": 140, "y": 351 },
+    { "id": "N17", "x": 733, "y": 461 }
+  ],
+  "edges": [
+    { "from": "N3",  "to": "N12" },
+    { "from": "N12", "to": "N2"  },
+    { "from": "N2",  "to": "N1"  },
+    { "from": "N1",  "to": "N15" },
+    { "from": "N15", "to": "N9"  },
+    { "from": "N3",  "to": "N4"  },
+    { "from": "N4",  "to": "N5"  },
+    { "from": "N5",  "to": "N16" },
+    { "from": "N2",  "to": "N10" },
+    { "from": "N10", "to": "N6"  },
+    { "from": "N1",  "to": "N7"  },
+    { "from": "N15", "to": "N11" },
+    { "from": "N11", "to": "N8"  },
+    { "from": "N8",  "to": "N17" },
+    { "from": "N13", "to": "N2"  },
+    { "from": "N14", "to": "N1"  }
+  ],
+  "pois": [
+    { "id": "poi-reception",          "name": "Reception",           "x": 454, "y": 103, "nearestNode": "N1"  },
+    { "id": "poi-cafeteria",          "name": "Cafeteria",           "x": 337, "y": 340, "nearestNode": "N6"  },
+    { "id": "poi-it-bar",             "name": "IT Bar",              "x": 144, "y": 293, "nearestNode": "N16" },
+    { "id": "poi-pki-room",           "name": "PKI Room",            "x": 144, "y": 236, "nearestNode": "N4"  },
+    { "id": "poi-recreational-room",  "name": "Recreational Room",   "x": 739, "y": 283, "nearestNode": "N8"  },
+    { "id": "poi-laptop-repair",      "name": "Laptop Repair Room",  "x": 144, "y": 184, "nearestNode": "N4"  },
+    { "id": "poi-executive-dining",   "name": "Executive Dining Room","x": 95,  "y": 390, "nearestNode": "N16" },
+    { "id": "poi-fire-exit-1",        "name": "Fire Exit 1",         "x": 483, "y": 321, "nearestNode": "N7"  },
+    { "id": "poi-training-room",      "name": "Training Room",       "x": 454, "y": 390, "nearestNode": "N7"  },
+    { "id": "poi-medical-room",       "name": "Medical Room",        "x": 739, "y": 236, "nearestNode": "N11" },
+    { "id": "poi-av-room",            "name": "AV Room",             "x": 694, "y": 139, "nearestNode": "N9"  },
+    { "id": "poi-innovation-lab",     "name": "Innovation Lab",      "x": 594, "y": 103, "nearestNode": "N15" },
+    { "id": "poi-fire-exit-2",        "name": "Fire Exit 2",         "x": 640, "y": 103, "nearestNode": "N15" },
+    { "id": "poi-board-room",         "name": "Board Room",          "x": 227, "y": 58,  "nearestNode": "N13" },
+    { "id": "poi-aws-room",           "name": "AWS Room",            "x": 22,  "y": 164, "nearestNode": "N3"  },
+    { "id": "poi-vending-machine",    "name": "Vending Machine",     "x": 739, "y": 360, "nearestNode": "N8"  }
+  ]
+}

@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
-import StatusBar from "../components/StatusBar";
 import TopBar from "../components/TopBar";
 import BuildingChips from "../components/BuildingChips";
 import "../css/Search.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
-const FILTERS = ["All", "MEETING_ROOM", "OFFICE", "PANTRY", "RECEPTION", "TOILET", "STORAGE", "SERVER_ROOM", "OTHER"];
+const CATEGORIES = [
+  { id: "MEETING",    label: "Meeting",    types: ["MEETING_ROOM"], color: "#185FA5" },
+  { id: "WORK",       label: "Work",       types: ["OFFICE"],      color: "#3B6D11" },
+  { id: "FACILITIES", label: "Facilities", types: ["TOILET", "PANTRY", "STORAGE"], color: "#854F0B" },
+  { id: "SUPPORT",    label: "Support",    types: ["RECEPTION", "SERVER_ROOM"], color: "#534AB7" },
+  { id: "EXIT",       label: "Exit",       types: ["EXIT"], color: "#A32D2D" },
+];
 
 export default function Search({ userLocation, floorId, buildings, buildingId, onSelectBuilding, onBack, onSelectDestination }) {
   const [query,    setQuery]    = useState("");
-  const [filter,   setFilter]   = useState("All");
+  const [category, setCategory] = useState(null);
   const [results,  setResults]  = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading,  setLoading]  = useState(false);
@@ -24,8 +29,13 @@ export default function Search({ userLocation, floorId, buildings, buildingId, o
         const params = new URLSearchParams();
         // ✅ always send q — even if empty string
         params.set("q", query.trim());
-        if (filter !== "All") params.set("type", filter);
-        if (activeFloorId)    params.set("floorId", activeFloorId);
+
+        if (category) {
+          const categoryItem = CATEGORIES.find(c => c.id === category);
+          if (categoryItem) params.set("type", categoryItem.types.join(','));
+        }
+
+        if (activeFloorId) params.set("floorId", activeFloorId);
 
         const res  = await fetch(`${API_BASE}/rooms/search?${params}`);
         const json = await res.json();
@@ -37,7 +47,7 @@ export default function Search({ userLocation, floorId, buildings, buildingId, o
       }
     }, 300);
     return () => clearTimeout(timeout);
-  }, [query, filter, activeFloorId]);
+  }, [query, category, activeFloorId]);
 
   async function handleGetDirections(selectedRoom) {
     if (!selectedRoom || !userLocation) return;
@@ -62,7 +72,6 @@ export default function Search({ userLocation, floorId, buildings, buildingId, o
 
   return (
     <div className="search-page">
-      <StatusBar />
       <TopBar title="Search" onBack={onBack} />
       <BuildingChips
         buildings={buildings}
@@ -81,11 +90,11 @@ export default function Search({ userLocation, floorId, buildings, buildingId, o
             className="search-input"
             placeholder="Search rooms, desks, amenities…"
             value={query}
-            onChange={e => { setQuery(e.target.value); setSelected(null); }}
+            onChange={e => { setQuery(e.target.value); setCategory(null); setSelected(null); }}
             autoFocus
           />
           {query && (
-            <div onClick={() => { setQuery(""); setSelected(null); }}
+            <div onClick={() => { setQuery(""); setCategory(null); setSelected(null); }}
               style={{ cursor: "pointer" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="#9ca3af" strokeWidth="2">
@@ -96,17 +105,24 @@ export default function Search({ userLocation, floorId, buildings, buildingId, o
           )}
         </div>
 
-        <div className="filter-row">
-          {FILTERS.map(f => (
-            <div
-              key={f}
-              className={`filter-pill ${filter === f ? "active" : ""}`}
-              onClick={() => { setFilter(f); setSelected(null); }}
+        <div className="category-row">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              type="button"
+              className={`category-card ${category === cat.id ? "active" : ""}`}
+              onClick={() => {
+                setCategory(prev => prev === cat.id ? null : cat.id);
+                setQuery("");
+                setSelected(null);
+              }}
             >
-              {f === "All" ? "All" : f.replace(/_/g, " ")}
-            </div>
+              <span className="category-dot" style={{ background: cat.color }} />
+              <span>{cat.label}</span>
+            </button>
           ))}
         </div>
+
 
         <div className="search-section-title">
           {loading ? "Searching…" : `${results.length} result${results.length !== 1 ? "s" : ""}`}
@@ -133,26 +149,26 @@ export default function Search({ userLocation, floorId, buildings, buildingId, o
                   {room.floor?.name ? ` · ${room.floor.name}` : ""}
                 </div>
               </div>
-              <div className="result-floor">F{room.floor?.level ?? "G"}</div>
-              <div className="result-arr">›</div>
+              <div className="result-meta">
+                <div className="result-floor">F{room.floor?.level ?? "G"}</div>
+                {selected?.id === room.id && (
+                  <button
+                    type="button"
+                    className="result-go-btn"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleGetDirections(room);
+                    }}
+                  >
+                    Get directions →
+                  </button>
+                )}
+                <div className="result-arr">›</div>
+              </div>
             </div>
           ))}
         </div>
 
-        {selected && (
-          <div className="search-confirm-bar">
-            <div className="search-confirm-info">
-              <div className="scb-name">{selected.name}</div>
-              <div className="scb-sub">Floor {selected.floor?.level ?? "G"}</div>
-            </div>
-            <button
-              className="search-go-btn"
-              onClick={() => handleGetDirections(selected)}
-            >
-              Get directions →
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,20 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import StatusBar from "../components/StatusBar";
 import TopBar from "../components/TopBar";
 import FloorMap from "../components/FloorMap";
 import Walk3D from "../components/Walk3D";
 import BuildingChips from "../components/BuildingChips";
-import useDeadReckoning from "../hooks/useDeadReckoning";
 import "../css/MapView.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
 const DEFAULT_FLOOR_ID = "floor-gf";
-
-function formatTime(seconds) {
-  if (!seconds) return "—";
-  const mins = Math.round(seconds / 60);
-  return mins < 1 ? "< 1 min" : `${mins} min`;
-}
 
 function formatDist(metres) {
   if (!metres) return "—";
@@ -24,11 +16,10 @@ function formatDist(metres) {
 export default function MapView({ destination, userLocation, route, routeLoading, buildings, buildingId, onSelectBuilding, onBack }) {
   const [mapData, setMapData]   = useState(null);
   const [view3D, setView3D]     = useState(false);
-  const [tracking, setTracking] = useState(false);
 
   const floorId = destination?.floor?.id ?? userLocation?.floor?.id ?? DEFAULT_FLOOR_ID;
 
-  // ✅ Fetch real floor map from backend
+  // Fetch real floor map from backend
   useEffect(() => {
     async function loadMap() {
       try {
@@ -49,49 +40,13 @@ export default function MapView({ destination, userLocation, route, routeLoading
       ? `${userLocation.name}${userLocation.floor ? ` — Floor ${userLocation.floor?.level ?? userLocation.floor}` : ""}`
       : "Unknown";
 
-  const estimatedTime = route ? formatTime(route.estimatedSeconds) : "—";
   const totalDist     = route ? formatDist(route.totalDistanceM)   : "—";
   const floorChanges  = route ? route.floorChanges                 : 0;
   const steps         = route?.steps        ?? [];
   const pathGridCells = route?.pathGridCells ?? [];
 
-  // ── Dead-reckoning live tracking ─────────────────────────────────────────
-  // Compute the user's known grid cell from their current room (if any).
-  const userCell = useMemo(() => {
-    if (!userLocation) return null;
-    if (typeof userLocation.gridX === "number" && typeof userLocation.gridY === "number") {
-      return {
-        gx: userLocation.gridX + (userLocation.gridW ?? 1) / 2,
-        gy: userLocation.gridY + (userLocation.gridH ?? 1) / 2,
-      };
-    }
-    return null;
-  }, [userLocation]);
-
-  const dr = useDeadReckoning({
-    initialGridX: userCell?.gx ?? 0,
-    initialGridY: userCell?.gy ?? 0,
-    scaleX: mapData?.scaleX ?? 1,
-    scaleY: mapData?.scaleY ?? 1,
-    enabled: tracking,
-  });
-
-  // Snap dead-reckoning origin whenever a QR scan changes userLocation,
-  // cancelling accumulated drift every time the user passes a QR sticker.
-  useEffect(() => {
-    if (userCell) dr.recalibrate(userCell.gx, userCell.gy);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userCell?.gx, userCell?.gy]);
-
-  async function toggleTracking() {
-    if (tracking) { setTracking(false); return; }
-    const ok = await dr.requestPermission();
-    if (ok) setTracking(true);
-  }
-
   return (
     <div className="map-page">
-      <StatusBar />
       <TopBar
         title={destination ? `Route to ${destination.name}` : "Map"}
         subtitle={`From ${userLocationText}`}
@@ -111,15 +66,15 @@ export default function MapView({ destination, userLocation, route, routeLoading
             destination={destination}
             pathGridCells={pathGridCells}
             userRoom={userLocation}
-            livePosition={tracking ? dr.position : null}
+            livePosition={null}
           />
         ) : (
           <FloorMap
             destination={destination}
             userLocation={userLocation}
             pathGridCells={pathGridCells}
-            livePosition={tracking ? dr.position : null}
-            heading={tracking ? dr.heading : null}
+            livePosition={null}
+            heading={null}
             rooms={
               route && (userLocation || destination)
                 ? (mapData?.rooms ?? []).filter(
@@ -144,26 +99,6 @@ export default function MapView({ destination, userLocation, route, routeLoading
         </button>
 
         {/* Live tracking toggle (dead-reckoning via phone sensors) */}
-        <button
-          type="button"
-          className={`map-track-toggle ${tracking ? "on" : ""}`}
-          onClick={toggleTracking}
-          aria-pressed={tracking}
-          title={tracking ? "Stop live tracking" : "Start live tracking using phone sensors"}
-        >
-          {tracking ? `● Live · ${dr.steps} steps` : "Track me"}
-        </button>
-
-        {tracking && dr.status === "denied" && (
-          <div className="map-track-warn">
-            Sensor permission denied — tap "Track me" again to retry.
-          </div>
-        )}
-        {tracking && dr.status === "unsupported" && (
-          <div className="map-track-warn">
-            This device doesn't expose motion sensors.
-          </div>
-        )}
       </div>
 
       <div className="route-sheet">
@@ -193,10 +128,6 @@ export default function MapView({ destination, userLocation, route, routeLoading
               </div>
 
               <div className="route-stats">
-                <div className="route-stat">
-                  <div className="rs-val">{estimatedTime}</div>
-                  <div className="rs-lbl">Est. time</div>
-                </div>
                 <div className="route-stat">
                   <div className="rs-val">{totalDist}</div>
                   <div className="rs-lbl">Distance</div>

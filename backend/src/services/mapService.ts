@@ -23,9 +23,9 @@ type FloorGeometryData = {
 
 // Maps floorId → the JSON basename in src/data for that floor's geometry/grid.
 // Add new floors here as they are seeded.
-const FLOOR_DATA_MAP: Record<string, { clean: string; nav: string }> = {
+const FLOOR_DATA_MAP: Record<string, { clean: string; nav?: string }> = {
   'floor-gf':         { clean: 'floor_ganges_clean.json', nav: 'nav_ganges_g.json' },
-  'floor-hudson-f5':  { clean: 'floor_hudson_clean.json', nav: 'nav_hudson_f5.json' },
+  'floor-hudson-f5':  { clean: 'floor_hudson_clean.json' },
 };
 
 function dataPath(name: string): string {
@@ -48,7 +48,7 @@ function parseGridData(raw: unknown): number[][] {
 
 function loadFallbackGrid(floorId: string): number[][] {
   const entry = FLOOR_DATA_MAP[floorId];
-  if (!entry) return [];
+  if (!entry || !entry.nav) return [];
   const filePath = dataPath(entry.nav);
   if (!fs.existsSync(filePath)) return [];
   try {
@@ -164,12 +164,16 @@ export async function getAllFloors(prisma: PrismaClient, buildingId: string) {
 export async function searchRooms(
   prisma: PrismaClient,
   query: string,
-  floorId?: string
+  floorId?: string,
+  type?: string,
 ) {
+  const typeFilter = type ? type.split(',').map(t => t.trim()).filter(Boolean) : [];
+
   return prisma.room.findMany({
     where: {
       AND: [
         floorId ? { floorId } : {},
+        typeFilter.length ? { type: { in: typeFilter } } : {},
         {
           OR: [
             { name:  { contains: query } },

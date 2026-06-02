@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import "../css/Walk3D.css";
-4
+
 // ─── ROOM TYPE COLOURS (mirrors FloorMap palette) ────────────────────────────
 const ROOM_COLOURS = {
   RECEPTION:      0xd8eafb,
@@ -59,8 +59,11 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
   const [arrived, setArrived]   = useState(false);
   const [progressPct, setProgressPct] = useState(0);
   const [speedMul, setSpeedMul] = useState(1);
+  const [paused, setPaused] = useState(false);
   const speedMulRef = useRef(1);
+  const pausedRef = useRef(false);
   useEffect(() => { speedMulRef.current = speedMul; }, [speedMul]);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
   const SPEED_STEPS = [1, 2, 4];
   const cycleSpeed = () => {
     setSpeedMul(prev => {
@@ -68,6 +71,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       return SPEED_STEPS[(i + 1) % SPEED_STEPS.length];
     });
   };
+  const togglePaused = () => setPaused((prev) => !prev);
 
   useEffect(() => {
     if (!floorMap || !mountRef.current) return;
@@ -420,14 +424,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       // camera from that (projected onto the route). Otherwise fall back to
       // the constant-speed auto-walk so the demo still moves on a desktop.
       if (pathPoints.length >= 2 && pathLengthM > 0) {
-        const live = livePosRef.current;
-        if (live && typeof live.gx === "number" && typeof live.gy === "number") {
-          s.progress = progressFromLive(live.gx, live.gy);
-        } else if (s.progress < 1) {
-          const dp = (WALK_SPEED * speedMulRef.current * dt) / pathLengthM;
-          s.progress = Math.min(1, s.progress + dp);
+        if (!pausedRef.current) {
+          const live = livePosRef.current;
+          if (live && typeof live.gx === "number" && typeof live.gy === "number") {
+            s.progress = progressFromLive(live.gx, live.gy);
+          } else if (s.progress < 1) {
+            const dp = (WALK_SPEED * speedMulRef.current * dt) / pathLengthM;
+            s.progress = Math.min(1, s.progress + dp);
+          }
+          setProgressPct(Math.round(s.progress * 100));
         }
-        setProgressPct(Math.round(s.progress * 100));
 
         // Look ~1.5 m ahead along the path so the camera begins rotating
         // *before* reaching the corner (much more natural than snapping
@@ -455,9 +461,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         );
         const here = s.progress >= 0.995;
         setArrived(prev => (prev === here ? prev : here));
-      } else {
-        camera.position.set(0, EYE_HEIGHT, 0);
-        camera.lookAt(0, EYE_HEIGHT, 1);
       }
 
       renderer.render(scene, camera);
@@ -488,13 +491,17 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         mount.removeChild(renderer.domElement);
       }
     };
-    return () => stateRef.current.cleanup?.();
+    return () => {
+      if (typeof stateRef.current.cleanup === 'function') {
+        stateRef.current.cleanup();
+      }
+    };
   }, [floorMap, pathGridCells, destination, userRoom]);
 
   const hasPath = pathGridCells.length >= 2;
 
   return (
-    <div className="walk3d-wrap">
+    <div className="walk3d-wrap" onClick={togglePaused}>
       <div ref={mountRef} className="walk3d-mount" />
 
       {!hasPath && (
@@ -516,12 +523,21 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         <button
           type="button"
           className="walk3d-speed"
-          onClick={cycleSpeed}
+          onClick={(event) => {
+            event.stopPropagation();
+            cycleSpeed();
+          }}
           aria-label={`Walk speed ${speedMul}x. Click to change.`}
           title="Change walk speed"
         >
           {speedMul}× Speed
         </button>
+      )}
+
+      {hasPath && (
+        <div className="walk3d-help">
+          Tap anywhere to {paused ? "resume" : "pause"} the walkthrough.
+        </div>
       )}
     </div>
   );

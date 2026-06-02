@@ -9,6 +9,8 @@ export interface NavigationGraph {
   nodesById: Map<string, GraphNode>;
   // Room ID → entry node IDs for that room
   roomEntryNodes: Map<string, string[]>;
+  // Store room data for fallback node lookup
+  roomsData?: Map<string, { centreX: number; centreY: number; floorId: string }>;
 }
 
 /**

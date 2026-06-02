@@ -8,6 +8,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import { seedHudsonManualGraph } from './seedManualGraph';
 
 const RoomType = { STORAGE:'STORAGE', SERVER_ROOM:'SERVER_ROOM', MEETING_ROOM:'MEETING_ROOM', OFFICE:'OFFICE', PANTRY:'PANTRY', OTHER:'OTHER', TOILET:'TOILET', RECEPTION:'RECEPTION', BOARDROOM:'BOARDROOM', OPEN_WORKSPACE:'OPEN_WORKSPACE' } as const;
 const NodeType = { ROOM_ENTRY:'ROOM_ENTRY', CORRIDOR_JUNCTION:'CORRIDOR_JUNCTION', WAYPOINT:'WAYPOINT' } as const;
@@ -625,68 +626,11 @@ async function main() {
     });
   }
 
-  // Central hub node + per-room entries (auto-generated via grid A*).
-  // The build_nav_graph.py script writes nav.graph = { roomEntryNodes, nodes, edges }
-  // where nodes follow the actual walkable corridors so routes don't cut walls.
-  type GraphSection = {
-    roomEntryNodes: Record<string, string>;     // room code -> node id
-    nodes: Array<{ id: string; gridX: number; gridY: number; realX: number; realY: number; type: string; label?: string }>;
-    edges: Array<{ from: string; to: string; weight: number }>;
-  };
-  const graph: GraphSection | undefined = navRaw.graph;
-  if (!graph) {
-    throw new Error('nav_hudson_f5.json is missing .graph — run build_nav_graph.py first.');
-  }
-
-  // Which node ids belong to which Hudson room (so we can mark them ROOM_ENTRY).
-  const codeToRoomId: Record<string, string> = {};
-  for (const r of navRaw.rooms as Array<any>) {
-    codeToRoomId[r.code] = `room-h5-${r.code.toLowerCase()}`;
-  }
-  const entryNodeToRoom: Record<string, string> = {};
-  for (const [code, nodeId] of Object.entries(graph.roomEntryNodes)) {
-    const rid = codeToRoomId[code];
-    if (rid) entryNodeToRoom[nodeId as string] = rid;
-  }
-
-  let hudsonNodeCount = 0;
-  for (const n of graph.nodes) {
-    const isEntry = !!entryNodeToRoom[n.id];
-    await prisma.node.upsert({
-      where: { id: n.id },
-      create: {
-        id: n.id,
-        floorId: hudsonFloor.id,
-        roomId: isEntry ? entryNodeToRoom[n.id] : null,
-        gridX: n.gridX, gridY: n.gridY,
-        realX: n.realX, realY: n.realY,
-        type: isEntry ? NodeType.ROOM_ENTRY : NodeType.WAYPOINT,
-        label: n.label ?? null,
-      },
-      update: {
-        roomId: isEntry ? entryNodeToRoom[n.id] : null,
-        gridX: n.gridX, gridY: n.gridY,
-        realX: n.realX, realY: n.realY,
-        type: isEntry ? NodeType.ROOM_ENTRY : NodeType.WAYPOINT,
-      },
-    });
-    hudsonNodeCount++;
-  }
-
-  let hudsonEdgeCount = 0;
-  for (const e of graph.edges) {
-    const edgeId = `edge-${e.from}--${e.to}`;
-    await prisma.edge.upsert({
-      where: { id: edgeId },
-      create: { id: edgeId, fromNodeId: e.from, toNodeId: e.to, weight: e.weight, isAccessible: true, isBidirectional: true },
-      update: { weight: e.weight },
-    });
-    hudsonEdgeCount++;
-  }
+  await seedHudsonManualGraph(prisma);
 
   console.log('\n✓ Database seeded successfully');
   console.log(`  Ganges (${building.name}): ${gfRooms.length} rooms, ${gfNodes.length} nodes, ${gfEdges.length} edges`);
-  console.log(`  Hudson (${hudsonBuilding.name}): ${navRaw.rooms.length} rooms, ${hudsonNodeCount} nodes, ${hudsonEdgeCount} edges`);
+  console.log(`  Hudson (${hudsonBuilding.name}): ${navRaw.rooms.length} rooms; route graph loaded from manualGraph.json`);
 }
 
 main()

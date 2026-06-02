@@ -1,10 +1,8 @@
 import "../css/StatusBar.css";
 
 export default function StatusBar() {
-  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   return (
     <div className="statusbar">
-      <span className="statusbar-time">{time}</span>
       <div className="statusbar-icons">
         <svg width="15" height="11" viewBox="0 0 15 11" fill="#111">
           <rect x="0" y="4" width="3" height="7" rx="1"/>

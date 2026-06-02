@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import StatusBar from "../components/StatusBar";
 import BuildingChips from "../components/BuildingChips";
 import "../css/Home.css";
 
@@ -63,7 +62,6 @@ export default function Home({
 
   return (
     <div className="home-page">
-      <StatusBar />
       <div className="home-hero">
         <div className="home-hero-label">Your location</div>
         <div className="home-hero-loc">{userLocationText}</div>

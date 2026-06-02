@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import "../css/FloorMap.css";
 
 /* ─── Colour palette by room type ────────────────────────────────────────── */
@@ -81,26 +81,91 @@ export default function FloorMap({
   const [zoom, setZoom] = useState(1);
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 4;
-  const ZOOM_STEP = 0.4;
-  const zoomIn  = () => setZoom(z => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
-  const zoomOut = () => setZoom(z => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
+  const ZOOM_STEP = 0.14;
+  const zoomIn  = () => setZoom(z => clampZoom(z + ZOOM_STEP));
+  const zoomOut = () => setZoom(z => clampZoom(z - ZOOM_STEP));
   const zoomReset = () => setZoom(1);
+  const pointersRef = useRef(new Map());
+  const lastPinchDistanceRef = useRef(null);
 
-  /* ─── Canvas (square viewBox — floor grid is ~square) ──────────────────── */
+  const clampZoom = (value) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(value).toFixed(2)));
+  const getDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  const handleWheel = (event) => {
+    const delta = event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+    setZoom((z) => clampZoom(z + delta));
+  };
+
+  const handlePointerDown = (event) => {
+    const pointers = pointersRef.current;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event) => {
+    const pointers = pointersRef.current;
+    if (!pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointers.size === 2) {
+      const [first, second] = Array.from(pointers.values());
+      const distance = getDistance(first, second);
+      const previous = lastPinchDistanceRef.current;
+      if (previous) {
+        const delta = distance - previous;
+        setZoom((z) => clampZoom(z + delta * 0.0025));
+      }
+      lastPinchDistanceRef.current = distance;
+    }
+  };
+
+  const handlePointerUp = (event) => {
+    const pointers = pointersRef.current;
+    pointers.delete(event.pointerId);
+    if (pointers.size < 2) {
+      lastPinchDistanceRef.current = null;
+    }
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // ignore if pointer capture is already released
+    }
+  };
+
+  /* ─── Canvas ────────────────────────────────────────────────────────────── */
   const SVG_W  = 480;
   const SVG_H  = 480;
   const PAD    = 16;
   const innerW = SVG_W - PAD * 2;
   const innerH = SVG_H - PAD * 2;
-  const sx     = innerW / gridCols;
-  const sy     = innerH / gridRows;
-  const gx     = (g) => PAD + g * sx;
-  const gy     = (g) => PAD + g * sy;
+
+  /* Room coordinates come from the database grid (0–gridCols, 0–gridRows).
+     Use gx/gy for rooms. */
+  const sx = innerW / gridCols;
+  const sy = innerH / gridRows;
+  const gx = (g) => PAD + g * sx;
+  const gy = (g) => PAD + g * sy;
+
+  /* Path coordinates are either:
+     - Grid space (0–80): Ganges and any floor using the generated graph
+     - Pixel space (0–800): Hudson manual graph (stored pixel coords in gridX/gridY)
+     Detect by checking if any coordinate exceeds the grid dimensions. */
+  const FLOOR_PX_W = 800;
+  const FLOOR_PX_H = 500;
+  const pathIsPixelSpace = pathGridCells.some(
+    p => p.x > gridCols || p.y > gridRows
+  );
+  const px = pathIsPixelSpace
+    ? (v) => PAD + (v / FLOOR_PX_W) * innerW
+    : (v) => PAD + v * sx;
+  const py = pathIsPixelSpace
+    ? (v) => PAD + (v / FLOOR_PX_H) * innerH
+    : (v) => PAD + v * sy;
 
   /* ─── Path geometry ────────────────────────────────────────────────────── */
   const hasPath = pathGridCells.length > 1;
   const polylinePoints = hasPath
-    ? pathGridCells.map(p => `${gx(p.x)},${gy(p.y)}`).join(" ")
+    ? pathGridCells.map(p => `${px(p.x)},${py(p.y)}`).join(" ")
     : null;
   const startPoint = pathGridCells[0];
   const endPoint   = pathGridCells[pathGridCells.length - 1];
@@ -108,15 +173,22 @@ export default function FloorMap({
   /* Calculate total polyline length for the animated dash effect */
   let totalLen = 0;
   for (let i = 1; i < pathGridCells.length; i++) {
-    const dx = (pathGridCells[i].x - pathGridCells[i - 1].x) * sx;
-    const dy = (pathGridCells[i].y - pathGridCells[i - 1].y) * sy;
+    const dx = (pathGridCells[i].x - pathGridCells[i - 1].x) / FLOOR_PX_W * innerW;
+    const dy = (pathGridCells[i].y - pathGridCells[i - 1].y) / FLOOR_PX_H * innerH;
     totalLen += Math.sqrt(dx * dx + dy * dy);
   }
 
   /* ─── Render ─────────────────────────────────────────────────────── */
   return (
     <div className="floormap-wrap">
-      <div className="floormap-scroll">
+      <div
+        className="floormap-scroll"
+        onWheel={handleWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         xmlns="http://www.w3.org/2000/svg"
@@ -191,7 +263,7 @@ export default function FloorMap({
         <g clipPath="url(#map-clip)">
           <g>
 
-        {/* Rooms */}
+        {/* Rooms — use grid coordinates (gx/gy) */}
         {rooms.map(room => {
           const colors        = getRoomColor(room.type);
           const isDestination = destination?.id === room.id;
@@ -253,7 +325,7 @@ export default function FloorMap({
           </text>
         )}
 
-        {/* Route path ── 3 stacked polylines for a polished look */}
+        {/* Route path — uses pixel coordinates (px/py) */}
         {hasPath && (
           <g>
             {/* Soft glow */}
@@ -300,8 +372,8 @@ export default function FloorMap({
             {pathGridCells.slice(1, -1).map((p, i) => (
               <circle
                 key={`wp-${i}`}
-                cx={gx(p.x)}
-                cy={gy(p.y)}
+                cx={px(p.x)}
+                cy={py(p.y)}
                 r="2.2"
                 fill="#FFFFFF"
                 stroke="#1E5FB8"
@@ -314,12 +386,12 @@ export default function FloorMap({
         {/* Source marker — "You" with pulse */}
         {startPoint && (
           <g>
-            <circle cx={gx(startPoint.x)} cy={gy(startPoint.y)} r="16" fill="url(#pulse-grad)">
+            <circle cx={px(startPoint.x)} cy={py(startPoint.y)} r="16" fill="url(#pulse-grad)">
               <animate attributeName="r" values="10;20;10" dur="2s" repeatCount="indefinite"/>
               <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite"/>
             </circle>
             <circle
-              cx={gx(startPoint.x)} cy={gy(startPoint.y)}
+              cx={px(startPoint.x)} cy={py(startPoint.y)}
               r="8"
               fill="#FFFFFF"
               stroke="#1E5FB8"
@@ -327,14 +399,14 @@ export default function FloorMap({
               filter="url(#card-shadow)"
             />
             <circle
-              cx={gx(startPoint.x)} cy={gy(startPoint.y)}
+              cx={px(startPoint.x)} cy={py(startPoint.y)}
               r="3.5"
               fill="#1E5FB8"
             />
             {userLocation?.name && (
               <NameLabel
-                x={gx(startPoint.x)}
-                y={gy(startPoint.y) - 12}
+                x={px(startPoint.x)}
+                y={py(startPoint.y) - 12}
                 text={userLocation.name}
                 bg="#1E5FB8"
                 fg="#FFFFFF"
@@ -348,7 +420,7 @@ export default function FloorMap({
         {endPoint && endPoint !== startPoint && (
           <g>
             <g
-              transform={`translate(${gx(endPoint.x)}, ${gy(endPoint.y)})`}
+              transform={`translate(${px(endPoint.x)}, ${py(endPoint.y)})`}
               filter="url(#card-shadow)"
             >
               <path
@@ -361,8 +433,8 @@ export default function FloorMap({
             </g>
             {destination?.name && (
               <NameLabel
-                x={gx(endPoint.x)}
-                y={gy(endPoint.y) - 20}
+                x={px(endPoint.x)}
+                y={py(endPoint.y) - 20}
                 text={destination.name}
                 bg="#2E7D32"
                 fg="#FFFFFF"
@@ -371,6 +443,7 @@ export default function FloorMap({
             )}
           </g>
         )}
+
           </g>
         </g>
       </svg>
@@ -395,12 +468,29 @@ export default function FloorMap({
         <div className="map-floor-pill active">G</div>
       </div>
 
-      {/* Zoom */}
       <div className="map-zoom">
-        <button className="map-zoom-btn" title="Zoom in"  onClick={zoomIn}  disabled={zoom >= MAX_ZOOM}>＋</button>
-        <button className="map-zoom-btn" title="Zoom out" onClick={zoomOut} disabled={zoom <= MIN_ZOOM}>−</button>
+        <button
+          className="map-zoom-btn"
+          type="button"
+          title="Zoom in"
+          onClick={(event) => { event.stopPropagation(); zoomIn(); }}
+          disabled={zoom >= MAX_ZOOM}
+        >＋</button>
+        <button
+          className="map-zoom-btn"
+          type="button"
+          title="Zoom out"
+          onClick={(event) => { event.stopPropagation(); zoomOut(); }}
+          disabled={zoom <= MIN_ZOOM}
+        >−</button>
         {zoom !== 1 && (
-          <button className="map-zoom-btn" title="Reset zoom" onClick={zoomReset} style={{ fontSize: 11 }}>⟳</button>
+          <button
+            className="map-zoom-btn"
+            type="button"
+            title="Reset zoom"
+            onClick={(event) => { event.stopPropagation(); zoomReset(); }}
+            style={{ fontSize: 11 }}
+          >⟳</button>
         )}
       </div>
     </div>
