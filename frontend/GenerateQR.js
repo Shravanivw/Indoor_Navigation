@@ -17,7 +17,7 @@ import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 
-const BASE_URL = process.env.BASE_URL ?? "http://192.168.1.102:5174";
+const BASE_URL = process.env.BASE_URL ?? "http://192.168.1.100:5174";
 
 const RECEPTION = { code: "LOC-GF-RECEPTION", label: "Reception" };
 

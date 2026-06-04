@@ -17,27 +17,42 @@ const ROOM_COLOURS = {
   OTHER:          0xf5f5f5,
 };
 
-const WALL_HEIGHT  = 2.7;     // metres
+const WALL_HEIGHT  = 2.7;     // outer boundary walls
+const ROOM_WALL_H  = 1.0;     // room partition walls — below eye level so camera clears them
 const EYE_HEIGHT   = 1.65;
 const WALK_SPEED   = 1.4;     // metres / second auto-advance along the path
 
-function makeLabelSprite(text, colorHex = "#0C447C") {
+function makeLabelSprite(text, colorHex = "#0C447C", bgAlpha = 0.93) {
   const canvas = document.createElement("canvas");
-  canvas.width = 512; canvas.height = 128;
+  canvas.width = 640; canvas.height = 160;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const r = 20; // corner radius
+  // Rounded-rect background
+  ctx.fillStyle = `rgba(255,255,255,${bgAlpha})`;
+  ctx.beginPath();
+  ctx.moveTo(r, 0); ctx.lineTo(canvas.width - r, 0);
+  ctx.quadraticCurveTo(canvas.width, 0, canvas.width, r);
+  ctx.lineTo(canvas.width, canvas.height - r);
+  ctx.quadraticCurveTo(canvas.width, canvas.height, canvas.width - r, canvas.height);
+  ctx.lineTo(r, canvas.height); ctx.quadraticCurveTo(0, canvas.height, 0, canvas.height - r);
+  ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  ctx.fill();
+  // Border
   ctx.strokeStyle = colorHex;
-  ctx.lineWidth = 6;
-  ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+  ctx.lineWidth = 8;
+  ctx.stroke();
+  // Text — truncate if needed
+  const maxChars = 18;
+  const label = text.length > maxChars ? text.slice(0, maxChars - 1) + "…" : text;
   ctx.fillStyle = colorHex;
-  ctx.font = "bold 64px DM Sans, system-ui, sans-serif";
+  ctx.font = "bold 72px DM Sans, system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(label, canvas.width / 2, canvas.height / 2);
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
   sprite.scale.set(4, 1, 1);
   return sprite;
 }
@@ -61,17 +76,12 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
   const [speedMul, setSpeedMul] = useState(1);
   const [paused, setPaused] = useState(false);
   const speedMulRef = useRef(1);
-  const pausedRef = useRef(false);
+  const pausedRef   = useRef(false);
   useEffect(() => { speedMulRef.current = speedMul; }, [speedMul]);
-  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { pausedRef.current   = paused;   }, [paused]);
   const SPEED_STEPS = [1, 2, 4];
-  const cycleSpeed = () => {
-    setSpeedMul(prev => {
-      const i = SPEED_STEPS.indexOf(prev);
-      return SPEED_STEPS[(i + 1) % SPEED_STEPS.length];
-    });
-  };
-  const togglePaused = () => setPaused((prev) => !prev);
+  const cycleSpeed   = () => setSpeedMul(prev => SPEED_STEPS[(SPEED_STEPS.indexOf(prev) + 1) % SPEED_STEPS.length]);
+  const togglePaused = () => setPaused(prev => !prev);
 
   useEffect(() => {
     if (!floorMap || !mountRef.current) return;
@@ -116,6 +126,21 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       z: gy * scaleY - czOffset,
     });
 
+    // Hudson's manual graph stores pixel coords (0-800, 0-500) while the scene
+    // uses grid coords (0-cols, 0-rows). Normalise once so path aligns with rooms.
+    const FLOOR_PX_W = 800;
+    const FLOOR_PX_H = 500;
+    const pathIsPixelSpace = pathGridCells.some(c => c.x > cols || c.y > rows);
+    const normPath = pathIsPixelSpace
+      ? pathGridCells.map(c => ({ x: (c.x / FLOOR_PX_W) * cols, y: (c.y / FLOOR_PX_H) * rows }))
+      : pathGridCells;
+
+    // Pre-calculate destination world position from last path node so rooms
+    // can use it before pathPoints array is built further down.
+    const destWorldPos = normPath.length > 0
+      ? toWorld(normPath[normPath.length - 1].x + 0.5, normPath[normPath.length - 1].y + 0.5)
+      : null;
+
     // Floor + subtle grid lines for orientation
     const floorMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(widthM, heightM),
@@ -124,14 +149,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     floorMesh.rotation.x = -Math.PI / 2;
     scene.add(floorMesh);
 
-    // Ceiling — gives an enclosed indoor feel
-    const ceiling = new THREE.Mesh(
-      new THREE.PlaneGeometry(widthM, heightM),
-      new THREE.MeshStandardMaterial({ color: 0xf4f5f7, roughness: 1, side: THREE.DoubleSide, transparent: true, opacity: 0.55 }),
-    );
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = WALL_HEIGHT;
-    scene.add(ceiling);
+    // No ceiling — open top view lets room labels and layout stay visible
 
     const gridHelper = new THREE.GridHelper(Math.max(widthM, heightM), Math.max(cols, rows), 0xdadfe5, 0xe9ecf0);
     gridHelper.position.y = 0.01;
@@ -143,9 +161,12 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       const colour = ROOM_COLOURS[r.type] ?? 0xf5f5f5;
       const wM = r.gridW * scaleX;
       const hM = r.gridH * scaleY;
-      const { x, z } = toWorld(r.gridX + r.gridW / 2, r.gridY + r.gridH / 2);
       const isDest = destination?.id === r.id;
       const isUser = userRoom?.id === r.id;
+      // For the destination room use the actual path end point so walls/label
+      // appear exactly where the camera stops (fixes pixel vs grid coord mismatch)
+      const rawPos = toWorld(r.gridX + r.gridW / 2, r.gridY + r.gridH / 2);
+      const { x, z } = (isDest && destWorldPos) ? destWorldPos : rawPos;
 
       const slabColour = isDest ? 0xb7ecd0 : isUser ? 0xbcd6f7 : colour;
       const slab = new THREE.Mesh(
@@ -157,9 +178,11 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       slab.position.set(x, 0.03, z);
       scene.add(slab);
 
-      const label = makeLabelSprite(r.name, isDest ? "#059669" : isUser ? "#1d4ed8" : "#374151");
-      label.position.set(x, WALL_HEIGHT - 0.35, z);
-      label.scale.set(Math.min(8, Math.max(3.5, wM * 0.75)), 1.6, 1);
+      const labelColor = isDest ? "#059669" : isUser ? "#1d4ed8" : "#374151";
+      const label = makeLabelSprite(r.name, labelColor, isDest ? 0.97 : 0.88);
+      // Float labels well above the low partition walls so they're always visible
+      label.position.set(x, ROOM_WALL_H + 0.85, z);
+      label.scale.set(Math.min(10, Math.max(4, wM * 0.9)), 2.2, 1);
       scene.add(label);
 
       // ── Simple furniture / props per room type so cabins, reception,
@@ -257,40 +280,34 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       }
     }
 
-    // ── REAL WALLS from the walkability grid ────────────────────────────────
-    // Every cell flagged 1 in floorMap.grid is a wall. We draw one wall cube
-    // per cell using an InstancedMesh so 1500+ walls render in a single draw
-    // call. We skip cells that fall along the route (a 1-cell-wide doorway)
-    // so the player can travel down the path unobstructed.
-    const grid = floorMap.grid ?? [];
-    const pathCellSet = new Set(pathGridCells.map(c => `${c.x},${c.y}`));
-
-    const wallCells = [];
-    for (let y = 0; y < grid.length; y++) {
-      const row = grid[y];
-      if (!row) continue;
-      for (let x = 0; x < row.length; x++) {
-        if (row[x] !== 1) continue;
-        if (pathCellSet.has(`${x},${y}`)) continue; // carve doorway along the path
-        wallCells.push({ x, y });
+    // ── Room-outline walls: low partitions (below eye level) around each room ─
+    // ROOM_WALL_H < EYE_HEIGHT means the camera always clears the walls —
+    // no more "walking through blocks". Labels float above so they're always
+    // visible. Destination room walls are tinted green for easy recognition.
+    const wallMatNormal = new THREE.MeshStandardMaterial({ color: 0xcbd2da, roughness: 0.85 });
+    const wallMatDest   = new THREE.MeshStandardMaterial({
+      color: 0x34d399, roughness: 0.6, emissive: 0x059669, emissiveIntensity: 0.18,
+    });
+    const wt = 0.15;
+    for (const r of rooms) {
+      const wM = r.gridW * scaleX;
+      const hM = r.gridH * scaleY;
+      const isDest = destination?.id === r.id;
+      const rawWallPos = toWorld(r.gridX + r.gridW / 2, r.gridY + r.gridH / 2);
+      const { x: cx, z: cz } = (isDest && destWorldPos) ? destWorldPos : rawWallPos;
+      const mat = isDest ? wallMatDest : wallMatNormal;
+      const h   = ROOM_WALL_H;
+      const panels = [
+        { pw: wM + wt * 2, pd: wt, ox: 0,       oz: -hM / 2 },
+        { pw: wM + wt * 2, pd: wt, ox: 0,       oz:  hM / 2 },
+        { pw: wt,          pd: hM, ox: -wM / 2, oz: 0        },
+        { pw: wt,          pd: hM, ox:  wM / 2, oz: 0        },
+      ];
+      for (const p of panels) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.pw, h, p.pd), mat);
+        mesh.position.set(cx + p.ox, h / 2, cz + p.oz);
+        scene.add(mesh);
       }
-    }
-
-    if (wallCells.length) {
-      const wallGeom = new THREE.BoxGeometry(scaleX, WALL_HEIGHT, scaleY);
-      const wallMat = new THREE.MeshStandardMaterial({
-        color: 0x9aa3ad, roughness: 0.95,
-      });
-      const inst = new THREE.InstancedMesh(wallGeom, wallMat, wallCells.length);
-      const m = new THREE.Matrix4();
-      for (let i = 0; i < wallCells.length; i++) {
-        const { x: gx, y: gy } = wallCells[i];
-        const { x, z } = toWorld(gx + 0.5, gy + 0.5);
-        m.makeTranslation(x, WALL_HEIGHT / 2, z);
-        inst.setMatrixAt(i, m);
-      }
-      inst.instanceMatrix.needsUpdate = true;
-      scene.add(inst);
     }
 
     // Outer boundary walls (visual cap; movement is rail-bound so collision
@@ -315,10 +332,11 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     }
 
     // ── Path: world-space points + cumulative arc length ────────────────────
-    const pathPoints = pathGridCells.map(c => {
+    const pathPoints = normPath.map(c => {
       const { x, z } = toWorld(c.x + 0.5, c.y + 0.5);
       return new THREE.Vector3(x, 0.08, z);
     });
+
     stateRef.current.pathPoints = pathPoints;
 
     const cumDist = [0];
@@ -523,21 +541,12 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         <button
           type="button"
           className="walk3d-speed"
-          onClick={(event) => {
-            event.stopPropagation();
-            cycleSpeed();
-          }}
+          onClick={e => { e.stopPropagation(); cycleSpeed(); }}
           aria-label={`Walk speed ${speedMul}x. Click to change.`}
           title="Change walk speed"
         >
           {speedMul}× Speed
         </button>
-      )}
-
-      {hasPath && (
-        <div className="walk3d-help">
-          Tap anywhere to {paused ? "resume" : "pause"} the walkthrough.
-        </div>
       )}
     </div>
   );

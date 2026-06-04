@@ -116,7 +116,7 @@ export function gridToReal(
     y: minY + ((cell.y + 0.5) / rows) * (maxY - minY),
   };
 }
-
+  
 /**
  * Auto-detect corridor junctions — cells surrounded by walkable cells
  * with 3+ walkable neighbours in different directions.

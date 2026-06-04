@@ -143,13 +143,11 @@ export default function FloorMap({
      Use gx/gy for rooms. */
   const sx = innerW / gridCols;
   const sy = innerH / gridRows;
+  // Flip Y axis so the map reads bottom-to-top (user's position appears at
+  // the bottom, destination ahead — matches how navigation apps feel on phone)
   const gx = (g) => PAD + g * sx;
-  const gy = (g) => PAD + g * sy;
+  const gy = (g) => PAD + (gridRows - g) * sy;
 
-  /* Path coordinates are either:
-     - Grid space (0–80): Ganges and any floor using the generated graph
-     - Pixel space (0–800): Hudson manual graph (stored pixel coords in gridX/gridY)
-     Detect by checking if any coordinate exceeds the grid dimensions. */
   const FLOOR_PX_W = 800;
   const FLOOR_PX_H = 500;
   const pathIsPixelSpace = pathGridCells.some(
@@ -159,8 +157,8 @@ export default function FloorMap({
     ? (v) => PAD + (v / FLOOR_PX_W) * innerW
     : (v) => PAD + v * sx;
   const py = pathIsPixelSpace
-    ? (v) => PAD + (v / FLOOR_PX_H) * innerH
-    : (v) => PAD + v * sy;
+    ? (v) => PAD + (1 - v / FLOOR_PX_H) * innerH
+    : (v) => PAD + (gridRows - v) * sy;
 
   /* ─── Path geometry ────────────────────────────────────────────────────── */
   const hasPath = pathGridCells.length > 1;
@@ -192,7 +190,7 @@ export default function FloorMap({
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="none"
         className="floormap-svg"
         style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%` }}
       >

@@ -21,11 +21,12 @@ export default function Home({
   onSelectQuick,
   onSelectRecent,
 }) {
+  const RECENTS_KEY = "indoorNav.recentDestinations";
   const [rooms, setRooms] = useState([]);
   const [recentRooms, setRecentRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load rooms for the active floor (driven by App-level building selection)
+  // Load rooms for the active floor (for Quick Find chips)
   useEffect(() => {
     if (!floorId) return;
     setLoading(true);
@@ -33,13 +34,7 @@ export default function Home({
       try {
         const res  = await fetch(`${API_BASE}/floors/${floorId}/map`);
         const json = await res.json();
-        if (json.success && json.data?.rooms) {
-          setRooms(json.data.rooms);
-          setRecentRooms(json.data.rooms.slice(0, 3));
-        } else {
-          setRooms([]);
-          setRecentRooms([]);
-        }
+        setRooms(json.success && json.data?.rooms ? json.data.rooms : []);
       } catch (err) {
         console.error("Failed to load floor map:", err);
       } finally {
@@ -47,6 +42,22 @@ export default function Home({
       }
     })();
   }, [floorId]);
+
+  // Read recent destinations from localStorage — updated whenever the user navigates
+  useEffect(() => {
+    function loadRecents() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]");
+        setRecentRooms(stored);
+      } catch {
+        setRecentRooms([]);
+      }
+    }
+    loadRecents();
+    // Refresh whenever the Home page becomes visible (user navigated back)
+    window.addEventListener("focus", loadRecents);
+    return () => window.removeEventListener("focus", loadRecents);
+  }, []);
 
   const getFloorLabel = (floor) => {
     if (floor == null) return "";
@@ -114,8 +125,8 @@ export default function Home({
         </div>
 
         <div className="home-section-title">Recent destinations</div>
-        {loading ? (
-          <div style={{ color: "#9ca3af", fontSize: 13, padding: "12px 0" }}>Loading…</div>
+        {recentRooms.length === 0 ? (
+          <div style={{ color: "#9ca3af", fontSize: 13, padding: "12px 0" }}>No recent destinations yet.</div>
         ) : (
           recentRooms.map((room, i) => (
             <div key={room.id || i} className="home-recent-item" onClick={() => onSelectRecent(room)}>

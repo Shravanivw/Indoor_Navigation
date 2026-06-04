@@ -7,9 +7,10 @@
 }
 
 .map-canvas {
-  flex: 1;
+  flex: 0 0 42%;
+  min-height: 160px;
+  max-height: 320px;
   overflow: hidden;
-  min-height: 440px;
   position: relative;
 }
 
@@ -77,10 +78,10 @@
 .route-sheet {
   background: #fff;
   border-top: 0.5px solid #e5e7eb;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  max-height: 70vh;
   overflow: hidden;
 }
 
@@ -94,15 +95,14 @@
 
 .route-sheet-inner {
   padding: 10px 16px 12px;
-  overflow-y: auto;
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  /* ensure last step isn't hidden behind bottom nav */
-  padding-bottom: 80px;
   min-height: 0;
   flex: 1;
-  max-height: calc(70vh - 30px);
+  /* reserve space so last step clears the bottom nav bar */
+  padding-bottom: 70px;
 }
 
 .route-dest-row {

@@ -101,9 +101,19 @@ export async function getRoute(
     };
   }
 
-  // Get entry nodes for each room
-  const startNodeId = getRoomEntryNode(fromRoomId, graph);
-  const endNodeId   = getRoomEntryNode(toRoomId, graph);
+  // Get entry nodes for each room; fall back to nearest node when none is linked.
+  const fromGridCols = fromRoom.floor?.gridCols ?? 80;
+  const fromGridRows = fromRoom.floor?.gridRows ?? 80;
+  const toGridCols   = toRoom.floor?.gridCols   ?? 80;
+  const toGridRows   = toRoom.floor?.gridRows   ?? 80;
+
+  const startNodeId =
+    getRoomEntryNode(fromRoomId, graph) ??
+    findNearestNode(graph, fromRoom, fromGridCols, fromGridRows);
+
+  const endNodeId =
+    getRoomEntryNode(toRoomId, graph) ??
+    findNearestNode(graph, toRoom, toGridCols, toGridRows);
 
   if (!startNodeId) throw new Error(`No navigation node found for room: ${fromRoomId}`);
   if (!endNodeId)   throw new Error(`No navigation node found for room: ${toRoomId}`);
@@ -185,6 +195,33 @@ export async function getRoute(
     floorChanges,
     accessible: options.accessibleOnly ?? false,
   };
+}
+
+// When a room has no directly linked navigation node, find the nearest one on
+// the same floor. Hudson nodes use pixel coords (0-800, 0-500) while rooms use
+// grid coords (0-gridCols, 0-gridRows) — normalise before comparing.
+function findNearestNode(
+  graph: NavigationGraph,
+  room: { gridX: number; gridY: number; floorId: string },
+  gridCols: number,
+  gridRows: number,
+): string | null {
+  const FLOOR_PX_W = 800;
+  const FLOOR_PX_H = 500;
+  let bestId: string | null = null;
+  let bestDist = Infinity;
+
+  for (const [nodeId, node] of graph.nodesById) {
+    if (node.floorId !== room.floorId) continue;
+    const nx = node.gridX > gridCols ? (node.gridX / FLOOR_PX_W) * gridCols : node.gridX;
+    const ny = node.gridY > gridRows ? (node.gridY / FLOOR_PX_H) * gridRows : node.gridY;
+    const dist = Math.hypot(room.gridX - nx, room.gridY - ny);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestId = nodeId;
+    }
+  }
+  return bestId;
 }
 
 function enrichWithFloorChanges(

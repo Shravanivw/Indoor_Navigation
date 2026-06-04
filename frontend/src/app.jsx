@@ -8,6 +8,17 @@ import "./app.css";
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
 
 const BUILDING_STORAGE_KEY = "indoorNav.buildingId";
+const RECENTS_KEY          = "indoorNav.recentDestinations";
+const MAX_RECENTS          = 5;
+
+function saveRecentDestination(dest) {
+  if (!dest?.id) return;
+  try {
+    const stored  = JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]");
+    const updated = [dest, ...stored.filter(r => r.id !== dest.id)].slice(0, MAX_RECENTS);
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(updated));
+  } catch {}
+}
 
 export default function App() {
   const [page, setPage]                   = useState("home");
@@ -140,6 +151,7 @@ export default function App() {
   // Called by Search when user taps "Get directions".
   // Search may pass a pre-computed route; if not, fetch it here.
   async function selectDestination({ destination, route }) {
+    saveRecentDestination(destination);
     setDestination(destination);
     setRoute(route ?? null);
     setPrevPage(page);
@@ -154,6 +166,7 @@ export default function App() {
   // Called by Quick Find / Recent — always fetches the route automatically
   async function selectDestinationWithRoute(dest) {
     if (!dest) return;
+    saveRecentDestination(dest);
     const destFloorId = dest.floor?.id ?? dest.floorId;
     const userFloorId = userLocation?.floor?.id ?? userLocation?.floorId;
     if (destFloorId && userFloorId && destFloorId !== userFloorId) {
