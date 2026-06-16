@@ -22,6 +22,8 @@ import type { NavigationGraph } from '../engine/graphBuilder';
 let graphCache: Map<string, NavigationGraph> = new Map(); // floorId → graph
 let globalGraph: NavigationGraph | null = null;           // full building graph
 
+const PIXELS_TO_METERS = 73.579 / 800;
+
 export async function buildGraphCache(prisma: PrismaClient): Promise<void> {
   console.log('[RoutingService] Building navigation graph cache...');
 
@@ -147,11 +149,18 @@ export async function getRoute(
   const pathGridCells: GridCell[] = pathNodes.map(n => ({ x: n.gridX, y: n.gridY }));
 
   // Calculate total distance
+
   let totalDistanceM = 0;
+
   for (let i = 1; i < pathNodes.length; i++) {
     const a = pathNodes[i - 1];
     const b = pathNodes[i];
-    totalDistanceM += Math.sqrt((b.realX - a.realX) ** 2 + (b.realY - a.realY) ** 2);
+
+    const pixelDistance = Math.sqrt(
+      (b.realX - a.realX) ** 2 +
+      (b.realY - a.realY) ** 2
+    );
+    totalDistanceM += pixelDistance * PIXELS_TO_METERS;
   }
 
   // Count floor changes
@@ -160,10 +169,12 @@ export async function getRoute(
 
   // Build turn-by-turn steps
   // Use floor scale for distance labels; default 1m per grid cell if no floor data
-  const floor = await prisma.floor.findUnique({ where: { id: fromRoom.floorId } });
-  const scaleX = floor?.scaleX ?? 1;
-  const scaleY = floor?.scaleY ?? 1;
-  const steps = buildRouteSteps(pathGridCells, scaleX, scaleY);
+
+  const steps = buildRouteSteps(
+    pathGridCells,
+    PIXELS_TO_METERS,
+    PIXELS_TO_METERS
+  );
 
   // Add floor change instructions
   const enrichedSteps = enrichWithFloorChanges(steps, pathNodes, graph);

@@ -18,8 +18,8 @@ const ROOM_COLOURS = {
 };
 
 const WALL_HEIGHT  = 2.7;     // outer boundary walls
-const ROOM_WALL_H  = 1.0;     // room partition walls — below eye level so camera clears them
-const EYE_HEIGHT   = 1.65;
+const ROOM_WALL_H  = 2.6;     // room partition walls — below eye level so camera clears them
+const EYE_HEIGHT   = 1.75;
 const WALK_SPEED   = 1.4;     // metres / second auto-advance along the path
 
 function makeLabelSprite(text, colorHex = "#0C447C", bgAlpha = 0.93) {
@@ -144,16 +144,27 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     // Floor + subtle grid lines for orientation
     const floorMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(widthM, heightM),
-      new THREE.MeshStandardMaterial({ color: 0xf2f3f5, roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: 0xd9dce1, roughness: 1.5 }),
     );
     floorMesh.rotation.x = -Math.PI / 2;
     scene.add(floorMesh);
 
     // No ceiling — open top view lets room labels and layout stay visible
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(widthM, heightM),
+      new THREE.MeshStandardMaterial({
+        color: 0xf8f8f8,
+        side: THREE.DoubleSide,
+      })
+    );
 
-    const gridHelper = new THREE.GridHelper(Math.max(widthM, heightM), Math.max(cols, rows), 0xdadfe5, 0xe9ecf0);
-    gridHelper.position.y = 0.01;
-    scene.add(gridHelper);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = WALL_HEIGHT;
+    scene.add(ceiling);
+
+    //const gridHelper = new THREE.GridHelper(Math.max(widthM, heightM), Math.max(cols, rows), 0xdadfe5, 0xe9ecf0);
+    //gridHelper.position.y = 0.01;
+    //scene.add(gridHelper);
 
     // ── Rooms: coloured floor slab + label (no walls — walls come from grid) ─
     const rooms = floorMap.rooms ?? [];
