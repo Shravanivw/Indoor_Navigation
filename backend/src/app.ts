@@ -10,6 +10,11 @@ import { createRouter } from './api/routes';
 
 export function createApp(prisma: PrismaClient) {
   const app = express();
+
+  app.get('/hello', (_req, res) => {
+    res.send('HELLO_FROM_APP_TS');
+  });
+
   const allowedOrigins = (
     process.env.FRONTEND_URLS
     ?? `${process.env.FRONTEND_URL ?? ''},http://localhost:5173,http://localhost:5174`
@@ -38,7 +43,9 @@ export function createApp(prisma: PrismaClient) {
   }));
 
   // ─── ROUTES ─────────────────────────────────────────────────────────────────
+  console.log("MOUNTING ROUTER");
   app.use('/api/v1', createRouter(prisma));
+  console.log("ROUTER MOUNTED");
 
   // ─── 404 ────────────────────────────────────────────────────────────────────
   app.use((_req, res) => {

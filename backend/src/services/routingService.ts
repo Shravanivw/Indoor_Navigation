@@ -120,6 +120,27 @@ export async function getRoute(
   if (!startNodeId) throw new Error(`No navigation node found for room: ${fromRoomId}`);
   if (!endNodeId)   throw new Error(`No navigation node found for room: ${toRoomId}`);
 
+  console.log("FROM ROOM:", fromRoomId);
+  console.log("TO ROOM:", toRoomId);
+
+  console.log("START NODE:", startNodeId);
+  console.log("END NODE:", endNodeId);
+
+  console.log(
+    "START ADJACENCY:",
+    graph.adjacency.get(startNodeId)?.length ?? 0
+  );
+
+  console.log(
+    "END ADJACENCY:",
+    graph.adjacency.get(endNodeId)?.length ?? 0
+  );
+
+  console.log(
+  "CAN REACH:",
+  canReach(startNodeId, endNodeId, graph.adjacency)
+);
+
   // Run A*
   const pathNodeIds = findRoute(
     graph.adjacency,
@@ -143,6 +164,35 @@ export async function getRoute(
       accessible: false,
     };
   }
+
+  function canReach(
+      startId: string,
+      endId: string,
+      adjacency: Map<string, any[]>
+    ): boolean {
+      const visited = new Set<string>();
+      const queue = [startId];
+
+      while (queue.length) {
+        const current = queue.shift()!;
+
+        if (current === endId) {
+          return true;
+        }
+
+        if (visited.has(current)) {
+          continue;
+        }
+
+        visited.add(current);
+
+        for (const edge of (adjacency.get(current) ?? [])) {
+          queue.push(edge.nodeId);
+        }
+      }
+
+      return false;
+    }
 
   // Build path details
   const pathNodes = pathNodeIds.map(id => graph.nodesById.get(id)!);

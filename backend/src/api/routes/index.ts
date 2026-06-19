@@ -8,11 +8,21 @@ import { getRoute, getRoomByQR } from '../../services/routingService';
 import { getFloorMap, getFloorGeometry, getAllFloors, searchRooms, getRoomById } from '../../services/mapService';
 import type { ApiResponse } from '../../types';
 
+console.log("ROUTES INDEX LOADED");
+
 const ok  = <T>(data: T): ApiResponse<T> => ({ success: true,  data, meta: { timestamp: new Date().toISOString() } });
 const err = (msg: string, code = 400) => ({ success: false, error: msg, meta: { timestamp: new Date().toISOString() } });
 
 export function createRouter(prisma: PrismaClient): Router {
   const router = Router();
+  router.get('/test', (_req, res) => {
+    console.log("TEST ROUTE HIT");
+    res.json({ working: true });
+  });
+
+  router.get('/test', (_req, res) => {
+    res.json({ working: true });
+  });
 
   // ─── HEALTH ─────────────────────────────────────────────────────────────────
 
