@@ -94,6 +94,9 @@ export interface RoomMapData {
   qrCode: string | null;
   capacity: number | null;
   isAccessible: boolean;
+  polygon?: Array<{ x: number; y: number }>;
+  doors?: Array<{ id: string; x: number; y: number; width?: number }>;
+  layoutSource?: string;
 }
 
 // ─── API RESPONSE TYPES ──────────────────────────────────────────────────────

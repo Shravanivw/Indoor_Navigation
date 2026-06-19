@@ -151,6 +151,12 @@ export async function getRoute(
   );
 
   if (!pathNodeIds) {
+    console.warn('[RoutingService] No route found between graph nodes', {
+      fromRoomId,
+      toRoomId,
+      startNodeId,
+      endNodeId,
+    });
     return {
       found: false,
       fromRoomId,

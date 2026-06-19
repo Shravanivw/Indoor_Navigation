@@ -50,7 +50,9 @@ export default function Search({ userLocation, floorId, buildings, buildingId, o
   }, [query, category, activeFloorId]);
 
   async function handleGetDirections(selectedRoom) {
-    if (!selectedRoom || !userLocation) return;
+    if (!selectedRoom || !userLocation) {
+      return;
+    }
     try {
       const res  = await fetch(`${API_BASE}/route`, {
         method:  "POST",

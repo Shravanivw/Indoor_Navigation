@@ -75,11 +75,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
             pathGridCells={pathGridCells}
             livePosition={null}
             heading={null}
-            rooms={
-              route && destination
-                ? (mapData?.rooms ?? []).filter(r => r.id === destination?.id)
-                : (mapData?.rooms ?? [])
-            }
+            rooms={mapData?.rooms ?? []}
             gridCols={mapData?.gridCols ?? 80}
             gridRows={mapData?.gridRows ?? 80}
           />

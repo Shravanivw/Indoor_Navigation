@@ -27,6 +27,41 @@ const shortLabel = (name, max = 14) => {
   return name.length <= max ? name : name.substring(0, max - 1) + "…";
 };
 
+const hasPolygonGeometry = (room) => Array.isArray(room?.polygon) && room.polygon.length >= 3;
+
+function getPolygonLabelAnchor(points) {
+  const sum = points.reduce(
+    (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
+    { x: 0, y: 0 }
+  );
+  return {
+    x: sum.x / points.length,
+    y: sum.y / points.length,
+  };
+}
+
+function getPolygonBounds(points) {
+  return points.reduce(
+    (bounds, point) => ({
+      minX: Math.min(bounds.minX, point.x),
+      maxX: Math.max(bounds.maxX, point.x),
+      minY: Math.min(bounds.minY, point.y),
+      maxY: Math.max(bounds.maxY, point.y),
+    }),
+    { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+  );
+}
+
+function getPolygonArea(points) {
+  let area = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    area += current.x * next.y - next.x * current.y;
+  }
+  return Math.abs(area) / 2;
+}
+
 /* Rounded pill label rendered in SVG coords. Anchor = "bottom" places the
    tip of the label just above (x, y); "top" places it just below. */
 function NameLabel({ x, y, text, bg, fg, anchor = "bottom" }) {
@@ -268,12 +303,33 @@ export default function FloorMap({
           const isSource      = userLocation?.id === room.id;
           const isHighlight   = isDestination || isSource;
 
+          const polygonPoints = hasPolygonGeometry(room)
+            ? room.polygon.map(point => ({ x: gx(point.x), y: gy(point.y) }))
+            : null;
+          const polygonLabelAnchor = polygonPoints
+            ? getPolygonLabelAnchor(polygonPoints)
+            : null;
+          const polygonBounds = polygonPoints
+            ? getPolygonBounds(polygonPoints)
+            : null;
+          const polygonArea = polygonPoints
+            ? getPolygonArea(polygonPoints)
+            : 0;
+
           const w = Math.max(2, (room.gridW ?? 4)) * sx;
           const h = Math.max(2, (room.gridH ?? 4)) * sy;
           const x = gx(room.gridX ?? 0);
           const y = gy(room.gridY ?? 0);
           const cx = x + w / 2;
           const cy = y + h / 2;
+          const labelWidth = polygonBounds ? polygonBounds.maxX - polygonBounds.minX : w;
+          const labelHeight = polygonBounds ? polygonBounds.maxY - polygonBounds.minY : h;
+          const showLabel = polygonPoints
+            ? polygonArea >= 700 && labelWidth >= 34 && labelHeight >= 18
+            : w > 22 && h > 12;
+          const textMax = polygonPoints
+            ? Math.max(8, Math.floor(labelWidth / 9))
+            : Math.max(7, Math.floor(w / 4));
 
           const stroke = isDestination
             ? "#2E7D32"
@@ -281,29 +337,74 @@ export default function FloorMap({
             ? "#1E5FB8"
             : colors.stroke;
           const strokeW = isHighlight ? 2.2 : 0.7;
+          const fillOpacity = room.type === "OPEN_WORKSPACE" ? 0.78 : 0.94;
 
           return (
             <g key={room.id}>
-              <rect
-                x={x} y={y}
-                width={w} height={h}
-                rx="3"
-                fill={colors.fill}
-                stroke={stroke}
-                strokeWidth={strokeW}
-                filter={isHighlight ? "url(#card-shadow)" : undefined}
-              />
-              {w > 22 && h > 12 && (
+              {polygonPoints ? (
+                <>
+                  <polygon
+                    points={polygonPoints.map(point => `${point.x},${point.y}`).join(" ")}
+                    fill="#FFFFFF"
+                    stroke="rgba(255,255,255,0.85)"
+                    strokeWidth={Math.max(1.4, strokeW + 1.4)}
+                    opacity="0.96"
+                    filter="url(#card-shadow)"
+                  />
+                  <polygon
+                    points={polygonPoints.map(point => `${point.x},${point.y}`).join(" ")}
+                    fill={colors.fill}
+                    fillOpacity={fillOpacity}
+                    stroke={stroke}
+                    strokeWidth={strokeW}
+                    filter={isHighlight ? "url(#card-shadow)" : undefined}
+                  />
+                  <polygon
+                    points={polygonPoints.map(point => `${point.x},${point.y}`).join(" ")}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.55)"
+                    strokeWidth="0.8"
+                    strokeLinejoin="round"
+                  />
+                  {(room.doors ?? []).map((door) => (
+                    <circle
+                      key={`${room.id}-door-${door.id}`}
+                      cx={gx(door.x)}
+                      cy={gy(door.y)}
+                      r={isHighlight ? 3.2 : 2.4}
+                      fill="#FFFFFF"
+                      stroke={stroke}
+                      strokeWidth="1.2"
+                    />
+                  ))}
+                </>
+              ) : (
+                <rect
+                  x={x} y={y}
+                  width={w} height={h}
+                  rx="3"
+                  fill={colors.fill}
+                  stroke={stroke}
+                  strokeWidth={strokeW}
+                  filter={isHighlight ? "url(#card-shadow)" : undefined}
+                />
+              )}
+              {showLabel && (
                 <text
-                  x={cx}
-                  y={cy + 2}
+                  x={polygonLabelAnchor?.x ?? cx}
+                  y={(polygonLabelAnchor?.y ?? cy) + 2}
                   textAnchor="middle"
-                  fontSize={Math.min(9, Math.max(5.5, w / 8))}
+                  fontSize={polygonPoints
+                    ? Math.min(10, Math.max(6, labelWidth / 8.5))
+                    : Math.min(9, Math.max(5.5, w / 8))}
                   fill={colors.text}
                   fontWeight={isHighlight ? 700 : 500}
+                  stroke="rgba(255,255,255,0.9)"
+                  strokeWidth="2.6"
+                  paintOrder="stroke fill"
                   style={{ pointerEvents: "none" }}
                 >
-                  {shortLabel(room.name, Math.max(7, Math.floor(w / 4)))}
+                  {shortLabel(room.name, textMax)}
                 </text>
               )}
             </g>

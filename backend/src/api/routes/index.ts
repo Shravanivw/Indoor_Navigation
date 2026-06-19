@@ -15,6 +15,7 @@ const err = (msg: string, code = 400) => ({ success: false, error: msg, meta: { 
 
 export function createRouter(prisma: PrismaClient): Router {
   const router = Router();
+  
   router.get('/test', (_req, res) => {
     console.log("TEST ROUTE HIT");
     res.json({ working: true });
@@ -253,6 +254,5 @@ export function createRouter(prisma: PrismaClient): Router {
       res.status(500).json(err(e.message));
     }
   });
-
   return router;
 }
