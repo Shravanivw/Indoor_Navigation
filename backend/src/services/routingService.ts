@@ -16,13 +16,46 @@ import type {
 import type { NavigationGraph } from '../engine/graphBuilder';
 
 // ─── GRAPH CACHE ──────────────────────────────────────────────────────────────
-// Graphs are built once at startup and cached in memory.
-// Call rebuildGraphCache() when the map data changes.
-
-let graphCache: Map<string, NavigationGraph> = new Map(); // floorId → graph
-let globalGraph: NavigationGraph | null = null;           // full building graph
+let graphCache: Map<string, NavigationGraph> = new Map();
+let globalGraph: NavigationGraph | null = null;
 
 const PIXELS_TO_METERS = 73.579 / 800;
+
+// ─── HUDSON FLOOR ROUTE GRAPH BOUNDS ─────────────────────────────────────────
+// seedManualGraph.ts stores Hudson corridor/POI nodes in manualGraph pixel
+// space, not in raw Hudson_5th.json DWG coordinates.
+const HUDSON_GRAPH_PIXELS = {
+  width: 800,
+  height: 500,
+};
+
+/**
+ * Normalise a manualGraph pixel coordinate (0..800 / 0..500)
+ * into the 0–gridCols / 0–gridRows space that FloorMap.jsx uses.
+ *
+ * FloorMap flips Y internally via gy(g) = PAD + (gridRows - g) * sy, so the
+ * value we store here must already be in the flipped (screen) orientation.
+ */
+function normaliseHudsonCell(
+  rawX: number,
+  rawY: number,
+  gridCols: number,
+  gridRows: number,
+): GridCell {
+  const { width, height } = HUDSON_GRAPH_PIXELS;
+  return {
+    x: (rawX / width) * gridCols,
+    y: gridRows - ((rawY / height) * gridRows),
+  };
+}
+
+/**
+ * Returns true when the floor is Hudson F5 — these nodes need normalisation
+ * because they are stored in raw DWG pixel space (0–5465), not grid space.
+ */
+function isHudsonFloor(floorId: string): boolean {
+  return floorId === 'floor-hudson-f5';
+}
 
 export async function buildGraphCache(prisma: PrismaClient): Promise<void> {
   console.log('[RoutingService] Building navigation graph cache...');
@@ -103,7 +136,6 @@ export async function getRoute(
     };
   }
 
-  // Get entry nodes for each room; fall back to nearest node when none is linked.
   const fromGridCols = fromRoom.floor?.gridCols ?? 80;
   const fromGridRows = fromRoom.floor?.gridRows ?? 80;
   const toGridCols   = toRoom.floor?.gridCols   ?? 80;
@@ -122,24 +154,11 @@ export async function getRoute(
 
   console.log("FROM ROOM:", fromRoomId);
   console.log("TO ROOM:", toRoomId);
-
   console.log("START NODE:", startNodeId);
   console.log("END NODE:", endNodeId);
-
-  console.log(
-    "START ADJACENCY:",
-    graph.adjacency.get(startNodeId)?.length ?? 0
-  );
-
-  console.log(
-    "END ADJACENCY:",
-    graph.adjacency.get(endNodeId)?.length ?? 0
-  );
-
-  console.log(
-  "CAN REACH:",
-  canReach(startNodeId, endNodeId, graph.adjacency)
-);
+  console.log("START ADJACENCY:", graph.adjacency.get(startNodeId)?.length ?? 0);
+  console.log("END ADJACENCY:", graph.adjacency.get(endNodeId)?.length ?? 0);
+  console.log("CAN REACH:", canReach(startNodeId, endNodeId, graph.adjacency));
 
   // Run A*
   const pathNodeIds = findRoute(
@@ -152,10 +171,7 @@ export async function getRoute(
 
   if (!pathNodeIds) {
     console.warn('[RoutingService] No route found between graph nodes', {
-      fromRoomId,
-      toRoomId,
-      startNodeId,
-      endNodeId,
+      fromRoomId, toRoomId, startNodeId, endNodeId,
     });
     return {
       found: false,
@@ -171,47 +187,25 @@ export async function getRoute(
     };
   }
 
-  function canReach(
-      startId: string,
-      endId: string,
-      adjacency: Map<string, any[]>
-    ): boolean {
-      const visited = new Set<string>();
-      const queue = [startId];
-
-      while (queue.length) {
-        const current = queue.shift()!;
-
-        if (current === endId) {
-          return true;
-        }
-
-        if (visited.has(current)) {
-          continue;
-        }
-
-        visited.add(current);
-
-        for (const edge of (adjacency.get(current) ?? [])) {
-          queue.push(edge.nodeId);
-        }
-      }
-
-      return false;
-    }
-
   // Build path details
   const pathNodes = pathNodeIds.map(id => graph.nodesById.get(id)!);
-  const pathGridCells: GridCell[] = pathNodes.map(n => ({ x: n.gridX, y: n.gridY }));
+
+  // ── COORDINATE NORMALISATION ────────────────────────────────────────────────
+  // Hudson graph nodes are stored in manualGraph pixel space (800x500). Convert
+  // them to the same grid space used by room polygons before sending them to UI.
+  const hudsonFloor = isHudsonFloor(fromRoom.floorId);
+  const pathGridCells: GridCell[] = pathNodes.map(n => {
+    if (hudsonFloor && n.type === 'CORRIDOR_JUNCTION') {
+      return normaliseHudsonCell(n.gridX, n.gridY, fromGridCols, fromGridRows);
+    }
+    return { x: n.gridX, y: n.gridY };
+  });
 
   // Calculate total distance
-
   let totalDistanceM = 0;
-
   for (let i = 1; i < pathNodes.length; i++) {
     const a = pathNodes[i - 1];
     const b = pathNodes[i];
-
     const pixelDistance = Math.sqrt(
       (b.realX - a.realX) ** 2 +
       (b.realY - a.realY) ** 2
@@ -223,19 +217,16 @@ export async function getRoute(
   const floorIds = pathNodes.map(n => n.floorId);
   const floorChanges = floorIds.filter((id, i) => i > 0 && id !== floorIds[i - 1]).length;
 
-  // Build turn-by-turn steps
-  // Use floor scale for distance labels; default 1m per grid cell if no floor data
-
+  // Build turn-by-turn steps using normalised cells so distances are meaningful
   const steps = buildRouteSteps(
     pathGridCells,
     PIXELS_TO_METERS,
     PIXELS_TO_METERS
   );
 
-  // Add floor change instructions
   const enrichedSteps = enrichWithFloorChanges(steps, pathNodes, graph);
 
-  // Persist the session (best-effort — don't fail the request if persistence errors)
+  // Persist session (best-effort)
   try {
     await prisma.navSession.create({
       data: {
@@ -264,24 +255,53 @@ export async function getRoute(
   };
 }
 
+function canReach(
+  startId: string,
+  endId: string,
+  adjacency: Map<string, any[]>
+): boolean {
+  const visited = new Set<string>();
+  const queue = [startId];
+  while (queue.length) {
+    const current = queue.shift()!;
+    if (current === endId) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    for (const edge of (adjacency.get(current) ?? [])) {
+      queue.push(edge.nodeId);
+    }
+  }
+  return false;
+}
+
 // When a room has no directly linked navigation node, find the nearest one on
-// the same floor. Hudson nodes use pixel coords (0-800, 0-500) while rooms use
-// grid coords (0-gridCols, 0-gridRows) — normalise before comparing.
+// the same floor. Hudson nodes use raw DWG pixel coords so we normalise before
+// comparing against the room's grid coords.
 function findNearestNode(
   graph: NavigationGraph,
   room: { gridX: number; gridY: number; floorId: string },
   gridCols: number,
   gridRows: number,
 ): string | null {
-  const FLOOR_PX_W = 800;
-  const FLOOR_PX_H = 500;
+  const hudson = isHudsonFloor(room.floorId);
   let bestId: string | null = null;
   let bestDist = Infinity;
 
   for (const [nodeId, node] of graph.nodesById) {
     if (node.floorId !== room.floorId) continue;
-    const nx = node.gridX > gridCols ? (node.gridX / FLOOR_PX_W) * gridCols : node.gridX;
-    const ny = node.gridY > gridRows ? (node.gridY / FLOOR_PX_H) * gridRows : node.gridY;
+
+    let nx: number;
+    let ny: number;
+    if (hudson && node.type === 'CORRIDOR_JUNCTION') {
+      // Normalise raw DWG coords to grid space so they're comparable to room.gridX/Y
+      const cell = normaliseHudsonCell(node.gridX, node.gridY, gridCols, gridRows);
+      nx = cell.x;
+      ny = cell.y;
+    } else {
+      nx = node.gridX;
+      ny = node.gridY;
+    }
+
     const dist = Math.hypot(room.gridX - nx, room.gridY - ny);
     if (dist < bestDist) {
       bestDist = dist;
@@ -296,9 +316,7 @@ function enrichWithFloorChanges(
   pathNodes: GraphNode[],
   graph: NavigationGraph
 ): any[] {
-  // Insert staircase/lift instructions where floor changes
   const enriched = [...steps];
-  // Future: detect STAIRCASE_LANDING and LIFT_LOBBY node types and insert steps
   return enriched;
 }
 

@@ -139,10 +139,12 @@ function projectHudsonLayoutRooms(
     layoutRooms.map((room) => [normaliseRoomName(room.id), room])
   );
 
-  return rooms.map((room) => {
+  return rooms
+    .map((room) => {
     const layout = roomByName.get(normaliseRoomName(room.name));
     if (!layout || !Array.isArray(layout.polygon) || layout.polygon.length < 3) {
-      return room;
+      // Hudson map should be driven by Hudson_5th.json only.
+      return null;
     }
 
     const xs = layout.polygon.map((point) => point.x);
@@ -151,15 +153,17 @@ function projectHudsonLayoutRooms(
     const right = ((Math.max(...xs) - minX) / spanX) * gridCols;
     const top = ((Math.min(...ys) - minY) / spanY) * gridRows;
     const bottom = ((Math.max(...ys) - minY) / spanY) * gridRows;
+    const projectedTop = gridRows - bottom;
+    const projectedBottom = gridRows - top;
 
     return {
       ...room,
       gridX: Math.round(left),
-      gridY: Math.round(bottom),
+      gridY: Math.round(projectedBottom),
       gridW: Math.max(2, Math.round(right - left)),
-      gridH: Math.max(2, Math.round(bottom - top)),
+      gridH: Math.max(2, Math.round(projectedBottom - projectedTop)),
       centreX: (left + right) / 2,
-      centreY: (top + bottom) / 2,
+      centreY: (projectedTop + projectedBottom) / 2,
       polygon: layout.polygon.map((point) => ({
         x: ((point.x - minX) / spanX) * gridCols,
         y: gridRows - (((point.y - minY) / spanY) * gridRows),
@@ -172,7 +176,8 @@ function projectHudsonLayoutRooms(
       })),
       layoutSource: 'Hudson_5th.json',
     };
-  });
+  })
+    .filter((room): room is RoomMapData => room !== null);
 }
 
 export async function getFloorGeometry(prisma: PrismaClient, floorId: string): Promise<FloorGeometryData | null> {

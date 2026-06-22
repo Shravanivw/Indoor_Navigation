@@ -32,18 +32,43 @@ interface ManualEdge {
   to: string;
 }
 
-interface POI {
-  id: string;
-  name: string;
+interface LayoutPoint {
   x: number;
   y: number;
-  nearestNode: string;
+}
+
+interface LayoutDoor extends LayoutPoint {
+  id: string;
+  width?: number;
+}
+
+interface LayoutRoom {
+  id: string;
+  type?: string;
+  polygon: LayoutPoint[];
+  doors?: LayoutDoor[];
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function euclidean(ax: number, ay: number, bx: number, by: number): number {
   return Math.round(Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2) * 10) / 10;
+}
+
+function normaliseRoomName(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function projectPoint(
+  point: LayoutPoint,
+  bounds: { minX: number; minY: number; spanX: number; spanY: number },
+  width: number,
+  height: number,
+) {
+  return {
+    x: ((point.x - bounds.minX) / bounds.spanX) * width,
+    y: height - (((point.y - bounds.minY) / bounds.spanY) * height),
+  };
 }
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
@@ -53,47 +78,29 @@ export async function seedHudsonManualGraph(prisma: PrismaClient): Promise<void>
 
   const FLOOR_ID = 'floor-hudson-f5';
 
-  // ── Step 0: Ensure POI-only rooms exist ──────────────────────────────────────
-// These destinations exist physically on the floor but have no room record
-// in nav_hudson_f5.json. We create minimal room records so the routing
-// service can resolve them to nodes via roomId.
+  const layoutPath = path.resolve(__dirname, '../src/data/Hudson_5th.json');
+  const layoutData = JSON.parse(fs.readFileSync(layoutPath, 'utf-8')) as { rooms?: LayoutRoom[] };
+  const layoutRooms = Array.isArray(layoutData.rooms) ? layoutData.rooms : [];
 
-const poiRooms = [
-  { id: 'room-h5-cafeteria',            code: 'HUDSON_CAFETERIA',              name: 'Cafeteria',              gridX: 34, gridY: 34, gridW: 1, gridH: 1, centreX: 337, centreY: 340 },
-  { id: 'room-h5-it_bar',               code: 'HUDSON_IT_BAR',                 name: 'IT Bar',                 gridX: 14, gridY: 29, gridW: 1, gridH: 1, centreX: 144, centreY: 293 },
-  { id: 'room-h5-recreational_room',    code: 'HUDSON_RECREATIONAL_ROOM',      name: 'Recreational Room',      gridX: 73, gridY: 28, gridW: 1, gridH: 1, centreX: 739, centreY: 283 },
-  { id: 'room-h5-executive_dining_room',code: 'HUDSON_EXECUTIVE_DINING_ROOM',  name: 'Executive Dining Room',  gridX: 9,  gridY: 39, gridW: 1, gridH: 1, centreX: 95,  centreY: 390 },
-  { id: 'room-h5-fire_exit_1',          code: 'HUDSON_FIRE_EXIT_1',            name: 'Fire Exit 1',            gridX: 48, gridY: 32, gridW: 1, gridH: 1, centreX: 483, centreY: 321 },
-  { id: 'room-h5-training_room',        code: 'HUDSON_TRAINING_ROOM',          name: 'Training Room',          gridX: 45, gridY: 39, gridW: 1, gridH: 1, centreX: 454, centreY: 390 },
-  { id: 'room-h5-innovation_lab',       code: 'HUDSON_INNOVATION_LAB',         name: 'Innovation Lab',         gridX: 59, gridY: 10, gridW: 1, gridH: 1, centreX: 594, centreY: 103 },
-  { id: 'room-h5-fire_exit_2',          code: 'HUDSON_FIRE_EXIT_2',            name: 'Fire Exit 2',            gridX: 64, gridY: 10, gridW: 1, gridH: 1, centreX: 640, centreY: 103 },
-  { id: 'room-h5-aws_room',             code: 'HUDSON_AWS_ROOM',               name: 'AWS Room',               gridX: 2,  gridY: 16, gridW: 1, gridH: 1, centreX: 22,  centreY: 164 },
-  { id: 'room-h5-vending_machine',      code: 'HUDSON_VENDING_MACHINE',        name: 'Vending Machine',        gridX: 73, gridY: 36, gridW: 1, gridH: 1, centreX: 739, centreY: 360 },
-  { id: 'room-h5-board_room',           code: 'HUDSON_BOARD_ROOM',             name: 'Board Room',             gridX: 27, gridY: 5,  gridW: 1, gridH: 1, centreX: 277, centreY: 58  },
-];
+  const allLayoutPoints = layoutRooms.flatMap((room) => [
+    ...(room.polygon ?? []),
+    ...(room.doors ?? []),
+  ]);
 
-for (const r of poiRooms) {
-  await prisma.room.upsert({
-    where: { code: r.code },
-    create: {
-      id:           r.id,
-      floorId:      FLOOR_ID,
-      code:         r.code,
-      name:         r.name,
-      type:         'OTHER',
-      gridX:        r.gridX,
-      gridY:        r.gridY,
-      gridW:        r.gridW,
-      gridH:        r.gridH,
-      centreX:      r.centreX,
-      centreY:      r.centreY,
-      qrCode:       `LOC-H5-${r.code.replace('HUDSON_', '')}`,
-      isAccessible: true,
-    },
-    update: { name: r.name },
-  });
-}
-console.log(`  POI-only rooms ensured: ${poiRooms.length}`);
+  if (allLayoutPoints.length === 0) {
+    throw new Error('Hudson_5th.json does not contain any geometry points');
+  }
+
+  const bounds = {
+    minX: Math.min(...allLayoutPoints.map((point) => point.x)),
+    minY: Math.min(...allLayoutPoints.map((point) => point.y)),
+    spanX: Math.max(1, Math.max(...allLayoutPoints.map((point) => point.x)) - Math.min(...allLayoutPoints.map((point) => point.x))),
+    spanY: Math.max(1, Math.max(...allLayoutPoints.map((point) => point.y)) - Math.min(...allLayoutPoints.map((point) => point.y))),
+  };
+
+  const roomLayoutByName = new Map(
+    layoutRooms.map((room) => [normaliseRoomName(room.id), room])
+  );
 
   // ── Step 1: Delete old auto-generated nodes and edges ─────────────────────
   // Edges must be deleted before nodes (foreign key constraint)
@@ -182,108 +189,121 @@ console.log(`  POI-only rooms ensured: ${poiRooms.length}`);
   }
   console.log(`  Edges seeded.`);
 
-// ── Step 4: Seed POIs as ROOM_ENTRY nodes linked to rooms ─────────────────
-const pois: POI[] = graph.pois;
+  // ── Step 4: Seed ROOM_ENTRY nodes from Hudson_5th door coordinates ───────
+  const allHudsonRooms = await prisma.room.findMany({
+    where: { floorId: FLOOR_ID },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      centreX: true,
+      centreY: true,
+    },
+  });
 
-// Build a lookup: normalised name → room id, from what seed.ts actually creates.
-// seed.ts creates room IDs as: room-h5-${r.code.toLowerCase()}
-// and room codes as: HUDSON_${r.code}
-// The rooms table has a `code` column — use that for exact matching.
-const allHudsonRooms = await prisma.room.findMany({
-  where: { floorId: FLOOR_ID },
-  select: { id: true, name: true, code: true },
-});
+  console.log(`  Seeding ${allHudsonRooms.length} room entry nodes from Hudson_5th doors...`);
+  let roomEntryCount = 0;
 
-// Normalise for loose matching: lowercase, strip spaces/punctuation
-const normalise = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  for (const room of allHudsonRooms) {
+    const layoutRoom = roomLayoutByName.get(normaliseRoomName(room.name));
 
-const roomByNormName = new Map<string, string>();
-const roomByCode     = new Map<string, string>();
-for (const r of allHudsonRooms) {
-  roomByNormName.set(normalise(r.name), r.id);
-  roomByCode.set(r.code.toLowerCase(), r.id);
-}
+    let doorPoint: LayoutPoint | null = null;
+    if (layoutRoom?.doors && layoutRoom.doors.length > 0) {
+      doorPoint = layoutRoom.doors[0];
+    } else if (layoutRoom?.polygon && layoutRoom.polygon.length > 0) {
+      const avg = layoutRoom.polygon.reduce(
+        (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
+        { x: 0, y: 0 },
+      );
+      doorPoint = {
+        x: avg.x / layoutRoom.polygon.length,
+        y: avg.y / layoutRoom.polygon.length,
+      };
+    }
 
-console.log(`  Seeding ${pois.length} POI nodes...`);
-for (const poi of pois) {
-  const poiDbId = `manual-poi-${poi.id}-hudson-f5`;
+    if (!doorPoint) {
+      console.warn(`  [WARN] No Hudson_5th geometry for room \"${room.name}\"; skipping entry node.`);
+      continue;
+    }
 
-  // Try exact code match first (most reliable), then normalised name
-  const hudsonCode = `hudson_${normalise(poi.name)}`;
-  const roomId =
-    roomByCode.get(hudsonCode) ??
-    roomByNormName.get(normalise(poi.name)) ??
-    null;
+    const gridPoint = projectPoint(doorPoint, bounds, 80, 80);
+    const pixelPoint = projectPoint(doorPoint, bounds, 800, 500);
 
-  if (!roomId) {
-    console.warn(`  [WARN] No room found for POI "${poi.name}" — node will have roomId=null`);
-  } else {
-    console.log(`  [OK]   POI "${poi.name}" → room ${roomId}`);
+    const roomNodeId = `room-entry-${room.id}`;
+    await prisma.node.upsert({
+      where: { id: roomNodeId },
+      create: {
+        id: roomNodeId,
+        floorId: FLOOR_ID,
+        roomId: room.id,
+        gridX: Math.round(gridPoint.x),
+        gridY: Math.round(gridPoint.y),
+        realX: pixelPoint.x,
+        realY: pixelPoint.y,
+        type: 'ROOM_ENTRY',
+        label: room.name,
+      },
+      update: {
+        roomId: room.id,
+        gridX: Math.round(gridPoint.x),
+        gridY: Math.round(gridPoint.y),
+        realX: pixelPoint.x,
+        realY: pixelPoint.y,
+        label: room.name,
+      },
+    });
+
+    let nearestNode: ManualNode | null = null;
+    let nearestDistance = Infinity;
+    for (const corridorNode of nodes) {
+      const distance = euclidean(pixelPoint.x, pixelPoint.y, corridorNode.x, corridorNode.y);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestNode = corridorNode;
+      }
+    }
+
+    if (!nearestNode) {
+      console.warn(`  [WARN] No corridor node found for room \"${room.name}\".`);
+      continue;
+    }
+
+    const nearestDbId = nodeIdMap[nearestNode.id];
+    const edgeBase = `${roomNodeId}-to-${nearestNode.id.toLowerCase()}`;
+
+    await prisma.edge.upsert({
+      where: { id: `room-link-${edgeBase}` },
+      create: {
+        id: `room-link-${edgeBase}`,
+        fromNodeId: roomNodeId,
+        toNodeId: nearestDbId,
+        weight: nearestDistance,
+        isAccessible: true,
+        isBidirectional: true,
+      },
+      update: { weight: nearestDistance },
+    });
+
+    await prisma.edge.upsert({
+      where: { id: `room-link-${nearestNode.id.toLowerCase()}-to-${roomNodeId}` },
+      create: {
+        id: `room-link-${nearestNode.id.toLowerCase()}-to-${roomNodeId}`,
+        fromNodeId: nearestDbId,
+        toNodeId: roomNodeId,
+        weight: nearestDistance,
+        isAccessible: true,
+        isBidirectional: true,
+      },
+      update: { weight: nearestDistance },
+    });
+
+    roomEntryCount += 1;
   }
-
-  await prisma.node.upsert({
-    where: { id: poiDbId },
-    create: {
-      id:      poiDbId,
-      floorId: FLOOR_ID,
-      roomId,
-      gridX:   poi.x,
-      gridY:   poi.y,
-      realX:   poi.x,
-      realY:   poi.y,
-      type:    'ROOM_ENTRY',
-      label:   poi.name,
-    },
-    update: {
-      roomId,          // ← was missing before; re-seed now fixes it
-      gridX: poi.x,
-      gridY: poi.y,
-      realX: poi.x,
-      realY: poi.y,
-      label: poi.name,
-    },
-  });
-  nodeIdMap[poi.id] = poiDbId;
-
-  // Connect POI node to its nearest graph node
-  const nearestNode = nodesById[poi.nearestNode];
-  const nearestDbId = nodeIdMap[poi.nearestNode];
-  const poiWeight   = euclidean(poi.x, poi.y, nearestNode.x, nearestNode.y);
-
-  const poiFwdId = `manual-edge-${poi.id}-to-${poi.nearestNode.toLowerCase()}`;
-  await prisma.edge.upsert({
-    where: { id: poiFwdId },
-    create: {
-      id:              poiFwdId,
-      fromNodeId:      poiDbId,
-      toNodeId:        nearestDbId,
-      weight:          poiWeight,
-      isAccessible:    true,
-      isBidirectional: true,
-    },
-    update: { weight: poiWeight },
-  });
-
-  const poiRevId = `manual-edge-${poi.nearestNode.toLowerCase()}-to-${poi.id}`;
-  await prisma.edge.upsert({
-    where: { id: poiRevId },
-    create: {
-      id:              poiRevId,
-      fromNodeId:      nearestDbId,
-      toNodeId:        poiDbId,
-      weight:          poiWeight,
-      isAccessible:    true,
-      isBidirectional: true,
-    },
-    update: { weight: poiWeight },
-  });
-}
-console.log(`  POI nodes seeded.`);
+  console.log(`  Room entry nodes seeded: ${roomEntryCount}`);
 
   console.log('\n✓ Manual graph seeded successfully.');
-  console.log(`  Nodes:  ${nodes.length} graph + ${pois.length} POI = ${nodes.length + pois.length} total`);
-  console.log(`  Edges:  ${edges.length * 2} corridor + ${pois.length * 2} POI connector`);
+  console.log(`  Nodes:  ${nodes.length} graph + ${roomEntryCount} room entry = ${nodes.length + roomEntryCount} total`);
+  console.log(`  Edges:  ${edges.length * 2} corridor + ${roomEntryCount * 2} room connectors`);
 }
 
 async function main() {
