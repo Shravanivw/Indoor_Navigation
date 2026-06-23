@@ -247,6 +247,13 @@ async function main() {
     },
   });
 
+  // Hudson floor uses a fixed 80x80 display grid with computed scale factors
+  const isHudsonEditor = options.floorId === 'floor-hudson-f5';
+  const displayGridCols = isHudsonEditor ? 80 : Math.ceil(floorBounds.maxX);
+  const displayGridRows = isHudsonEditor ? 80 : Math.ceil(floorBounds.maxY);
+  const displayScaleX = isHudsonEditor ? 0.9197 : 1;
+  const displayScaleY = isHudsonEditor ? 0.5951 : 1;
+
   const floor = await prisma.floor.upsert({
     where: {
       buildingId_level: {
@@ -259,17 +266,19 @@ async function main() {
       buildingId: building.id,
       level: options.level,
       name: options.floorName,
-      gridCols: Math.ceil(floorBounds.maxX),
-      gridRows: Math.ceil(floorBounds.maxY),
-      scaleX: 1,
-      scaleY: 1,
+      gridCols: displayGridCols,
+      gridRows: displayGridRows,
+      scaleX: displayScaleX,
+      scaleY: displayScaleY,
       widthM: floorBounds.width,
       heightM: floorBounds.height,
     },
     update: {
       name: options.floorName,
-      gridCols: Math.ceil(floorBounds.maxX),
-      gridRows: Math.ceil(floorBounds.maxY),
+      gridCols: displayGridCols,
+      gridRows: displayGridRows,
+      scaleX: displayScaleX,
+      scaleY: displayScaleY,
       widthM: floorBounds.width,
       heightM: floorBounds.height,
     },
@@ -277,6 +286,15 @@ async function main() {
 
   if (options.replaceGraph) {
     console.log('  Clearing existing floor graph...');
+    // Delete navigation sessions that reference rooms on this floor
+    await prisma.navSession.deleteMany({
+      where: {
+        OR: [
+          { fromRoom: { floorId: floor.id } },
+          { toRoom: { floorId: floor.id } },
+        ],
+      },
+    });
     await prisma.edge.deleteMany({
       where: {
         OR: [
@@ -286,6 +304,11 @@ async function main() {
       },
     });
     await prisma.node.deleteMany({ where: { floorId: floor.id } });
+    await prisma.room.deleteMany({
+      where: {
+        floorId: floor.id
+      }
+    });
   }
 
   const roomIdMap = new Map<string, string>();

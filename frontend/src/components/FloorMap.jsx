@@ -183,17 +183,8 @@ export default function FloorMap({
   const gx = (g) => PAD + g * sx;
   const gy = (g) => PAD + (gridRows - g) * sy;
 
-  const FLOOR_PX_W = 800;
-  const FLOOR_PX_H = 500;
-  const pathIsPixelSpace = pathGridCells.some(
-    p => p.x > gridCols || p.y > gridRows
-  );
-  const px = pathIsPixelSpace
-    ? (v) => PAD + (v / FLOOR_PX_W) * innerW
-    : (v) => PAD + v * sx;
-  const py = pathIsPixelSpace
-    ? (v) => PAD + (1 - v / FLOOR_PX_H) * innerH
-    : (v) => PAD + (gridRows - v) * sy;
+  const px = (v) => PAD + v * sx;
+  const py = (v) => PAD + (gridRows - v) * sy;
 
   /* ─── Path geometry ────────────────────────────────────────────────────── */
   const hasPath = pathGridCells.length > 1;
@@ -202,14 +193,6 @@ export default function FloorMap({
     : null;
   const startPoint = pathGridCells[0];
   const endPoint   = pathGridCells[pathGridCells.length - 1];
-
-  /* Calculate total polyline length for the animated dash effect */
-  let totalLen = 0;
-  for (let i = 1; i < pathGridCells.length; i++) {
-    const dx = (pathGridCells[i].x - pathGridCells[i - 1].x) / FLOOR_PX_W * innerW;
-    const dy = (pathGridCells[i].y - pathGridCells[i - 1].y) / FLOOR_PX_H * innerH;
-    totalLen += Math.sqrt(dx * dx + dy * dy);
-  }
 
   /* ─── Render ─────────────────────────────────────────────────────── */
   return (
@@ -424,7 +407,7 @@ export default function FloorMap({
           </text>
         )}
 
-        {/* Route path — uses pixel coordinates (px/py) */}
+        {/* Route path — uses normalized grid coordinates (px/py) */}
         {hasPath && (
           <g>
             {/* Soft glow */}

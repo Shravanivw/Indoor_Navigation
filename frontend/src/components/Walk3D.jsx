@@ -126,14 +126,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       z: gy * scaleY - czOffset,
     });
 
-    // Hudson's manual graph stores pixel coords (0-800, 0-500) while the scene
-    // uses grid coords (0-cols, 0-rows). Normalise once so path aligns with rooms.
-    const FLOOR_PX_W = 800;
-    const FLOOR_PX_H = 500;
-    const pathIsPixelSpace = pathGridCells.some(c => c.x > cols || c.y > rows);
-    const normPath = pathIsPixelSpace
-      ? pathGridCells.map(c => ({ x: (c.x / FLOOR_PX_W) * cols, y: (c.y / FLOOR_PX_H) * rows }))
-      : pathGridCells;
+    const normPath = pathGridCells;
 
     // Pre-calculate destination world position from last path node so rooms
     // can use it before pathPoints array is built further down.

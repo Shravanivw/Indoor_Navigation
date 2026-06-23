@@ -19,33 +19,53 @@ import type { NavigationGraph } from '../engine/graphBuilder';
 let graphCache: Map<string, NavigationGraph> = new Map();
 let globalGraph: NavigationGraph | null = null;
 
-const PIXELS_TO_METERS = 73.579 / 800;
-
 // ─── HUDSON FLOOR ROUTE GRAPH BOUNDS ─────────────────────────────────────────
-// seedManualGraph.ts stores Hudson corridor/POI nodes in manualGraph pixel
-// space, not in raw Hudson_5th.json DWG coordinates.
-const HUDSON_GRAPH_PIXELS = {
-  width: 800,
-  height: 500,
+// The editor-generated Hudson graph uses raw pixel coordinates in the
+// Hudson_5th.json coordinate space (approx 646..5465 x 884..4123). The map
+// display uses a projected 80x80 grid from nav_hudson_f5.json.
+const HUDSON_EDITOR_PX_BOUNDS = {
+  minX: 646,
+  minY: 884,
+  width: 4819,
+  height: 3239,
 };
 
+const HUDSON_DISPLAY_GRID = {
+  cols: 80,
+  rows: 80,
+};
+
+const HUDSON_DISPLAY_SCALE = {
+  x: 0.9197,
+  y: 0.5951,
+};
+
+function getFloorScale(floorId: string, scaleX?: number | null, scaleY?: number | null) {
+  if (isHudsonFloor(floorId)) {
+    return HUDSON_DISPLAY_SCALE;
+  }
+  return {
+    x: scaleX ?? 1,
+    y: scaleY ?? 1,
+  };
+}
+
 /**
- * Normalise a manualGraph pixel coordinate (0..800 / 0..500)
- * into the 0–gridCols / 0–gridRows space that FloorMap.jsx uses.
- *
- * FloorMap flips Y internally via gy(g) = PAD + (gridRows - g) * sy, so the
- * value we store here must already be in the flipped (screen) orientation.
+ * Normalise a raw Hudson editor coordinate into the projected 80x80 map grid.
  */
 function normaliseHudsonCell(
   rawX: number,
   rawY: number,
   gridCols: number,
   gridRows: number,
+  minX: number,
+  minY: number,
+  width: number,
+  height: number,
 ): GridCell {
-  const { width, height } = HUDSON_GRAPH_PIXELS;
   return {
-    x: (rawX / width) * gridCols,
-    y: gridRows - ((rawY / height) * gridRows),
+    x: ((rawX - minX) / width) * gridCols,
+    y: gridRows - (((rawY - minY) / height) * gridRows),
   };
 }
 
@@ -62,6 +82,10 @@ export async function buildGraphCache(prisma: PrismaClient): Promise<void> {
 
   const nodes = await prisma.node.findMany();
   const edges = await prisma.edge.findMany();
+  console.log(
+    "ALL NODE IDS:",
+    nodes.map(n => n.id)
+  );
 
   const graphNodes: GraphNode[] = nodes.map(n => ({
     id: n.id,
@@ -191,26 +215,45 @@ export async function getRoute(
   const pathNodes = pathNodeIds.map(id => graph.nodesById.get(id)!);
 
   // ── COORDINATE NORMALISATION ────────────────────────────────────────────────
-  // Hudson graph nodes are stored in manualGraph pixel space (800x500). Convert
-  // them to the same grid space used by room polygons before sending them to UI.
+  // Hudson editor graph nodes are stored in raw Hudson pixel space, but the UI
+  // floor map is rendered on the projected 80x80 Hudson grid.
   const hudsonFloor = isHudsonFloor(fromRoom.floorId);
+  const targetGridCols = hudsonFloor ? HUDSON_DISPLAY_GRID.cols : fromGridCols;
+  const targetGridRows = hudsonFloor ? HUDSON_DISPLAY_GRID.rows : fromGridRows;
   const pathGridCells: GridCell[] = pathNodes.map(n => {
-    if (hudsonFloor && n.type === 'CORRIDOR_JUNCTION') {
-      return normaliseHudsonCell(n.gridX, n.gridY, fromGridCols, fromGridRows);
+    if (hudsonFloor) {
+      return normaliseHudsonCell(
+        n.gridX,
+        n.gridY,
+        targetGridCols,
+        targetGridRows,
+        HUDSON_EDITOR_PX_BOUNDS.minX,
+        HUDSON_EDITOR_PX_BOUNDS.minY,
+        HUDSON_EDITOR_PX_BOUNDS.width,
+        HUDSON_EDITOR_PX_BOUNDS.height,
+      );
     }
     return { x: n.gridX, y: n.gridY };
   });
 
-  // Calculate total distance
+  console.log('[RoutingService] Route found:', {
+    pathNodeCount: pathNodeIds.length,
+    pathGridCellsCount: pathGridCells.length,
+    firstCell: pathGridCells[0],
+    lastCell: pathGridCells[pathGridCells.length - 1],
+  });
+
+  const scale = getFloorScale(fromRoom.floorId, fromRoom.floor?.scaleX, fromRoom.floor?.scaleY);
+
+  // Calculate total distance in metres using the normalized route coordinates.
   let totalDistanceM = 0;
-  for (let i = 1; i < pathNodes.length; i++) {
-    const a = pathNodes[i - 1];
-    const b = pathNodes[i];
-    const pixelDistance = Math.sqrt(
-      (b.realX - a.realX) ** 2 +
-      (b.realY - a.realY) ** 2
+  for (let i = 1; i < pathGridCells.length; i++) {
+    const a = pathGridCells[i - 1];
+    const b = pathGridCells[i];
+    totalDistanceM += Math.sqrt(
+      ((b.x - a.x) * scale.x) ** 2 +
+      ((b.y - a.y) * scale.y) ** 2
     );
-    totalDistanceM += pixelDistance * PIXELS_TO_METERS;
   }
 
   // Count floor changes
@@ -220,8 +263,8 @@ export async function getRoute(
   // Build turn-by-turn steps using normalised cells so distances are meaningful
   const steps = buildRouteSteps(
     pathGridCells,
-    PIXELS_TO_METERS,
-    PIXELS_TO_METERS
+    scale.x,
+    scale.y
   );
 
   const enrichedSteps = enrichWithFloorChanges(steps, pathNodes, graph);
@@ -292,9 +335,17 @@ function findNearestNode(
 
     let nx: number;
     let ny: number;
-    if (hudson && node.type === 'CORRIDOR_JUNCTION') {
-      // Normalise raw DWG coords to grid space so they're comparable to room.gridX/Y
-      const cell = normaliseHudsonCell(node.gridX, node.gridY, gridCols, gridRows);
+    if (hudson) {
+      const cell = normaliseHudsonCell(
+        node.gridX,
+        node.gridY,
+        gridCols,
+        gridRows,
+        HUDSON_EDITOR_PX_BOUNDS.minX,
+        HUDSON_EDITOR_PX_BOUNDS.minY,
+        HUDSON_EDITOR_PX_BOUNDS.width,
+        HUDSON_EDITOR_PX_BOUNDS.height,
+      );
       nx = cell.x;
       ny = cell.y;
     } else {
