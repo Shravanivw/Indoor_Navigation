@@ -65,6 +65,8 @@ type ImportOptions = {
   floorName: string;
   qrPrefix: string;
   replaceGraph: boolean;
+  realWidthM: number | null;
+  realHeightM: number | null;
 };
 
 const prisma = new PrismaClient();
@@ -98,6 +100,8 @@ function readOptions(): ImportOptions {
     floorName: getArg('--floor-name', `${level}th Floor`)!,
     qrPrefix: getArg('--qr-prefix', `LOC-${level}`)!,
     replaceGraph: !hasFlag('--keep-existing-graph'),
+    realWidthM: parseFloat(getArg('--real-width-m', '0') ?? '0') || null,
+    realHeightM: parseFloat(getArg('--real-height-m', '0') ?? '0') || null,
   };
 }
 
@@ -247,13 +251,6 @@ async function main() {
     },
   });
 
-  // Hudson floor uses a fixed 80x80 display grid with computed scale factors
-  const isHudsonEditor = options.floorId === 'floor-hudson-f5';
-  const displayGridCols = isHudsonEditor ? 80 : Math.ceil(floorBounds.maxX);
-  const displayGridRows = isHudsonEditor ? 80 : Math.ceil(floorBounds.maxY);
-  const displayScaleX = isHudsonEditor ? 0.9197 : 1;
-  const displayScaleY = isHudsonEditor ? 0.5951 : 1;
-
   const floor = await prisma.floor.upsert({
     where: {
       buildingId_level: {
@@ -266,35 +263,33 @@ async function main() {
       buildingId: building.id,
       level: options.level,
       name: options.floorName,
-      gridCols: displayGridCols,
-      gridRows: displayGridRows,
-      scaleX: displayScaleX,
-      scaleY: displayScaleY,
+      gridCols: Math.ceil(floorBounds.maxX),
+      gridRows: Math.ceil(floorBounds.maxY),
+      // scaleX/scaleY are metres-per-layout-unit for real-world distance calculations.
+      // If --real-width-m and --real-height-m are supplied, compute them correctly.
+      // Otherwise default to 1 (layout units treated as metres — distances will be wrong).
+      scaleX: options.realWidthM ? options.realWidthM / floorBounds.width : 1,
+      scaleY: options.realHeightM ? options.realHeightM / floorBounds.height : 1,
       widthM: floorBounds.width,
       heightM: floorBounds.height,
+      realWidthM: options.realWidthM ?? floorBounds.width,
+      realHeightM: options.realHeightM ?? floorBounds.height,
     },
     update: {
       name: options.floorName,
-      gridCols: displayGridCols,
-      gridRows: displayGridRows,
-      scaleX: displayScaleX,
-      scaleY: displayScaleY,
+      gridCols: Math.ceil(floorBounds.maxX),
+      gridRows: Math.ceil(floorBounds.maxY),
+      scaleX: options.realWidthM ? options.realWidthM / floorBounds.width : 1,
+      scaleY: options.realHeightM ? options.realHeightM / floorBounds.height : 1,
       widthM: floorBounds.width,
       heightM: floorBounds.height,
+      realWidthM: options.realWidthM ?? floorBounds.width,
+      realHeightM: options.realHeightM ?? floorBounds.height,
     },
   });
 
   if (options.replaceGraph) {
     console.log('  Clearing existing floor graph...');
-    // Delete navigation sessions that reference rooms on this floor
-    await prisma.navSession.deleteMany({
-      where: {
-        OR: [
-          { fromRoom: { floorId: floor.id } },
-          { toRoom: { floorId: floor.id } },
-        ],
-      },
-    });
     await prisma.edge.deleteMany({
       where: {
         OR: [
@@ -304,11 +299,6 @@ async function main() {
       },
     });
     await prisma.node.deleteMany({ where: { floorId: floor.id } });
-    await prisma.room.deleteMany({
-      where: {
-        floorId: floor.id
-      }
-    });
   }
 
   const roomIdMap = new Map<string, string>();

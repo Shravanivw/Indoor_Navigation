@@ -4,7 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
-import type { FloorMapData, RoomMapData } from '../types';
+import type { FloorMapData, RoomMapData, GraphNode} from '../types';
 
 type LayoutPoint = { x: number; y: number };
 type LayoutDoor = LayoutPoint & { id: string; width?: number };
@@ -179,6 +179,47 @@ function projectHudsonLayoutRooms(
   });
 }
 
+function projectHudsonLayoutNodes(
+  nodes:any[],
+  gridCols: number,
+  gridRows: number,
+): any[] {
+
+  const layoutRooms = loadHudsonLayoutRooms();
+  if (layoutRooms.length === 0) return nodes;
+
+  const allPoints = layoutRooms.flatMap((room) => [
+    ...room.polygon,
+    ...(room.doors ?? []),
+  ]);
+
+  if (allPoints.length === 0) return nodes;
+
+  const minX = Math.min(...allPoints.map((point) => point.x));
+  const maxX = Math.max(...allPoints.map((point) => point.x));
+  const minY = Math.min(...allPoints.map((point) => point.y));
+  const maxY = Math.max(...allPoints.map((point) => point.y));
+
+  const spanX = Math.max(1, maxX - minX);
+  const spanY = Math.max(1, maxY - minY);
+
+  return nodes.map(node => ({
+    ...node,
+
+    gridX: ((node.gridX - minX) / spanX) * gridCols,
+
+    gridY:
+      gridRows -
+      (((node.gridY - minY) / spanY) * gridRows),
+
+    realX: ((node.realX - minX) / spanX) * gridCols,
+
+    realY:
+      gridRows -
+      (((node.realY - minY) / spanY) * gridRows),
+  }));
+}
+
 export async function getFloorGeometry(prisma: PrismaClient, floorId: string): Promise<FloorGeometryData | null> {
   // Resolve the floor's geometry JSON via the per-floor map. Fall back to the
   // generic filename for backwards compatibility.
@@ -223,6 +264,21 @@ export async function getFloorMap(
     building: floor.building,
   };
 
+  let nodes = await prisma.node.findMany({
+    where: {
+      floorId: floor.id,
+    },
+  });
+
+  const edges = await prisma.edge.findMany({
+    where: {
+      OR: [
+        { fromNode: { floorId: floor.id } },
+        { toNode: { floorId: floor.id } },
+      ],
+    },
+  });
+
   let rooms: RoomMapData[] = floor.rooms.map(r => ({
     id: r.id,
     code: r.code,
@@ -249,19 +305,31 @@ export async function getFloorMap(
   const gridCols = navFloorData?.gridCols ?? floor.gridCols ?? grid[0]?.length ?? 50;
 
   if (floor.id === 'floor-hudson-f5') {
-    rooms = projectHudsonLayoutRooms(rooms, gridCols, gridRows);
-  }
+    rooms = projectHudsonLayoutRooms(
+      rooms,
+      gridCols,
+      gridRows
+    );
+
+    nodes = projectHudsonLayoutNodes(
+      nodes,
+      gridCols,
+      gridRows
+    );
+}
 
   return {
-    floorId: floor.id,
-    level: floor.level,
-    name: floor.name,
-    gridRows,
-    gridCols,
-    grid,
-    scaleX: navFloorData?.scaleX ?? floor.scaleX ?? 1,
-    scaleY: navFloorData?.scaleY ?? floor.scaleY ?? 1,
-    rooms,
+  floorId: floor.id,
+  level: floor.level,
+  name: floor.name,
+  gridRows,
+  gridCols,
+  grid,
+  scaleX: navFloorData?.scaleX ?? floor.scaleX ?? 1,
+  scaleY: navFloorData?.scaleY ?? floor.scaleY ?? 1,
+  rooms,
+  nodes,
+  edges,
   };
 }
 

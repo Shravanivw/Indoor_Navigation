@@ -29,6 +29,8 @@ model Floor {
   gridData   String?                    // ← Json → String for SQLite
   widthM     Float?
   heightM    Float?
+  realWidthM  Float?
+  realHeightM Float?
   gridCols   Int?
   gridRows   Int?
   scaleX     Float?   @default(1)

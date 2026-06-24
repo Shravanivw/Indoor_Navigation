@@ -78,6 +78,8 @@ export default function MapView({ destination, userLocation, route, routeLoading
             rooms={mapData?.rooms ?? []}
             gridCols={mapData?.gridCols ?? 80}
             gridRows={mapData?.gridRows ?? 80}
+            graphNodes={mapData?.nodes ?? []}
+            graphEdges={mapData?.edges ?? []}
           />
         )}
 

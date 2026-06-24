@@ -25,6 +25,7 @@ export interface GraphNode {
 }
 
 export interface GraphEdge {
+  id?: string;
   fromNodeId: string;
   toNodeId: string;
   weight: number;        // metres
@@ -78,6 +79,8 @@ export interface FloorMapData {
   scaleX: number;         // metres per grid cell X
   scaleY: number;         // metres per grid cell Y
   rooms: RoomMapData[];
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 }
 
 export interface RoomMapData {

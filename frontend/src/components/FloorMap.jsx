@@ -108,10 +108,20 @@ export default function FloorMap({
   destination,
   userLocation,
   pathGridCells = [],
+  livePosition,
+  heading,
   rooms = [],
+  graphNodes = [],
+  graphEdges = [],
   gridCols = 80,
   gridRows = 80,
 }) {
+  console.log("GRAPH NODES:", graphNodes.length);
+  console.log("GRAPH EDGES:", graphEdges.length);
+  const nodeMap = Object.fromEntries(
+    graphNodes.map(node => [node.id, node])
+  );
+  const [showGraph, setShowGraph] = useState(true);
   /* ─── Zoom / pan state ─────────────────────────────────────────────────── */
   const [zoom, setZoom] = useState(1);
   const MIN_ZOOM = 1;
@@ -279,6 +289,45 @@ export default function FloorMap({
         <g clipPath="url(#map-clip)">
           <g>
 
+            {/* GRAPH DEBUG OVERLAY */}
+            <g opacity={0.8}>
+
+              {/* Edges */}
+              {graphEdges.map(edge => {
+                const from = nodeMap[edge.fromNodeId];
+                const to = nodeMap[edge.toNodeId];
+
+                if (!from || !to) return null;
+
+                return (
+                  <line
+                    key={edge.id || `${edge.fromNodeId}-${edge.toNodeId}`}
+                    x1={gx(from.gridX)}
+                    y1={gy(from.gridY)}
+                    x2={gx(to.gridX)}
+                    y2={gy(to.gridY)}
+                    stroke="orange"
+                    strokeWidth="1.5"
+                  />
+                );
+              })}
+
+              {/* Nodes */}
+              {graphNodes.slice(0, 20).map(node => {
+                console.log(node);
+
+                return (
+                  <circle
+                    key={node.id}
+                    cx={node.gridX}
+                    cy={node.gridY}
+                    r="10"
+                    fill="red"
+                  />
+                );
+              })}
+            </g>
+
         {/* Rooms — use grid coordinates (gx/gy) */}
         {rooms.map(room => {
           const colors        = getRoomColor(room.type);
@@ -406,6 +455,45 @@ export default function FloorMap({
             Loading map…
           </text>
         )}
+
+        {/* Debug graph overlay */}
+          {showGraph && (
+            <g>
+
+              {/* Draw edges first */}
+              {graphEdges.map(edge => {
+                const from = graphNodes.find(n => n.id === edge.fromNodeId);
+                const to = graphNodes.find(n => n.id === edge.toNodeId);
+
+                if (!from || !to) return null;
+
+                return (
+                  <line
+                    key={edge.id}
+                    x1={px(from.realX)}
+                    y1={py(from.realY)}
+                    x2={px(to.realX)}
+                    y2={py(to.realY)}
+                    stroke="orange"
+                    strokeWidth="1"
+                    opacity="0.7"
+                  />
+                );
+              })}
+
+              {/* Draw nodes */}
+              {graphNodes.map(node => (
+                <circle
+                  key={node.id}
+                  cx={px(node.realX)}
+                  cy={py(node.realY)}
+                  r="2.5"
+                  fill="blue"
+                />
+              ))}
+
+            </g>
+          )}
 
         {/* Route path — uses normalized grid coordinates (px/py) */}
         {hasPath && (
@@ -551,6 +639,17 @@ export default function FloorMap({
       </div>
 
       <div className="map-zoom">
+        <button
+          onClick={() => setShowGraph(v => !v)}
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            zIndex: 1000
+          }}
+        >
+          Graph
+        </button>
         <button
           className="map-zoom-btn"
           type="button"
