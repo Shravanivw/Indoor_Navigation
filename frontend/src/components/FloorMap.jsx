@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "../css/FloorMap.css";
 
 /* ─── Colour palette by room type ────────────────────────────────────────── */
@@ -122,64 +122,127 @@ export default function FloorMap({
     graphNodes.map(node => [node.id, node])
   );
   const [showGraph, setShowGraph] = useState(true);
-  /* ─── Zoom / pan state ─────────────────────────────────────────────────── */
-  const [zoom, setZoom] = useState(1);
+
+  /* ─── Zoom / pan via SVG viewBox (no CSS scale = no blur) ─────────────── */
+  const SVG_W = 480;
+  const SVG_H = 480;
   const MIN_ZOOM = 1;
-  const MAX_ZOOM = 4;
-  const ZOOM_STEP = 0.14;
-  const zoomIn  = () => setZoom(z => clampZoom(z + ZOOM_STEP));
-  const zoomOut = () => setZoom(z => clampZoom(z - ZOOM_STEP));
-  const zoomReset = () => setZoom(1);
+  const MAX_ZOOM = 5;
+  const containerRef = useRef(null);
+  // view = { vx, vy, z } — top-left corner of visible SVG window + zoom level
+  const viewRef = useRef({ vx: 0, vy: 0, z: 1 });
+  const [view, setView] = useState({ vx: 0, vy: 0, z: 1 });
   const pointersRef = useRef(new Map());
-  const lastPinchDistanceRef = useRef(null);
+  const lastPinchRef = useRef(null);
 
-  const clampZoom = (value) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, +(value).toFixed(2)));
-  const getDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const clampZoom = (v) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, v));
 
-  const handleWheel = (event) => {
-    const delta = event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-    setZoom((z) => clampZoom(z + delta));
+  const commit = (vx, vy, z) => {
+    z = clampZoom(z);
+    const clamped = {
+      vx: z <= 1 ? 0 : Math.max(0, Math.min(SVG_W * (1 - 1 / z), vx)),
+      vy: z <= 1 ? 0 : Math.max(0, Math.min(SVG_H * (1 - 1 / z), vy)),
+      z,
+    };
+    viewRef.current = clamped;
+    setView(clamped);
   };
 
+  /* Zoom keeping SVG point under container pixel (fx, fy) fixed */
+  const zoomAt = (factor, fx, fy) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const { vx, vy, z } = viewRef.current;
+    const sfx = vx + (fx / width)  * (SVG_W / z);
+    const sfy = vy + (fy / height) * (SVG_H / z);
+    const newZ = clampZoom(z * factor);
+    commit(sfx - (fx / width) * (SVG_W / newZ), sfy - (fy / height) * (SVG_H / newZ), newZ);
+  };
+
+  /* Pinch: SVG point at old finger-center moves to new finger-center */
+  const pinchAt = (factor, fromFx, fromFy, toFx, toFy) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const { vx, vy, z } = viewRef.current;
+    const sfx = vx + (fromFx / width)  * (SVG_W / z);
+    const sfy = vy + (fromFy / height) * (SVG_H / z);
+    const newZ = clampZoom(z * factor);
+    commit(sfx - (toFx / width) * (SVG_W / newZ), sfy - (toFy / height) * (SVG_H / newZ), newZ);
+  };
+
+  /* Drag pan: positive dx = finger moved right = view shifts left */
+  const panBy = (dx, dy) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const { vx, vy, z } = viewRef.current;
+    commit(vx - (dx / width) * (SVG_W / z), vy - (dy / height) * (SVG_H / z), z);
+  };
+
+  const zoomIn    = () => { const c = containerRef.current?.getBoundingClientRect(); zoomAt(1.25, (c?.width ?? 0) / 2, (c?.height ?? 0) / 2); };
+  const zoomOut   = () => { const c = containerRef.current?.getBoundingClientRect(); zoomAt(0.8,  (c?.width ?? 0) / 2, (c?.height ?? 0) / 2); };
+  const zoomReset = () => commit(0, 0, 1);
+
+  /* Non-passive wheel: ctrlKey = trackpad pinch → zoom; else → pan */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const fx = e.clientX - rect.left;
+      const fy = e.clientY - rect.top;
+      if (e.ctrlKey || e.metaKey) {
+        zoomAt(Math.pow(0.998, e.deltaY), fx, fy);
+      } else {
+        const { vx, vy, z } = viewRef.current;
+        const mult = e.deltaMode === 1 ? 20 : 1;
+        const { width, height } = el.getBoundingClientRect();
+        commit(vx + (e.deltaX * mult / width) * (SVG_W / z), vy + (e.deltaY * mult / height) * (SVG_H / z), z);
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handlePointerDown = (event) => {
-    const pointers = pointersRef.current;
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event) => {
-    const pointers = pointersRef.current;
-    if (!pointers.has(event.pointerId)) return;
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (!pointersRef.current.has(event.pointerId)) return;
+    const prev = pointersRef.current.get(event.pointerId);
+    const curr = { x: event.clientX, y: event.clientY };
+    pointersRef.current.set(event.pointerId, curr);
+    const pts = Array.from(pointersRef.current.values());
 
-    if (pointers.size === 2) {
-      const [first, second] = Array.from(pointers.values());
-      const distance = getDistance(first, second);
-      const previous = lastPinchDistanceRef.current;
-      if (previous) {
-        const delta = distance - previous;
-        setZoom((z) => clampZoom(z + delta * 0.0025));
+    if (pts.length === 1) {
+      panBy(curr.x - prev.x, curr.y - prev.y);
+    } else if (pts.length === 2) {
+      const [a, b] = pts;
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const rect = containerRef.current?.getBoundingClientRect();
+      const fx = (a.x + b.x) / 2 - (rect?.left ?? 0);
+      const fy = (a.y + b.y) / 2 - (rect?.top  ?? 0);
+      if (lastPinchRef.current) {
+        const { dist: prevDist, fx: prevFx, fy: prevFy } = lastPinchRef.current;
+        pinchAt(dist / prevDist, prevFx, prevFy, fx, fy);
       }
-      lastPinchDistanceRef.current = distance;
+      lastPinchRef.current = { dist, fx, fy };
     }
   };
 
   const handlePointerUp = (event) => {
-    const pointers = pointersRef.current;
-    pointers.delete(event.pointerId);
-    if (pointers.size < 2) {
-      lastPinchDistanceRef.current = null;
-    }
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // ignore if pointer capture is already released
-    }
+    pointersRef.current.delete(event.pointerId);
+    if (pointersRef.current.size < 2) lastPinchRef.current = null;
+    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* ignore */ }
   };
 
   /* ─── Canvas ────────────────────────────────────────────────────────────── */
-  const SVG_W  = 480;
-  const SVG_H  = 480;
   const PAD    = 16;
   const innerW = SVG_W - PAD * 2;
   const innerH = SVG_H - PAD * 2;
@@ -208,19 +271,19 @@ export default function FloorMap({
   return (
     <div className="floormap-wrap">
       <div
+        ref={containerRef}
         className="floormap-scroll"
-        onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       >
       <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+        viewBox={`${view.vx} ${view.vy} ${SVG_W / view.z} ${SVG_H / view.z}`}
         xmlns="http://www.w3.org/2000/svg"
         preserveAspectRatio="none"
         className="floormap-svg"
-        style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%` }}
+        style={{ width: '100%', height: '100%', display: 'block' }}
       >
         <defs>
           {/* Subtle paper grid */}
@@ -655,16 +718,16 @@ export default function FloorMap({
           type="button"
           title="Zoom in"
           onClick={(event) => { event.stopPropagation(); zoomIn(); }}
-          disabled={zoom >= MAX_ZOOM}
+          disabled={view.z >= MAX_ZOOM}
         >＋</button>
         <button
           className="map-zoom-btn"
           type="button"
           title="Zoom out"
           onClick={(event) => { event.stopPropagation(); zoomOut(); }}
-          disabled={zoom <= MIN_ZOOM}
+          disabled={view.z <= MIN_ZOOM}
         >−</button>
-        {zoom !== 1 && (
+        {view.z !== 1 && (
           <button
             className="map-zoom-btn"
             type="button"
