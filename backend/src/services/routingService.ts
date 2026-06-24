@@ -242,6 +242,11 @@ export async function getRoute(
     firstCell: pathGridCells[0],
     lastCell: pathGridCells[pathGridCells.length - 1],
   });
+  console.log('=== PATH NODE IDS ===');
+  pathNodeIds.forEach((id, index) => {
+    console.log(`${index}: ${id}`);
+  });
+  console.log('=====================');
 
   const scale = getFloorScale(fromRoom.floorId, fromRoom.floor?.scaleX, fromRoom.floor?.scaleY);
 
