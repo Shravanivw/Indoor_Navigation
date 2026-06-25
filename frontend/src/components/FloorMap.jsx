@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import "../css/FloorMap.css";
 
 /* ─── Colour palette by room type ────────────────────────────────────────── */
@@ -122,7 +122,68 @@ export default function FloorMap({
   const nodeMap = Object.fromEntries(
     graphNodes.map(node => [node.id, node])
   );
-  const [showGraph, setShowGraph] = useState(true);
+  const [showGraph, setShowGraph] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [localEdges, setLocalEdges] = useState(graphEdges);
+  const [localNodes, setLocalNodes] = useState(graphNodes);
+  const [selectedPairIndex, setSelectedPairIndex] = useState(null);
+
+  useEffect(() => {
+    setLocalEdges(graphEdges);
+    setSelectedPairIndex(null);
+  }, [graphEdges]);
+
+  useEffect(() => {
+    setLocalNodes(graphNodes);
+  }, [graphNodes]);
+
+  const toggleDebugMode = () => {
+    setDebugMode((prev) => {
+      const next = !prev;
+      setShowGraph(next);
+      return next;
+    });
+  };
+
+  const routeEdgePairs = useMemo(() => {
+    const pairs = [];
+    for (let i = 0; i < pathNodeIds.length - 1; i++) {
+      pairs.push({
+        from: pathNodeIds[i],
+        to: pathNodeIds[i + 1],
+        index: i
+      });
+    }
+    return pairs;
+  }, [pathNodeIds]);
+
+  const selectPrevPair = () => {
+    if (routeEdgePairs.length === 0) return;
+    setSelectedPairIndex(prev => {
+      if (prev === null) return routeEdgePairs.length - 1;
+      return (prev - 1 + routeEdgePairs.length) % routeEdgePairs.length;
+    });
+  };
+
+  const selectNextPair = () => {
+    if (routeEdgePairs.length === 0) return;
+    setSelectedPairIndex(prev => {
+      if (prev === null) return 0;
+      return (prev + 1) % routeEdgePairs.length;
+    });
+  };
+
+  const deleteSelectedPairEdge = () => {
+    if (selectedPairIndex === null || selectedPairIndex >= routeEdgePairs.length) return;
+    const pair = routeEdgePairs[selectedPairIndex];
+    setLocalEdges(prev => prev.filter(e => {
+      const match = (e.fromNodeId === pair.from && e.toNodeId === pair.to) ||
+                    (e.fromNodeId === pair.to && e.toNodeId === pair.from);
+      return !match;
+    }));
+    console.log(`Deleted edge from localEdges: ${pair.from} <-> ${pair.to}`);
+  };
+
   /* ─── Zoom / pan state ─────────────────────────────────────────────────── */
   const [zoom, setZoom] = useState(1);
   const MIN_ZOOM = 1;
@@ -423,9 +484,9 @@ export default function FloorMap({
             <g>
 
               {/* Draw edges first */}
-              {graphEdges.map(edge => {
-                const from = graphNodes.find(n => n.id === edge.fromNodeId);
-                const to = graphNodes.find(n => n.id === edge.toNodeId);
+              {localEdges.map(edge => {
+                const from = localNodes.find(n => n.id === edge.fromNodeId);
+                const to = localNodes.find(n => n.id === edge.toNodeId);
 
                 if (!from || !to) return null;
 
@@ -437,37 +498,101 @@ export default function FloorMap({
                   toIndex !== -1 &&
                   Math.abs(fromIndex - toIndex) === 1;
 
+                // Determine if this edge is the selected pair
+                let isSelectedPair = false;
+                if (selectedPairIndex !== null && selectedPairIndex < routeEdgePairs.length) {
+                  const pair = routeEdgePairs[selectedPairIndex];
+                  isSelectedPair =
+                    (edge.fromNodeId === pair.from && edge.toNodeId === pair.to) ||
+                    (edge.fromNodeId === pair.to && edge.toNodeId === pair.from);
+                }
+
+                const edgeKeyId = edge.id ?? `${edge.fromNodeId}-${edge.toNodeId}`;
+
+                let strokeColor = isRouteEdge ? "red" : "orange";
+                let strokeW = isRouteEdge ? 4 : 1.5;
+                let strokeOpacity = selectedPairIndex !== null ? 0.05 : (isRouteEdge ? 1 : 0.35);
+
+                if (selectedPairIndex !== null && isSelectedPair) {
+                  strokeColor = "#3b82f6";
+                  strokeW = 8;
+                  strokeOpacity = 1;
+                }
+
                 return (
                   <line
-                    key={edge.id}
+                    key={`line-${edgeKeyId}`}
                     x1={px(from.realX)}
                     y1={py(from.realY)}
                     x2={px(to.realX)}
                     y2={py(to.realY)}
-                    stroke={isRouteEdge ? "red" : "orange"}
-                    strokeWidth={isRouteEdge ? "4" : "1"}
-                    opacity={isRouteEdge ? "1" : "0.3"}
+                    stroke={strokeColor}
+                    strokeWidth={strokeW}
+                    opacity={strokeOpacity}
+                    style={{ pointerEvents: 'none' }}
                   />
                 );
               })}
 
               {/* Draw nodes */}
-              {graphNodes.map(node => (
-                <circle
-                  key={node.id}
-                  cx={px(node.realX)}
-                  cy={py(node.realY)}
-                  r="2.5"
-                  fill="blue"
-                />
-              ))}
+              {localNodes.map(node => {
+                const isRouteNode = pathNodeIds.includes(node.id);
+                
+                let isSelectedNode = false;
+                if (selectedPairIndex !== null && selectedPairIndex < routeEdgePairs.length) {
+                  const pair = routeEdgePairs[selectedPairIndex];
+                  isSelectedNode = node.id === pair.from || node.id === pair.to;
+                }
+
+                let radius = isRouteNode ? 5 : 2.5;
+                let fillColor = isRouteNode ? "red" : "blue";
+                let opacity = selectedPairIndex !== null 
+                  ? (isSelectedNode ? 1 : (isRouteNode ? 0.2 : 0.05))
+                  : (isRouteNode ? 1 : 0.35);
+
+                if (selectedPairIndex !== null && isSelectedNode) {
+                  radius = 7;
+                  fillColor = "#3b82f6";
+                }
+
+                return (
+                  <g key={`node-group-${node.id}`}>
+                    <circle
+                      cx={px(node.realX)}
+                      cy={py(node.realY)}
+                      r={radius}
+                      fill={fillColor}
+                      opacity={opacity}
+                      stroke={isSelectedNode ? "#ffffff" : "none"}
+                      strokeWidth={isSelectedNode ? "1.5" : "0"}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                    {(isRouteNode || isSelectedNode) && (
+                      <text
+                        x={px(node.realX) + 8}
+                        y={py(node.realY) + 3}
+                        fill={isSelectedNode ? "#3b82f6" : "red"}
+                        opacity={selectedPairIndex !== null ? (isSelectedNode ? 1 : 0.25) : 1}
+                        fontSize="10"
+                        fontWeight="bold"
+                        style={{
+                          pointerEvents: 'none',
+                          textShadow: '0 0 3px white, 0 0 3px white, 0 0 3px white'
+                        }}
+                      >
+                        {node.label || node.id}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
 
             </g>
           )}
 
         {/* Route path — uses normalized grid coordinates (px/py) */}
         {hasPath && (
-          <g>
+          <g style={{ opacity: selectedPairIndex !== null ? 0.15 : 1 }}>
             {/* Soft glow */}
             <polyline
               points={polylinePoints}
@@ -608,18 +733,16 @@ export default function FloorMap({
         <div className="map-floor-pill active">G</div>
       </div>
 
+      {/* Debug toggle */}
+      <button
+        type="button"
+        className={`map-debug-toggle ${debugMode ? 'active' : ''}`}
+        onClick={toggleDebugMode}
+      >
+        {debugMode ? "Disable Debug" : "Enable Debug"}
+      </button>
+
       <div className="map-zoom">
-        <button
-          onClick={() => setShowGraph(v => !v)}
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            zIndex: 1000
-          }}
-        >
-          Graph
-        </button>
         <button
           className="map-zoom-btn"
           type="button"
@@ -644,6 +767,109 @@ export default function FloorMap({
           >⟳</button>
         )}
       </div>
+
+      {/* Debug panel */}
+      {debugMode && (
+        <div className="map-debug-panel">
+          <div className="debug-panel-header">
+            <span>Graph Debugger</span>
+            <button
+              type="button"
+              onClick={() => setSelectedPairIndex(null)}
+              className="debug-clear-btn"
+              title="Clear selection"
+            >
+              Reset
+            </button>
+          </div>
+
+          <div className="debug-section">
+            <h4>Route Segments ({routeEdgePairs.length})</h4>
+            {routeEdgePairs.length > 0 ? (
+              <div className="debug-segment-list">
+                {routeEdgePairs.map((pair, idx) => {
+                  const isSelected = selectedPairIndex === idx;
+                  const edgeExists = localEdges.some(e => 
+                    (e.fromNodeId === pair.from && e.toNodeId === pair.to) ||
+                    (e.fromNodeId === pair.to && e.toNodeId === pair.from)
+                  );
+                  return (
+                    <button
+                      key={`pair-${idx}`}
+                      type="button"
+                      className={`debug-segment-btn ${isSelected ? 'active' : ''} ${!edgeExists ? 'deleted' : ''}`}
+                      onClick={() => {
+                        setSelectedPairIndex(idx);
+                        console.log(`Selected route segment ${idx}:`, pair);
+                      }}
+                    >
+                      <span className="segment-num">{idx + 1}.</span>
+                      <span className="segment-path">{pair.from.replace('editor-floor-hudson-f5-node-', '').replace('manual-node-', '')} → {pair.to.replace('editor-floor-hudson-f5-node-', '').replace('manual-node-', '')}</span>
+                      {!edgeExists && <span className="segment-deleted-badge">deleted</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="debug-placeholder">No active route</div>
+            )}
+          </div>
+
+          {routeEdgePairs.length > 0 && (
+            <div className="debug-section">
+              <div className="debug-cycle-controls">
+                <button
+                  type="button"
+                  className="debug-cycle-btn"
+                  onClick={selectPrevPair}
+                >
+                  ◀ Prev
+                </button>
+                <button
+                  type="button"
+                  className="debug-cycle-btn"
+                  onClick={selectNextPair}
+                >
+                  Next ▶
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="debug-section">
+            <h4>Selected Segment Details</h4>
+            {selectedPairIndex !== null && selectedPairIndex < routeEdgePairs.length ? (
+              (() => {
+                const pair = routeEdgePairs[selectedPairIndex];
+                const dbEdge = localEdges.find(e => 
+                  (e.fromNodeId === pair.from && e.toNodeId === pair.to) ||
+                  (e.fromNodeId === pair.to && e.toNodeId === pair.from)
+                );
+                return (
+                  <div className="debug-item">
+                    <div><strong>From Node:</strong> <span className="debug-val">{pair.from}</span></div>
+                    <div><strong>To Node:</strong> <span className="debug-val">{pair.to}</span></div>
+                    <div><strong>Edge DB ID:</strong> <span className="debug-val">{dbEdge?.id || "N/A (already deleted)"}</span></div>
+                    {dbEdge ? (
+                      <button
+                        type="button"
+                        className="debug-btn-delete"
+                        onClick={deleteSelectedPairEdge}
+                      >
+                        Delete Selected Edge
+                      </button>
+                    ) : (
+                      <div className="debug-deleted-text">Edge deleted from local memory</div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="debug-placeholder">Select a segment above or use cycle buttons</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
