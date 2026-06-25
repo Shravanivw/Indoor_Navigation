@@ -73,6 +73,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
             destination={destination}
             userLocation={userLocation}
             pathGridCells={pathGridCells}
+            pathNodeIds={route?.pathNodeIds ?? []}
             livePosition={null}
             heading={null}
             rooms={mapData?.rooms ?? []}

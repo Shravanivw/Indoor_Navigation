@@ -24,9 +24,9 @@ let globalGraph: NavigationGraph | null = null;
 // Hudson_5th.json coordinate space (approx 646..5465 x 884..4123). The map
 // display uses a projected 80x80 grid from nav_hudson_f5.json.
 const HUDSON_EDITOR_PX_BOUNDS = {
-  minX: 646,
+  minX: 280,
   minY: 884,
-  width: 4819,
+  width: 5185,
   height: 3239,
 };
 
