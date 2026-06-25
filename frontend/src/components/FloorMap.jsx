@@ -107,6 +107,7 @@ function NameLabel({ x, y, text, bg, fg, anchor = "bottom" }) {
 export default function FloorMap({
   destination,
   userLocation,
+  pathNodeIds = [],
   pathGridCells = [],
   livePosition,
   heading,
@@ -289,45 +290,6 @@ export default function FloorMap({
         <g clipPath="url(#map-clip)">
           <g>
 
-            {/* GRAPH DEBUG OVERLAY */}
-            <g opacity={0.8}>
-
-              {/* Edges */}
-              {graphEdges.map(edge => {
-                const from = nodeMap[edge.fromNodeId];
-                const to = nodeMap[edge.toNodeId];
-
-                if (!from || !to) return null;
-
-                return (
-                  <line
-                    key={edge.id || `${edge.fromNodeId}-${edge.toNodeId}`}
-                    x1={gx(from.gridX)}
-                    y1={gy(from.gridY)}
-                    x2={gx(to.gridX)}
-                    y2={gy(to.gridY)}
-                    stroke="orange"
-                    strokeWidth="1.5"
-                  />
-                );
-              })}
-
-              {/* Nodes */}
-              {graphNodes.slice(0, 20).map(node => {
-                console.log(node);
-
-                return (
-                  <circle
-                    key={node.id}
-                    cx={node.gridX}
-                    cy={node.gridY}
-                    r="10"
-                    fill="red"
-                  />
-                );
-              })}
-            </g>
-
         {/* Rooms — use grid coordinates (gx/gy) */}
         {rooms.map(room => {
           const colors        = getRoomColor(room.type);
@@ -467,6 +429,14 @@ export default function FloorMap({
 
                 if (!from || !to) return null;
 
+                const fromIndex = pathNodeIds.indexOf(edge.fromNodeId);
+                const toIndex = pathNodeIds.indexOf(edge.toNodeId);
+
+                const isRouteEdge =
+                  fromIndex !== -1 &&
+                  toIndex !== -1 &&
+                  Math.abs(fromIndex - toIndex) === 1;
+
                 return (
                   <line
                     key={edge.id}
@@ -474,9 +444,9 @@ export default function FloorMap({
                     y1={py(from.realY)}
                     x2={px(to.realX)}
                     y2={py(to.realY)}
-                    stroke="orange"
-                    strokeWidth="1"
-                    opacity="0.7"
+                    stroke={isRouteEdge ? "red" : "orange"}
+                    strokeWidth={isRouteEdge ? "4" : "1"}
+                    opacity={isRouteEdge ? "1" : "0.3"}
                   />
                 );
               })}
