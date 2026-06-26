@@ -1,140 +1,135 @@
 import * as THREE from "three";
-import { createRoomWalls } from "./ModelShared";
+import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createLift(cx, cz, wM, hM, isDest, isUser, resources) {
+export function createLift(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
   const cylGeom = geometries.cylinder;
 
-  const wt = 0.15;
+  const wt = 0.12;
   const wallHeight = 2.6;
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
-  // 1. Build three solid enclosure walls (North, East, West) representing the elevator shaft
-  // West Wall
-  const wallW = new THREE.Mesh(boxGeom, wallMat);
-  wallW.scale.set(wt, wallHeight, hM);
-  wallW.position.set(cx - wM / 2, wallHeight / 2, cz);
-  group.add(wallW);
+  // 1. Find corridor segment index
+  const doorIndex = findCorridorSegmentIndex(polygon, grid);
 
-  // East Wall
-  const wallE = new THREE.Mesh(boxGeom, wallMat);
-  wallE.scale.set(wt, wallHeight, hM);
-  wallE.position.set(cx + wM / 2, wallHeight / 2, cz);
-  group.add(wallE);
+  // 2. Build polygon walls with door cutout
+  group.add(
+    createPolygonWalls({
+      polygon,
+      wallHeight,
+      wallThickness: wt,
+      material: wallMat,
+      doorSegmentIndex: doorIndex,
+      doorWidth: 1.3,
+      doorHeight: 2.1,
+      resources,
+      toWorld
+    })
+  );
 
-  // North Wall
-  const wallN = new THREE.Mesh(boxGeom, wallMat);
-  wallN.scale.set(wM + wt * 2, wallHeight, wt);
-  wallN.position.set(cx, wallHeight / 2, cz - hM / 2);
-  group.add(wallN);
+  // 3. Render Lift Doors aligned with the corridor segment
+  const p1 = polygon[doorIndex];
+  const p2 = polygon[(doorIndex + 1) % polygon.length];
+  const wp1 = toWorld(p1.x, p1.y);
+  const wp2 = toWorld(p2.x, p2.y);
 
-  // 2. Front (South) Wall: Elevator Lobby Face
-  // Has metallic elevator doors at the center.
-  const doorWidth = 1.3;
-  const doorHeight = 2.1;
-  const sZ = cz + hM / 2;
+  const dx = wp2.x - wp1.x;
+  const dz = wp2.z - wp1.z;
+  const len = Math.sqrt(dx * dx + dz * dz);
 
-  // South Wall Left Segment
-  const segW = (wM - doorWidth) / 2;
-  if (segW > 0.05) {
-    const wallSL = new THREE.Mesh(boxGeom, wallMat);
-    wallSL.scale.set(segW, wallHeight, wt);
-    wallSL.position.set(cx - wM / 2 + segW / 2, wallHeight / 2, sZ);
-    group.add(wallSL);
+  if (len > 0.1) {
+    const doorMidX = (wp1.x + wp2.x) / 2;
+    const doorMidZ = (wp1.z + wp2.z) / 2;
+    const angle = Math.atan2(dx, dz);
 
-    const wallSR = new THREE.Mesh(boxGeom, wallMat);
-    wallSR.scale.set(segW, wallHeight, wt);
-    wallSR.position.set(cx + wM / 2 - segW / 2, wallHeight / 2, sZ);
-    group.add(wallSR);
+    // Calculate outward normal to offset doors slightly forward (prevent z-fighting)
+    let nx = -dz;
+    let nz = dx;
+    const nLen = Math.sqrt(nx * nx + nz * nz);
+    if (nLen > 0) { nx /= nLen; nz /= nLen; }
+
+    // Test normal direction away from room centroid (cx, cz)
+    const dist1 = (doorMidX + nx * 0.1 - cx) ** 2 + (doorMidZ + nz * 0.1 - cz) ** 2;
+    const dist2 = (doorMidX - nx * 0.1 - cx) ** 2 + (doorMidZ - nz * 0.1 - cz) ** 2;
+    const outX = dist1 > dist2 ? nx : -nx;
+    const outZ = dist1 > dist2 ? nz : -nz;
+
+    const liftDoorGroup = new THREE.Group();
+    // Offset by 0.015m forward to sit on the wall surface
+    liftDoorGroup.position.set(doorMidX + outX * 0.015, 0, doorMidZ + outZ * 0.015);
+    liftDoorGroup.rotation.y = angle;
+
+    const doorWidth = 1.3;
+    const doorHeight = 2.1;
+
+    // Left door panel
+    const doorL = new THREE.Mesh(boxGeom, materials.metalSilver);
+    doorL.scale.set(0.02, doorHeight, doorWidth / 2);
+    doorL.position.set(0, doorHeight / 2, -doorWidth / 4);
+    liftDoorGroup.add(doorL);
+
+    // Right door panel
+    const doorR = new THREE.Mesh(boxGeom, materials.metalSilver);
+    doorR.scale.set(0.02, doorHeight, doorWidth / 2);
+    doorR.position.set(0, doorHeight / 2, doorWidth / 4);
+    liftDoorGroup.add(doorR);
+
+    // Center seam line
+    const seam = new THREE.Mesh(boxGeom, materials.metalDark);
+    seam.scale.set(0.022, doorHeight, 0.015);
+    seam.position.set(0, doorHeight / 2, 0);
+    liftDoorGroup.add(seam);
+
+    // Door frame trim
+    const frameL = new THREE.Mesh(boxGeom, materials.metalDark);
+    frameL.scale.set(0.04, doorHeight + 0.06, 0.05);
+    frameL.position.set(-0.01, doorHeight / 2 + 0.03, -doorWidth / 2 - 0.025);
+    liftDoorGroup.add(frameL);
+
+    const frameR = new THREE.Mesh(boxGeom, materials.metalDark);
+    frameR.scale.set(0.04, doorHeight + 0.06, 0.05);
+    frameR.position.set(-0.01, doorHeight / 2 + 0.03, doorWidth / 2 + 0.025);
+    liftDoorGroup.add(frameR);
+
+    const frameT = new THREE.Mesh(boxGeom, materials.metalDark);
+    frameT.scale.set(0.04, 0.05, doorWidth + 0.1);
+    frameT.position.set(-0.01, doorHeight + 0.025, 0);
+    liftDoorGroup.add(frameT);
+
+    // Floor indicator display
+    const indicator = new THREE.Group();
+    indicator.position.set(-0.02, doorHeight + 0.22, 0);
+    const ipPlate = new THREE.Mesh(boxGeom, materials.metalDark);
+    ipPlate.scale.set(0.015, 0.12, 0.35);
+    indicator.add(ipPlate);
+    const ipLed = new THREE.Mesh(boxGeom, materials.rackLedGreen);
+    ipLed.scale.set(0.02, 0.06, 0.25);
+    ipLed.position.set(-0.005, 0, 0);
+    indicator.add(ipLed);
+    liftDoorGroup.add(indicator);
+
+    // Call buttons
+    const callButtons = new THREE.Group();
+    callButtons.position.set(-0.015, 1.25, doorWidth / 2 + 0.18);
+    const cbPlate = new THREE.Mesh(boxGeom, materials.metalDark);
+    cbPlate.scale.set(0.015, 0.22, 0.08);
+    callButtons.add(cbPlate);
+    const btnUp = new THREE.Mesh(cylGeom, materials.metalSilver);
+    btnUp.scale.set(0.02, 0.03, 0.02);
+    btnUp.rotation.z = Math.PI / 2;
+    btnUp.position.set(-0.01, 0.05, 0);
+    callButtons.add(btnUp);
+    const btnDown = new THREE.Mesh(cylGeom, materials.metalSilver);
+    btnDown.scale.set(0.02, 0.03, 0.02);
+    btnDown.rotation.z = Math.PI / 2;
+    btnDown.position.set(-0.01, -0.05, 0);
+    callButtons.add(btnDown);
+    liftDoorGroup.add(callButtons);
+
+    group.add(liftDoorGroup);
   }
-
-  // Header above lift doors
-  const headerH = wallHeight - doorHeight;
-  if (headerH > 0.05) {
-    const header = new THREE.Mesh(boxGeom, wallMat);
-    header.scale.set(doorWidth, headerH, wt);
-    header.position.set(cx, doorHeight + headerH / 2, sZ);
-    group.add(header);
-  }
-
-  // 3. Elevator Doors (Double-sliding brushed silver metal panels)
-  const liftDoorGroup = new THREE.Group();
-  liftDoorGroup.position.set(cx, 0, sZ + 0.01); // slightly forward to avoid z-fighting
-
-  // Left sliding door panel
-  const doorL = new THREE.Mesh(boxGeom, materials.metalSilver);
-  doorL.scale.set(doorWidth / 2, doorHeight, 0.03);
-  doorL.position.set(-doorWidth / 4, doorHeight / 2, 0);
-  liftDoorGroup.add(doorL);
-
-  // Right sliding door panel
-  const doorR = new THREE.Mesh(boxGeom, materials.metalSilver);
-  doorR.scale.set(doorWidth / 2, doorHeight, 0.03);
-  doorR.position.set(doorWidth / 4, doorHeight / 2, 0);
-  liftDoorGroup.add(doorR);
-
-  // Vertical center groove seam line
-  const seam = new THREE.Mesh(boxGeom, materials.metalDark);
-  seam.scale.set(0.015, doorHeight, 0.032);
-  seam.position.set(0, doorHeight / 2, 0);
-  liftDoorGroup.add(seam);
-
-  // Metal outer door frame architrave
-  const frameL = new THREE.Mesh(boxGeom, materials.metalDark);
-  frameL.scale.set(0.06, doorHeight + 0.06, 0.05);
-  frameL.position.set(-doorWidth / 2 - 0.03, doorHeight / 2 + 0.03, -0.01);
-  liftDoorGroup.add(frameL);
-
-  const frameR = new THREE.Mesh(boxGeom, materials.metalDark);
-  frameR.scale.set(0.06, doorHeight + 0.06, 0.05);
-  frameR.position.set(doorWidth / 2 + 0.03, doorHeight / 2 + 0.03, -0.01);
-  liftDoorGroup.add(frameR);
-
-  const frameT = new THREE.Mesh(boxGeom, materials.metalDark);
-  frameT.scale.set(doorWidth + 0.12, 0.06, 0.05);
-  frameT.position.set(0, doorHeight + 0.03, -0.01);
-  liftDoorGroup.add(frameT);
-
-  // 4. Floor Indicator Panel (glowing screen above elevator doors)
-  const indicator = new THREE.Group();
-  indicator.position.set(0, doorHeight + 0.22, 0.025);
-  // Panel plate
-  const ipPlate = new THREE.Mesh(boxGeom, materials.metalDark);
-  ipPlate.scale.set(0.35, 0.12, 0.02);
-  indicator.add(ipPlate);
-  // LED screen glowing green/red display (mocking "5" or "L")
-  const ipLed = new THREE.Mesh(boxGeom, materials.rackLedGreen);
-  ipLed.scale.set(0.25, 0.06, 0.005);
-  ipLed.position.set(0, 0, 0.012);
-  indicator.add(ipLed);
-
-  liftDoorGroup.add(indicator);
-
-  // 5. Lobby Call Buttons Panel (mounted next to the door on the wall)
-  const callButtons = new THREE.Group();
-  callButtons.position.set(doorWidth / 2 + 0.18, 1.25, 0.015);
-  // Button backing plate
-  const cbPlate = new THREE.Mesh(boxGeom, materials.metalDark);
-  cbPlate.scale.set(0.08, 0.22, 0.015);
-  callButtons.add(cbPlate);
-  // Up button (glowing green/white point)
-  const btnUp = new THREE.Mesh(cylGeom, materials.metalSilver);
-  btnUp.scale.set(0.03, 0.02, 0.03);
-  btnUp.rotation.x = Math.PI / 2;
-  btnUp.position.set(0, 0.05, 0.01);
-  callButtons.add(btnUp);
-  // Down button
-  const btnDown = new THREE.Mesh(cylGeom, materials.metalSilver);
-  btnDown.scale.set(0.03, 0.02, 0.03);
-  btnDown.rotation.x = Math.PI / 2;
-  btnDown.position.set(0, -0.05, 0.01);
-  callButtons.add(btnDown);
-
-  liftDoorGroup.add(callButtons);
-
-  group.add(liftDoorGroup);
 
   return group;
 }

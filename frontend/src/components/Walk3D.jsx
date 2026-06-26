@@ -3,7 +3,7 @@ import * as THREE from "three";
 import "../css/Walk3D.css";
 
 // Import modular room models and shared assets
-import { initSharedResources, createRoomWalls } from "./models/ModelShared";
+import { initSharedResources, createRoomWalls, createPolygonWalls, findCorridorSegmentIndex } from "./models/ModelShared";
 import { createOfficeDeskCluster } from "./models/OfficeDeskCluster";
 import { createMeetingRoom } from "./models/MeetingRoomModel";
 import { createReception } from "./models/ReceptionModel";
@@ -11,6 +11,7 @@ import { createPantry } from "./models/PantryModel";
 import { createStaircase } from "./models/StaircaseModel";
 import { createLift } from "./models/LiftModel";
 import { createUtilityRoom } from "./models/UtilityRoomModel";
+import { createBooth } from "./models/BoothModel";
 
 const WALL_HEIGHT  = 2.7;
 const EYE_HEIGHT   = 1.75;
@@ -52,6 +53,12 @@ function getRoomTemplateType(room) {
   const type = (room.type ?? "").toUpperCase();
   const name = (room.name ?? "").toLowerCase();
   
+  if (type === "CORRIDOR" || name.includes("corridor") || name.includes("passage") || name.includes("walkway") || name.includes("hallway") || name.includes("lobby area")) {
+    return "CORRIDOR";
+  }
+  if (name.includes("booth") || name.includes("seating") || name.includes("sitting booth")) {
+    return "BOOTH";
+  }
   if (type === "RECEPTION" || name.includes("reception") || name.includes("lobby") || name.includes("entrance")) {
     return "RECEPTION";
   }
@@ -180,6 +187,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     // ── Rooms & Models ───────────────────────────────────────────────────────
     const rooms = floorMap.rooms ?? [];
     let destinationPin = null;
+    const labelSprites = [];
 
     for (const r of rooms) {
       const isDest  = destination?.id === r.id;
@@ -212,11 +220,28 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       wM = Math.max(0.5, wM);
       hM = Math.max(0.5, hM);
 
+      // Compute the polygon for this room (either actual polygon or generated from grid bounds)
+      const roomPolygon = Array.isArray(r.polygon) && r.polygon.length >= 3
+        ? r.polygon
+        : [
+            { x: r.gridX, y: r.gridY },
+            { x: r.gridX + (r.gridW ?? 4), y: r.gridY },
+            { x: r.gridX + (r.gridW ?? 4), y: r.gridY - (r.gridH ?? 4) },
+            { x: r.gridX, y: r.gridY - (r.gridH ?? 4) }
+          ];
+
       // Route through the template renderer
       const template = getRoomTemplateType(r);
       let roomModel = null;
 
       switch (template) {
+        case "CORRIDOR":
+          // Keep corridors 100% open and clear of any walls/props
+          roomModel = null;
+          break;
+        case "BOOTH":
+          roomModel = createBooth(roomPolygon, cx, cz, wM, hM, r.name?.toLowerCase().includes("phone"), isDest, isUser, resources, toWorld, floorMap.grid);
+          break;
         case "RECEPTION":
           roomModel = createReception(cx, cz, wM, hM, resources);
           break;
@@ -224,23 +249,24 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           roomModel = createOfficeDeskCluster(cx, cz, wM, hM, r.name?.toLowerCase().includes("innovation"), resources);
           break;
         case "MEETING_ROOM":
-          roomModel = createMeetingRoom(cx, cz, wM, hM, isDest, isUser, resources);
+          roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
           break;
         case "PANTRY":
           roomModel = createPantry(cx, cz, wM, hM, resources);
           break;
         case "STAIRCASE":
-          roomModel = createStaircase(cx, cz, wM, hM, isDest, isUser, resources);
+          roomModel = createStaircase(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
           break;
         case "LIFT":
-          roomModel = createLift(cx, cz, wM, hM, isDest, isUser, resources);
+          roomModel = createLift(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
           break;
         case "SERVER_ROOM":
-          roomModel = createUtilityRoom(cx, cz, wM, hM, r.type === "SERVER_ROOM" || r.name?.toLowerCase().includes("server"), isDest, isUser, resources);
+          roomModel = createUtilityRoom(roomPolygon, cx, cz, wM, hM, r.type === "SERVER_ROOM" || r.name?.toLowerCase().includes("server"), isDest, isUser, resources, toWorld, floorMap.grid);
           break;
         case "TOILET":
           roomModel = new THREE.Group();
-          roomModel.add(createRoomWalls({ cx, cz, wM, hM, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSide: "south", doorWidth: 0.8, resources }));
+          const tDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
+          roomModel.add(createPolygonWalls({ polygon: roomPolygon, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSegmentIndex: tDoorIndex, doorWidth: 0.8, resources, toWorld }));
           // Toilet floor
           const tFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorTile);
           tFloor.rotation.x = -Math.PI / 2;
@@ -257,7 +283,8 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         case "OTHER":
         default:
           roomModel = new THREE.Group();
-          roomModel.add(createRoomWalls({ cx, cz, wM, hM, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSide: "south", doorWidth: 0.8, resources }));
+          const oDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
+          roomModel.add(createPolygonWalls({ polygon: roomPolygon, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSegmentIndex: oDoorIndex, doorWidth: 0.8, resources, toWorld }));
           
           // Office floor plate
           const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
@@ -285,11 +312,23 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       }
 
       // Render Label Sprite floating just below the ceiling level (Y = 2.4)
-      const labelColor = isDest ? "#059669" : isUser ? "#1d4ed8" : "#374151";
-      const label = makeLabelSprite(r.name, labelColor, isDest ? 0.97 : 0.88);
-      label.position.set(cx, 2.4, cz);
-      label.scale.set(Math.min(10, Math.max(4, wM * 0.9)), 2.2, 1);
-      scene.add(label);
+      if (template !== "CORRIDOR") {
+        const labelColor = isDest ? "#059669" : isUser ? "#1d4ed8" : "#374151";
+        const label = makeLabelSprite(r.name, labelColor, isDest ? 0.97 : 0.88);
+        label.position.set(cx, 2.4, cz);
+        // Reduced label size dramatically to avoid eye-level blocking
+        label.scale.set(Math.min(4.0, Math.max(1.8, wM * 0.45)), 0.85, 1.0);
+        scene.add(label);
+
+        labelSprites.push({
+          sprite: label,
+          cx, cz,
+          template,
+          isDest,
+          isUser,
+          name: r.name
+        });
+      }
     }
 
     // ── Destination Landmark Floating Pin ──────────────────────────────────
@@ -498,6 +537,35 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           floorRing.material.opacity = 0.8 - (sVal - 0.75) * 0.8;
         }
       }
+
+      // 2.5 LOD Label Fading Animation
+      labelSprites.forEach(item => {
+        const dist = camera.position.distanceTo(item.sprite.position);
+        const nameL = (item.name ?? "").toLowerCase();
+        const isImportant = item.isDest || item.isUser || 
+          item.template === "RECEPTION" || 
+          item.template === "PANTRY" || 
+          item.template === "STAIRCASE" || 
+          item.template === "LIFT" || 
+          nameL.includes("board") || 
+          nameL.includes("conference") ||
+          nameL.includes("innovation") ||
+          nameL.includes("meeting");
+
+        if (!isImportant) {
+          item.sprite.visible = false;
+        } else {
+          item.sprite.visible = true;
+          // Fade close labels to prevent camera obstruction
+          if (dist < 2.0) {
+            item.sprite.material.opacity = 0.0;
+          } else if (dist <= 5.0) {
+            item.sprite.material.opacity = (dist - 2.0) / 3.0;
+          } else {
+            item.sprite.material.opacity = 1.0;
+          }
+        }
+      });
 
       // 3. Movement and camera logic
       if (pathPoints.length >= 2 && pathLengthM > 0) {

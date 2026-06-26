@@ -1,56 +1,52 @@
 import * as THREE from "three";
-import { createRoomWalls } from "./ModelShared";
+import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createStaircase(cx, cz, wM, hM, isDest, isUser, resources) {
+export function createStaircase(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
   const cylGeom = geometries.cylinder;
 
-  const wt = 0.15;
+  const wt = 0.12;
   const wallHeight = 2.6;
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
-  // 1. Build walls with a doorway on the South wall (facing the corridor)
+  // 1. Build polygon walls with a corridor-facing doorway
+  const doorIndex = findCorridorSegmentIndex(polygon, grid);
   group.add(
-    createRoomWalls({
-      cx,
-      cz,
-      wM,
-      hM,
+    createPolygonWalls({
+      polygon,
       wallHeight,
       wallThickness: wt,
       material: wallMat,
-      doorSide: "south",
+      doorSegmentIndex: doorIndex,
       doorWidth: 1.0,
       doorHeight: 2.1,
-      resources
+      resources,
+      toWorld
     })
   );
 
   // 2. Build Stair Steps ascending inside the stairwell
-  // We place steps ascending from South to North, or North to South depending on the layout.
-  // Standard stair width: 1.2m
-  // Let's draw a straight flight of stairs starting at the South side ascending to the North.
   const stairW = Math.min(1.3, wM - 0.4);
   const stairL = hM - 0.6;
   const numSteps = 12;
-  const stepRise = wallHeight / (numSteps + 2); // Rise per step
-  const stepRun  = stairL / numSteps;          // Run per step
+  const stepRise = wallHeight / (numSteps + 2);
+  const stepRun  = stairL / numSteps;
 
   const stairGroup = new THREE.Group();
   stairGroup.position.set(cx - wM / 2 + stairW / 2 + 0.2, 0, cz - stairL / 2);
 
-  // Concrete support diagonal stringer slab
+  // Concrete diagonal support stringer
   const stringer = new THREE.Mesh(boxGeom, materials.wallNormal);
   stringer.scale.set(stairW, 0.15, stairL);
   stringer.position.set(0, wallHeight / 2 - 0.2, stairL / 2);
   stringer.rotation.x = Math.atan2(wallHeight - 0.4, stairL);
   stairGroup.add(stringer);
 
-  // Individual steps
+  // Steps
   for (let i = 0; i < numSteps; i++) {
-    const step = new THREE.Mesh(boxGeom, materials.floorTile); // Tile finish steps
+    const step = new THREE.Mesh(boxGeom, materials.floorTile);
     const stepHeight = 0.08;
     step.scale.set(stairW, stepHeight, stepRun + 0.05);
 
@@ -61,7 +57,7 @@ export function createStaircase(cx, cz, wM, hM, isDest, isUser, resources) {
     stairGroup.add(step);
   }
 
-  // Staircase landing platform at the top
+  // Staircase landing platform
   const landingW = wM - 0.4;
   const landingD = 0.7;
   const landing = new THREE.Mesh(boxGeom, materials.floorTile);
@@ -69,17 +65,16 @@ export function createStaircase(cx, cz, wM, hM, isDest, isUser, resources) {
   landing.position.set(cx, wallHeight - stepRise * 2, cz - hM / 2 + landingD / 2 + 0.1);
   group.add(landing);
 
-  // 3. Railing (handrail cylinders/box frames running along the side of the stairs)
+  // 3. Railing
   const railMat = materials.metalSilver;
   const railGroup = new THREE.Group();
   railGroup.position.copy(stairGroup.position);
 
-  // Posts
   const numPosts = 4;
   const postSpacing = stairL / (numPosts - 1);
   for (let i = 0; i < numPosts; i++) {
     const postZ = i * postSpacing;
-    const postY = i * stepRise + 0.45; // post height is 0.9m above the step
+    const postY = i * stepRise + 0.45;
 
     const post = new THREE.Mesh(cylGeom, railMat);
     post.scale.set(0.025, 0.9, 0.025);
@@ -87,7 +82,7 @@ export function createStaircase(cx, cz, wM, hM, isDest, isUser, resources) {
     railGroup.add(post);
   }
 
-  // Handrail bar (diagonal box running above the posts)
+  // Handrail bar
   const handrail = new THREE.Mesh(boxGeom, railMat);
   const handrailLength = Math.sqrt(stairL * stairL + (stepRise * numSteps) * (stepRise * numSteps));
   handrail.scale.set(0.04, 0.04, handrailLength);
