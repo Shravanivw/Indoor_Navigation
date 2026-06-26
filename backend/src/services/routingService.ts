@@ -123,12 +123,32 @@ function getRoomCandidates(
   gridRows: number,
   graph: NavigationGraph
 ): string[] {
-  const entries = graph.roomEntryNodes.get(roomId);
-  if (entries && entries.length > 0) {
-    return entries;
+  const entries = graph.roomEntryNodes.get(roomId) ?? [];
+  
+  // 1. Collect ALL candidate entry nodes.
+  // 2. Ignore nodes with zero adjacency.
+  const connectedEntries = entries.filter(id => (graph.adjacency.get(id)?.length ?? 0) > 0);
+  
+  // 3. Ignore disconnected nodes & Prefer nodes belonging to the largest connected component.
+  const lccEntries = connectedEntries.filter(id => graph.lccNodes?.has(id));
+  if (lccEntries.length > 0) {
+    return lccEntries;
   }
-  const nearest = findNearestNode(graph, room, gridCols, gridRows);
-  return nearest ? [nearest] : [];
+  
+  return connectedEntries;
+}
+
+function getPathCost(path: string[], graph: NavigationGraph): number {
+  let cost = 0;
+  for (let i = 1; i < path.length; i++) {
+    const prev = path[i - 1];
+    const curr = path[i];
+    const edge = graph.adjacency.get(prev)?.find(e => e.nodeId === curr);
+    if (edge) {
+      cost += edge.weight;
+    }
+  }
+  return cost;
 }
 
 // ─── ROUTE BETWEEN ROOMS ──────────────────────────────────────────────────────
@@ -184,6 +204,24 @@ export async function getRoute(
   const startCandidatesAll = getRoomCandidates(fromRoomId, fromRoom, fromGridCols, fromGridRows, graph);
   const endCandidatesAll = getRoomCandidates(toRoomId, toRoom, toGridCols, toGridRows, graph);
 
+  if (startCandidatesAll.length === 0 || endCandidatesAll.length === 0) {
+    console.warn('[RoutingService] No candidate nodes found for room', {
+      fromRoomId, toRoomId, startCandidatesCount: startCandidatesAll.length, endCandidatesCount: endCandidatesAll.length
+    });
+    return {
+      found: false,
+      fromRoomId,
+      toRoomId,
+      pathNodeIds: [],
+      pathGridCells: [],
+      steps: [],
+      totalDistanceM: 0,
+      estimatedSeconds: 0,
+      floorChanges: 0,
+      accessible: false,
+    };
+  }
+
   // Filter out candidates with zero adjacency
   const startCandidatesConnected = startCandidatesAll.filter(id => (graph.adjacency.get(id)?.length ?? 0) > 0);
   const endCandidatesConnected = endCandidatesAll.filter(id => (graph.adjacency.get(id)?.length ?? 0) > 0);
@@ -201,7 +239,7 @@ export async function getRoute(
   const endNodeIdFallback = endCandidatesConnected[0] ?? endCandidatesAll[0] ?? null;
 
   let bestPathNodeIds: string[] | null = null;
-  let bestPathLength = Infinity;
+  let bestPathCost = Infinity;
   let bestStartNodeId: string | null = null;
   let bestEndNodeId: string | null = null;
 
@@ -216,40 +254,9 @@ export async function getRoute(
       );
 
       if (path) {
-        let dist = 0;
-        const scale = getFloorScale(fromRoom.floorId, fromRoom.floor?.scaleX, fromRoom.floor?.scaleY);
-        const hudsonFloor = isHudsonFloor(fromRoom.floorId);
-        const targetGridCols = hudsonFloor ? HUDSON_DISPLAY_GRID.cols : fromGridCols;
-        const targetGridRows = hudsonFloor ? HUDSON_DISPLAY_GRID.rows : fromGridRows;
-
-        const pathNodes = path.map(id => graph.nodesById.get(id)!);
-        const pathGridCells = pathNodes.map(n => {
-          if (hudsonFloor) {
-            return normaliseHudsonCell(
-              n.gridX,
-              n.gridY,
-              targetGridCols,
-              targetGridRows,
-              HUDSON_EDITOR_PX_BOUNDS.minX,
-              HUDSON_EDITOR_PX_BOUNDS.minY,
-              HUDSON_EDITOR_PX_BOUNDS.width,
-              HUDSON_EDITOR_PX_BOUNDS.height,
-            );
-          }
-          return { x: n.gridX, y: n.gridY };
-        });
-
-        for (let i = 1; i < pathGridCells.length; i++) {
-          const a = pathGridCells[i - 1];
-          const b = pathGridCells[i];
-          dist += Math.sqrt(
-            ((b.x - a.x) * scale.x) ** 2 +
-            ((b.y - a.y) * scale.y) ** 2
-          );
-        }
-
-        if (dist < bestPathLength) {
-          bestPathLength = dist;
+        const cost = getPathCost(path, graph);
+        if (cost < bestPathCost) {
+          bestPathCost = cost;
           bestPathNodeIds = path;
           bestStartNodeId = startId;
           bestEndNodeId = endId;

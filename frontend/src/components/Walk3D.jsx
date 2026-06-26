@@ -2,23 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import "../css/Walk3D.css";
 
-// ─── ROOM TYPE COLOURS (mirrors FloorMap palette) ────────────────────────────
-const ROOM_COLOURS = {
-  RECEPTION:      0xd8eafb,
-  MEETING_ROOM:   0xe6f3d7,
-  BOARDROOM:      0xe6f3d7,
-  PANTRY:         0xfaefd9,
-  TOILET:         0xeceff3,
-  EXIT:           0xfbe2e2,
-  OFFICE:         0xeeedfe,
-  OPEN_WORKSPACE: 0xf1efe8,
-  SERVER_ROOM:    0xfff3cd,
-  STORAGE:        0xf1efe8,
-  OTHER:          0xf5f5f5,
-};
+// Import modular room models and shared assets
+import { initSharedResources, createRoomWalls } from "./models/ModelShared";
+import { createOfficeDeskCluster } from "./models/OfficeDeskCluster";
+import { createMeetingRoom } from "./models/MeetingRoomModel";
+import { createReception } from "./models/ReceptionModel";
+import { createPantry } from "./models/PantryModel";
+import { createStaircase } from "./models/StaircaseModel";
+import { createLift } from "./models/LiftModel";
+import { createUtilityRoom } from "./models/UtilityRoomModel";
 
 const WALL_HEIGHT  = 2.7;
-const ROOM_WALL_H  = 2.6;
 const EYE_HEIGHT   = 1.75;
 const WALK_SPEED   = 1.4; // metres / second
 
@@ -54,62 +48,43 @@ function makeLabelSprite(text, colorHex = "#0C447C", bgAlpha = 0.93) {
   return sprite;
 }
 
-/**
- * Validates a segment between two path grid cells against the walkability grid.
- * Uses Bresenham's line algorithm to traverse cells between p1 and p2.
- * Returns true if all cells along the segment are walkable (value === 0),
- * or false if any cell is a wall (value === 1).
- */
-function isSegmentWalkable(p1, p2, grid) {
-  if (!grid) return true; // if grid is missing, assume valid
-
-  const x0 = Math.round(p1.x);
-  const y0 = Math.round(p1.y);
-  const x1 = Math.round(p2.x);
-  const y1 = Math.round(p2.y);
-
-  const dx = Math.abs(x1 - x0);
-  const dy = Math.abs(y1 - y0);
-  const sx = (x0 < x1) ? 1 : -1;
-  const sy = (y0 < y1) ? 1 : -1;
-  let err = dx - dy;
-
-  let cx = x0;
-  let cy = y0;
-
-  const rows = grid.length;
-  const cols = rows > 0 ? grid[0].length : 0;
-
-  while (true) {
-    const gridY = rows - 1 - cy;
-    if (cx >= 0 && cx < cols && gridY >= 0 && gridY < rows) {
-      if (grid[gridY][cx] === 1) {
-        return false; // Collision with a wall
-      }
-    } else {
-      return false; // Out of bounds is treated as blocked
-    }
-
-    if (cx === x1 && cy === y1) break;
-
-    const e2 = 2 * err;
-    if (e2 > -dy) {
-      err -= dy;
-      cx += sx;
-    }
-    if (e2 < dx) {
-      err += dx;
-      cy += sy;
-    }
+function getRoomTemplateType(room) {
+  const type = (room.type ?? "").toUpperCase();
+  const name = (room.name ?? "").toLowerCase();
+  
+  if (type === "RECEPTION" || name.includes("reception") || name.includes("lobby") || name.includes("entrance")) {
+    return "RECEPTION";
   }
-
-  return true;
+  if (type === "OPEN_WORKSPACE" || type === "WORKSPACE" || name.includes("workspace") || name.includes("innovation") || name.includes("hotdesk") || name.includes("desk") || name.includes("it bar") || name.includes("support")) {
+    return "OPEN_WORKSPACE";
+  }
+  if (type === "MEETING_ROOM" || type === "BOARDROOM" || type === "OFFICE" || name.includes("meeting") || name.includes("board") || name.includes("cabin") || name.includes("conference")) {
+    return "MEETING_ROOM";
+  }
+  if (type === "PANTRY" || name.includes("cafeteria") || name.includes("pantry") || name.includes("food") || name.includes("cafe")) {
+    return "PANTRY";
+  }
+  if (type === "TOILET" || name.includes("restroom") || name.includes("toilet") || name.includes("washroom")) {
+    return "TOILET";
+  }
+  if (name.includes("lift") || name.includes("elevator") || name.includes("escalator")) {
+    return "LIFT";
+  }
+  if (type === "EXIT" || name.includes("stair") || name.includes("exit")) {
+    return "STAIRCASE";
+  }
+  if (type === "SERVER_ROOM" || type === "STORAGE" || name.includes("server") || name.includes("storage") || name.includes("utility")) {
+    return "SERVER_ROOM";
+  }
+  return "OTHER";
 }
+
 
 export default function Walk3D({ floorMap, pathGridCells = [], destination, userRoom, livePosition = null }) {
   const mountRef = useRef(null);
   const livePosRef = useRef(livePosition);
   useEffect(() => { livePosRef.current = livePosition; }, [livePosition]);
+  
   const stateRef = useRef({
     raf: 0,
     progress: 0,
@@ -120,14 +95,18 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     yaw: null,
     cleanup: null,
   });
+
   const [arrived, setArrived]         = useState(false);
   const [progressPct, setProgressPct] = useState(0);
   const [speedMul, setSpeedMul]       = useState(1);
   const [paused, setPaused]           = useState(false);
+
   const speedMulRef = useRef(1);
   const pausedRef   = useRef(false);
+  
   useEffect(() => { speedMulRef.current = speedMul; }, [speedMul]);
   useEffect(() => { pausedRef.current   = paused;   }, [paused]);
+
   const SPEED_STEPS = [1, 2, 4];
   const cycleSpeed   = () => setSpeedMul(prev => SPEED_STEPS[(SPEED_STEPS.indexOf(prev) + 1) % SPEED_STEPS.length]);
   const togglePaused = () => setPaused(prev => !prev);
@@ -150,19 +129,21 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     const camera = new THREE.PerspectiveCamera(72, width / height, 0.05, 200);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-    const sun = new THREE.DirectionalLight(0xffffff, 0.7);
-    sun.position.set(20, 40, 15);
+    // Initialize shared geometries/materials
+    const resources = initSharedResources();
+    const { geometries, materials } = resources;
+
+    // ── LIGHTING ────────────────────────────────────────────────────────────
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+    sun.position.set(25, 40, 15);
     scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.35);
-    fill.position.set(-15, 25, -10);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+    fill.position.set(-20, 25, -15);
     scene.add(fill);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xc8ccd1, 0.45));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xb8ccd1, 0.5));
 
     // ── Coordinate helpers ──────────────────────────────────────────────────
-    // Path coordinates (pathGridCells), grid boundaries, and room definitions
-    // are all defined in the normalized 80x80 grid space.
-    // We map this grid directly to Three.js world space in metres, centered at (0, 0).
     const gridCols = floorMap.gridCols ?? 80;
     const gridRows = floorMap.gridRows ?? 80;
     const realWidthM  = floorMap.realWidthM  ?? 73.579;
@@ -170,10 +151,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     const cellSizeX = realWidthM / gridCols;
     const cellSizeZ = realHeightM / gridRows;
 
-    // Convert a grid coordinate (gx, gy) to Three.js world space (X and Z in metres).
-    // The Y-axis is flipped because grid y=0 is at the top, but Three.js Z increases towards the user (bottom).
-    // worldX = (gx - gridCols / 2) * cellSizeX
-    // worldZ = (gridRows / 2 - gy) * cellSizeZ
     const toWorld = (gx, gy) => ({
       x: (gx - gridCols / 2) * cellSizeX,
       z: (gridRows / 2 - gy) * cellSizeZ,
@@ -181,36 +158,35 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     const widthM3d  = realWidthM;
     const heightM3d = realHeightM;
-
     const normPath = pathGridCells;
 
-    // Floor
+    // Floor (corridor texture as the backing default)
     const floorMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(widthM3d, heightM3d),
-      new THREE.MeshStandardMaterial({ color: 0xd9dce1, roughness: 1.5 }),
+      materials.floorCorridor
     );
     floorMesh.rotation.x = -Math.PI / 2;
     scene.add(floorMesh);
 
+    // Ceiling
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(widthM3d, heightM3d),
-      new THREE.MeshStandardMaterial({ color: 0xf8f8f8, side: THREE.DoubleSide }),
+      materials.ceiling
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.y = WALL_HEIGHT;
     scene.add(ceiling);
 
-    // ── Rooms ───────────────────────────────────────────────────────────────
-    // Rooms are positioned and sized directly using grid coordinates.
+    // ── Rooms & Models ───────────────────────────────────────────────────────
     const rooms = floorMap.rooms ?? [];
+    let destinationPin = null;
+
     for (const r of rooms) {
-      const colour  = ROOM_COLOURS[r.type] ?? 0xf5f5f5;
       const isDest  = destination?.id === r.id;
       const isUser  = userRoom?.id === r.id;
 
       let cx, cz, wM, hM;
       if (Array.isArray(r.polygon) && r.polygon.length >= 3) {
-        // Use polygon centroid and bounds in grid coordinates
         const pxs = r.polygon.map(p => p.x);
         const pys = r.polygon.map(p => p.y);
         const polyMinX = Math.min(...pxs), polyMaxX = Math.max(...pxs);
@@ -222,7 +198,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         wM = (polyMaxX - polyMinX) * cellSizeX;
         hM = (polyMaxY - polyMinY) * cellSizeZ;
       } else {
-        // Use gridX/gridY and gridW/gridH directly
         const gridW = r.gridW ?? 4;
         const gridH = r.gridH ?? 4;
         const centerX = r.gridX + gridW / 2;
@@ -233,153 +208,165 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         hM = gridH * cellSizeZ;
       }
 
-      const slabColour = isDest ? 0xb7ecd0 : isUser ? 0xbcd6f7 : colour;
-      const slab = new THREE.Mesh(
-        new THREE.BoxGeometry(Math.max(0.5, wM), 0.05, Math.max(0.5, hM)),
-        new THREE.MeshStandardMaterial({ color: slabColour, roughness: 0.85, transparent: true, opacity: 0.92 }),
-      );
-      slab.position.set(cx, 0.03, cz);
-      scene.add(slab);
+      // Safeguard sizes
+      wM = Math.max(0.5, wM);
+      hM = Math.max(0.5, hM);
 
+      // Route through the template renderer
+      const template = getRoomTemplateType(r);
+      let roomModel = null;
+
+      switch (template) {
+        case "RECEPTION":
+          roomModel = createReception(cx, cz, wM, hM, resources);
+          break;
+        case "OPEN_WORKSPACE":
+          roomModel = createOfficeDeskCluster(cx, cz, wM, hM, r.name?.toLowerCase().includes("innovation"), resources);
+          break;
+        case "MEETING_ROOM":
+          roomModel = createMeetingRoom(cx, cz, wM, hM, isDest, isUser, resources);
+          break;
+        case "PANTRY":
+          roomModel = createPantry(cx, cz, wM, hM, resources);
+          break;
+        case "STAIRCASE":
+          roomModel = createStaircase(cx, cz, wM, hM, isDest, isUser, resources);
+          break;
+        case "LIFT":
+          roomModel = createLift(cx, cz, wM, hM, isDest, isUser, resources);
+          break;
+        case "SERVER_ROOM":
+          roomModel = createUtilityRoom(cx, cz, wM, hM, r.type === "SERVER_ROOM" || r.name?.toLowerCase().includes("server"), isDest, isUser, resources);
+          break;
+        case "TOILET":
+          roomModel = new THREE.Group();
+          roomModel.add(createRoomWalls({ cx, cz, wM, hM, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSide: "south", doorWidth: 0.8, resources }));
+          // Toilet floor
+          const tFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorTile);
+          tFloor.rotation.x = -Math.PI / 2;
+          tFloor.position.set(cx, 0.012, cz);
+          roomModel.add(tFloor);
+          // Privacy divider screen
+          if (wM > 2.0) {
+            const pScreen = new THREE.Mesh(geometries.box, materials.metalDark);
+            pScreen.scale.set(0.04, 1.8, Math.min(1.6, hM * 0.5));
+            pScreen.position.set(cx, 0.9, cz);
+            roomModel.add(pScreen);
+          }
+          break;
+        case "OTHER":
+        default:
+          roomModel = new THREE.Group();
+          roomModel.add(createRoomWalls({ cx, cz, wM, hM, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSide: "south", doorWidth: 0.8, resources }));
+          
+          // Office floor plate
+          const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
+          oFloor.rotation.x = -Math.PI / 2;
+          oFloor.position.set(cx, 0.012, cz);
+          roomModel.add(oFloor);
+
+          // Standard simple desk
+          const desk = new THREE.Mesh(geometries.box, materials.deskSurface);
+          desk.scale.set(Math.min(1.2, wM * 0.5), 0.75, Math.min(0.6, hM * 0.4));
+          desk.position.set(cx, 0.375, cz);
+          roomModel.add(desk);
+          break;
+      }
+
+      if (roomModel) {
+        scene.add(roomModel);
+      }
+
+      // Add local point spotlight for warm interior lighting in key landmarks
+      if (template === "RECEPTION" || template === "MEETING_ROOM" || template === "PANTRY") {
+        const localSpot = new THREE.PointLight(0xffecc4, 0.6, 6.0);
+        localSpot.position.set(cx, 2.3, cz);
+        scene.add(localSpot);
+      }
+
+      // Render Label Sprite floating just below the ceiling level (Y = 2.4)
       const labelColor = isDest ? "#059669" : isUser ? "#1d4ed8" : "#374151";
       const label = makeLabelSprite(r.name, labelColor, isDest ? 0.97 : 0.88);
-      label.position.set(cx, WALL_HEIGHT * 0.75, cz);
+      label.position.set(cx, 2.4, cz);
       label.scale.set(Math.min(10, Math.max(4, wM * 0.9)), 2.2, 1);
       scene.add(label);
-
-      // Simple furniture props
-      const isSmall = wM < 2 || hM < 2;
-      if (!isSmall) {
-        if (r.type === "OFFICE" || r.type === "BOARDROOM" || r.type === "MEETING_ROOM") {
-          const tableW = Math.max(0.8, Math.min(wM * 0.55, 3.5));
-          const tableD = Math.max(0.6, Math.min(hM * 0.4, 1.6));
-          const table = new THREE.Mesh(
-            new THREE.BoxGeometry(tableW, 0.06, tableD),
-            new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7 }),
-          );
-          table.position.set(cx, 0.75, cz);
-          scene.add(table);
-          const legGeom = new THREE.BoxGeometry(0.08, 0.72, 0.08);
-          const legMat  = new THREE.MeshStandardMaterial({ color: 0x5c4530 });
-          for (const [lx, lz] of [
-            [ tableW/2-0.1,  tableD/2-0.1],[-tableW/2+0.1, tableD/2-0.1],
-            [ tableW/2-0.1, -tableD/2+0.1],[-tableW/2+0.1,-tableD/2+0.1],
-          ]) {
-            const leg = new THREE.Mesh(legGeom, legMat);
-            leg.position.set(cx+lx, 0.36, cz+lz);
-            scene.add(leg);
-          }
-        } else if (r.type === "RECEPTION") {
-          const dW = Math.min(wM * 0.7, 4.5);
-          const desk = new THREE.Mesh(
-            new THREE.BoxGeometry(dW, 1.1, 0.7),
-            new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 }),
-          );
-          desk.position.set(cx, 0.55, cz);
-          scene.add(desk);
-        } else if (r.type === "PANTRY") {
-          const counterW = Math.min(wM * 0.8, 4);
-          const counter = new THREE.Mesh(
-            new THREE.BoxGeometry(counterW, 0.9, 0.6),
-            new THREE.MeshStandardMaterial({ color: 0xd4b483, roughness: 0.6 }),
-          );
-          counter.position.set(cx, 0.45, cz - hM/2 + 0.35);
-          scene.add(counter);
-          const fridge = new THREE.Mesh(
-            new THREE.BoxGeometry(0.7, 1.7, 0.7),
-            new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.4 }),
-          );
-          fridge.position.set(cx + counterW/2 + 0.4, 0.85, cz - hM/2 + 0.4);
-          scene.add(fridge);
-        } else if (r.type === "OPEN_WORKSPACE") {
-          const deskW = 1.2, deskD = 0.6, gap = 0.4;
-          const cols2 = Math.max(1, Math.floor((wM - gap) / (deskW + gap)));
-          const rows2 = Math.max(1, Math.floor((hM - gap) / (deskD + gap)));
-          const startX = cx - ((cols2-1)*(deskW+gap))/2;
-          const startZ = cz - ((rows2-1)*(deskD+gap))/2;
-          const dMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7 });
-          for (let cc = 0; cc < cols2; cc++)
-            for (let rr = 0; rr < rows2; rr++) {
-              const dm = new THREE.Mesh(new THREE.BoxGeometry(deskW, 0.05, deskD), dMat);
-              dm.position.set(startX+cc*(deskW+gap), 0.75, startZ+rr*(deskD+gap));
-              scene.add(dm);
-            }
-        } else if (r.type === "TOILET") {
-          const box = new THREE.Mesh(
-            new THREE.BoxGeometry(Math.min(wM*0.5,1.5),1.2,Math.min(hM*0.4,0.8)),
-            new THREE.MeshStandardMaterial({ color: 0xeceff3, roughness: 0.7 }),
-          );
-          box.position.set(cx, 0.6, cz);
-          scene.add(box);
-        } else if (r.type === "EXIT") {
-          const pole = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3,2.2,0.3),
-            new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.4 }),
-          );
-          pole.position.set(cx, 1.1, cz);
-          scene.add(pole);
-        } else if (r.type === "SERVER_ROOM") {
-          const rack = new THREE.Mesh(
-            new THREE.BoxGeometry(Math.min(wM*0.4,0.8),1.8,Math.min(hM*0.3,0.6)),
-            new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.5 }),
-          );
-          rack.position.set(cx, 0.9, cz);
-          scene.add(rack);
-        }
-      }
     }
 
-    // ── Room partition walls ─────────────────────────────────────────────────
-    const wallMatNormal = new THREE.MeshStandardMaterial({ color: 0xcbd2da, roughness: 0.85 });
-    const wallMatDest   = new THREE.MeshStandardMaterial({
-      color: 0x34d399, roughness: 0.6, emissive: 0x059669, emissiveIntensity: 0.18,
-    });
-    const wt = 0.15;
-    for (const r of rooms) {
-      const isDest = destination?.id === r.id;
-      let cx, cz, wM, hM;
-      if (Array.isArray(r.polygon) && r.polygon.length >= 3) {
-        const pxs = r.polygon.map(p => p.x), pys = r.polygon.map(p => p.y);
-        const polyMinX = Math.min(...pxs), polyMaxX = Math.max(...pxs);
-        const polyMinY = Math.min(...pys), polyMaxY = Math.max(...pys);
-        const centerX  = (polyMinX + polyMaxX) / 2;
-        const centerY  = (polyMinY + polyMaxY) / 2;
-        const w = toWorld(centerX, centerY);
-        cx = w.x; cz = w.z;
-        wM = (polyMaxX-polyMinX)*cellSizeX;
-        hM = (polyMaxY-polyMinY)*cellSizeZ;
-      } else {
-        const gridW = r.gridW ?? 4;
-        const gridH = r.gridH ?? 4;
-        const centerX = r.gridX + gridW / 2;
-        const centerY = r.gridY - gridH / 2;
-        const w = toWorld(centerX, centerY);
-        cx = w.x; cz = w.z;
-        wM = gridW*cellSizeX;
-        hM = gridH*cellSizeZ;
-      }
-      const mat = isDest ? wallMatDest : wallMatNormal;
-      const h   = ROOM_WALL_H;
-      for (const p of [
-        { pw: wM+wt*2, pd: wt, ox: 0,      oz: -hM/2 },
-        { pw: wM+wt*2, pd: wt, ox: 0,      oz:  hM/2 },
-        { pw: wt,      pd: hM, ox: -wM/2,  oz: 0     },
-        { pw: wt,      pd: hM, ox:  wM/2,  oz: 0     },
-      ]) {
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.pw, h, p.pd), mat);
-        mesh.position.set(cx+p.ox, h/2, cz+p.oz);
-        scene.add(mesh);
+    // ── Destination Landmark Floating Pin ──────────────────────────────────
+    if (destination && rooms.length > 0) {
+      const destRoom = rooms.find(r => r.id === destination.id);
+      if (destRoom) {
+        let dcx, dcz;
+        if (Array.isArray(destRoom.polygon) && destRoom.polygon.length >= 3) {
+          const pxs = destRoom.polygon.map(p => p.x);
+          const pys = destRoom.polygon.map(p => p.y);
+          dcx = (Math.min(...pxs) + Math.max(...pxs)) / 2;
+          dcz = (Math.min(...pys) + Math.max(...pys)) / 2;
+        } else {
+          dcx = destRoom.gridX + (destRoom.gridW ?? 4) / 2;
+          dcz = destRoom.gridY - (destRoom.gridH ?? 4) / 2;
+        }
+        const dw = toWorld(dcx, dcz);
+
+        const pinGroup = new THREE.Group();
+
+        // Pin Top Sphere
+        const pinSphere = new THREE.Mesh(
+          geometries.sphere,
+          new THREE.MeshStandardMaterial({
+            color: 0x10b981,
+            roughness: 0.2,
+            metalness: 0.8,
+            emissive: 0x10b981,
+            emissiveIntensity: 0.2,
+          })
+        );
+        pinSphere.scale.set(0.46, 0.46, 0.46);
+        pinSphere.position.y = 0.6;
+        pinGroup.add(pinSphere);
+
+        // Pin Point Cone
+        const pinCone = new THREE.Mesh(
+          new THREE.ConeGeometry(0.18, 0.5, 16),
+          new THREE.MeshStandardMaterial({
+            color: 0x10b981,
+            roughness: 0.2,
+            metalness: 0.8,
+            emissive: 0x10b981,
+            emissiveIntensity: 0.2,
+          })
+        );
+        pinCone.rotation.x = Math.PI;
+        pinCone.position.y = 0.25;
+        pinGroup.add(pinCone);
+
+        // Floor ring indicator
+        const ringGeom = new THREE.RingGeometry(0.1, 0.5, 24);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0x10b981,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.8,
+        });
+        const floorRing = new THREE.Mesh(ringGeom, ringMat);
+        floorRing.rotation.x = -Math.PI / 2;
+        floorRing.position.y = 0.05;
+        pinGroup.add(floorRing);
+
+        pinGroup.position.set(dw.x, 1.35, dw.z);
+        scene.add(pinGroup);
+        destinationPin = pinGroup;
       }
     }
 
     // ── Outer boundary walls ─────────────────────────────────────────────────
     const boundaryMat = new THREE.MeshStandardMaterial({ color: 0x8a939e, roughness: 0.92 });
-    const t = 0.4;
+    const bt = 0.4;
     for (const b of [
-      { x: 0,             z: -heightM3d/2, w: widthM3d, d: t },
-      { x: 0,             z:  heightM3d/2, w: widthM3d, d: t },
-      { x: -widthM3d/2,   z: 0,            w: t,        d: heightM3d },
-      { x:  widthM3d/2,   z: 0,            w: t,        d: heightM3d },
+      { x: 0,             z: -heightM3d/2, w: widthM3d, d: bt },
+      { x: 0,             z:  heightM3d/2, w: widthM3d, d: bt },
+      { x: -widthM3d/2,   z: 0,            w: bt,        d: heightM3d },
+      { x:  widthM3d/2,   z: 0,            w: bt,        d: heightM3d },
     ]) {
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(b.w, WALL_HEIGHT, b.d), boundaryMat,
@@ -389,9 +376,10 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     }
 
     // ── Path: world-space points ─────────────────────────────────────────────
+    // Lift the path to float slightly above the ground (Y = 0.16)
     const pathPoints = normPath.map(c => {
       const { x, z } = toWorld(c.x + 0.5, c.y + 0.5);
-      return new THREE.Vector3(x, 0.08, z);
+      return new THREE.Vector3(x, 0.16, z);
     });
 
     stateRef.current.pathPoints = pathPoints;
@@ -405,62 +393,44 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     stateRef.current.pathLengthM = pathLengthM;
 
     if (pathPoints.length >= 1) {
-      // Validate segments and collect valid path segments
-      const validGroups = [];
-      let currentGroup = [];
-
-      currentGroup.push(pathPoints[0]);
-
-      for (let i = 1; i < pathPoints.length; i++) {
-        const p1 = normPath[i - 1];
-        const p2 = normPath[i];
-        const wp2 = pathPoints[i];
-
-        if (isSegmentWalkable(p1, p2, floorMap.grid)) {
-          currentGroup.push(wp2);
-        } else {
-          console.warn(`Invalid path segment detected between grid cell (${p1.x}, ${p1.y}) and (${p2.x}, ${p2.y}) due to wall collision.`);
-          if (currentGroup.length >= 2) {
-            validGroups.push(currentGroup);
-          }
-          currentGroup = [wp2];
-        }
-      }
-      if (currentGroup.length >= 2) {
-        validGroups.push(currentGroup);
+      // Configure chevrons repeat count relative to length
+      const arrowTex = resources.textures.arrowTex;
+      if (arrowTex) {
+        arrowTex.repeat.set(pathLengthM * 1.5, 1);
       }
 
-      // Render valid groups as linear Tubes
-      validGroups.forEach((group) => {
+      // Render flowing tube path as a single continuous curve
+      if (pathPoints.length >= 2) {
         const curve = new THREE.CurvePath();
-        for (let i = 1; i < group.length; i++) {
-          curve.add(new THREE.LineCurve3(group[i-1], group[i]));
+        for (let i = 1; i < pathPoints.length; i++) {
+          curve.add(new THREE.LineCurve3(pathPoints[i-1], pathPoints[i]));
         }
         const tube = new THREE.Mesh(
-          new THREE.TubeGeometry(curve, Math.max(10, group.length * 2), 0.18, 8, false),
-          new THREE.MeshStandardMaterial({
-            color: 0x1d4ed8, emissive: 0x1d4ed8, emissiveIntensity: 0.32, roughness: 0.4,
-          }),
+          new THREE.TubeGeometry(curve, Math.max(10, pathPoints.length * 2), 0.16, 8, false),
+          materials.pathArrows
         );
         scene.add(tube);
-      });
+      }
 
+      // User starting position dot (blue)
       const startDot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.32, 24, 24),
-        new THREE.MeshStandardMaterial({ color: 0x1d4ed8, emissive: 0x1d4ed8, emissiveIntensity: 0.4 }),
+        new THREE.SphereGeometry(0.24, 24, 24),
+        new THREE.MeshStandardMaterial({ color: 0x1d4ed8, emissive: 0x1d4ed8, emissiveIntensity: 0.5 }),
       );
       startDot.position.copy(pathPoints[0]);
-      startDot.position.y = 0.35;
+      startDot.position.y = 0.3;
       scene.add(startDot);
 
+      // Route destination position dot (green)
       if (pathPoints.length >= 2) {
-        const pin = new THREE.Mesh(
-          new THREE.ConeGeometry(0.4, 1.2, 24),
-          new THREE.MeshStandardMaterial({ color: 0x059669, emissive: 0x059669, emissiveIntensity: 0.35 }),
+        const endDot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.24, 24, 24),
+          new THREE.MeshStandardMaterial({ color: 0x059669, emissive: 0x059669, emissiveIntensity: 0.5 }),
         );
         const end = pathPoints[pathPoints.length-1];
-        pin.position.set(end.x, 1.0, end.z);
-        scene.add(pin);
+        endDot.position.copy(end);
+        endDot.position.y = 0.3;
+        scene.add(endDot);
       }
     }
 
@@ -512,6 +482,24 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       const dt = Math.min(0.05, (t - (s.lastT || t)) / 1000);
       s.lastT = t;
 
+      // 1. Flowing navigation arrows animation
+      if (materials.pathArrows?.map) {
+        materials.pathArrows.map.offset.x -= 0.4 * dt * speedMulRef.current;
+      }
+
+      // 2. Bobbing & spinning destination pin animation
+      if (destinationPin) {
+        destinationPin.position.y = 1.35 + Math.sin(t * 0.003) * 0.12;
+        destinationPin.rotation.y += 0.015 * speedMulRef.current;
+        const floorRing = destinationPin.children[2];
+        if (floorRing) {
+          const sVal = 1.0 + Math.sin(t * 0.006) * 0.25;
+          floorRing.scale.set(sVal, sVal, 1);
+          floorRing.material.opacity = 0.8 - (sVal - 0.75) * 0.8;
+        }
+      }
+
+      // 3. Movement and camera logic
       if (pathPoints.length >= 2 && pathLengthM > 0) {
         if (!pausedRef.current) {
           const live = livePosRef.current;
@@ -554,11 +542,20 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       cancelAnimationFrame(stateRef.current.raf);
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
+      
+      // Safety teardown: Dispose ONLY local scene assets to protect globally cached textures/materials
       scene.traverse(obj => {
-        if (obj.geometry) obj.geometry.dispose?.();
+        if (obj.geometry && !obj.geometry.isShared) {
+          obj.geometry.dispose?.();
+        }
         if (obj.material) {
           const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-          mats.forEach(m => { m.map?.dispose?.(); m.dispose?.(); });
+          mats.forEach(m => {
+            if (!m.isShared) {
+              if (m.map && !m.map.isShared) m.map.dispose?.();
+              m.dispose?.();
+            }
+          });
         }
       });
       if (renderer.domElement?.parentNode === mount) mount.removeChild(renderer.domElement);

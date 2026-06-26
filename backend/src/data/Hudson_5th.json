@@ -1415,7 +1415,14 @@
           "y": 3739
         }
       ],
-      "doors": []
+      "doors": [
+        {
+          "id": "door1",
+          "x": 4978,
+          "y": 3737,
+          "width": 10
+        }
+      ]
     },
     {
       "id": "Cafeteria",
@@ -2120,7 +2127,14 @@
           "y": 2652
         }
       ],
-      "doors": []
+      "doors": [
+        {
+          "id": "door1",
+          "x": 1640,
+          "y": 2983,
+          "width": 10
+        }
+      ]
     },
     {
       "id": "Sitting Area 2",
@@ -6559,6 +6573,46 @@
         "from": "J185",
         "to": "N28",
         "distance": 273.0
+      },
+      {
+        "from": "N34",
+        "to": "N37",
+        "distance": 8.06
+      },
+      {
+        "from": "N37",
+        "to": "N34",
+        "distance": 8.06
+      },
+      {
+        "from": "N24",
+        "to": "N40",
+        "distance": 14.21
+      },
+      {
+        "from": "N40",
+        "to": "N24",
+        "distance": 14.21
+      },
+      {
+        "from": "J163",
+        "to": "N44",
+        "distance": 81.87
+      },
+      {
+        "from": "N44",
+        "to": "J163",
+        "distance": 81.87
+      },
+      {
+        "from": "J161",
+        "to": "J163",
+        "distance": 3.15
+      },
+      {
+        "from": "J163",
+        "to": "J161",
+        "distance": 3.15
       }
     ]
   }

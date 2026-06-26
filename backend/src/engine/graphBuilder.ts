@@ -11,6 +11,7 @@ export interface NavigationGraph {
   roomEntryNodes: Map<string, string[]>;
   // Store room data for fallback node lookup
   roomsData?: Map<string, { centreX: number; centreY: number; floorId: string }>;
+  lccNodes?: Set<string>;
 }
 
 /**
@@ -59,7 +60,39 @@ export function buildGraph(
     }
   }
 
-  return { adjacency, nodesById, roomEntryNodes };
+  // Compute connected components to find the largest connected component (LCC)
+  const lccNodes = new Set<string>();
+  const visited = new Set<string>();
+  let maxComponent: string[] = [];
+
+  for (const nodeId of nodesById.keys()) {
+    if (visited.has(nodeId)) continue;
+    const queue = [nodeId];
+    const component: string[] = [];
+    visited.add(nodeId);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      component.push(current);
+      const neighbors = adjacency.get(current) ?? [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor.nodeId)) {
+          visited.add(neighbor.nodeId);
+          queue.push(neighbor.nodeId);
+        }
+      }
+    }
+
+    if (component.length > maxComponent.length) {
+      maxComponent = component;
+    }
+  }
+
+  for (const nodeId of maxComponent) {
+    lccNodes.add(nodeId);
+  }
+
+  return { adjacency, nodesById, roomEntryNodes, lccNodes };
 }
 
 /**

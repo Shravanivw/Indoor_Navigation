@@ -147,6 +147,9 @@ interface GraphAStarNode {
  * Euclidean heuristic for graph nodes (admissible when weights = real distances)
  */
 function heuristicGraph(a: GraphNode, b: GraphNode): number {
+  if (a.floorId !== b.floorId) {
+    return 0; // Admissible fallback for different floors
+  }
   return Math.sqrt((a.realX - b.realX) ** 2 + (a.realY - b.realY) ** 2);
 }
 
@@ -306,76 +309,149 @@ export function buildRouteSteps(
 ): RouteStep[] {
   if (pathCells.length < 2) return [];
 
-  /* Compass direction of a single grid step (axis-aligned). For diagonals
-     we choose whichever axis has the larger component. */
-  const getDir = (a: GridCell, b: GridCell): 'N' | 'S' | 'E' | 'W' => {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'E' : 'W';
-    return dy >= 0 ? 'S' : 'N';
-  };
-
-  /* Relative turn from one compass direction to the next. */
-  const turnFrom = (prev: string, next: string): 'straight' | 'left' | 'right' | 'around' => {
-    if (prev === next) return 'straight';
-    const order = ['N', 'E', 'S', 'W'];
-    const diff = (order.indexOf(next) - order.indexOf(prev) + 4) % 4;
-    if (diff === 1) return 'right';
-    if (diff === 3) return 'left';
-    return 'around';
-  };
-
-  const cellDist = (a: GridCell, b: GridCell) =>
-    Math.sqrt(((b.x - a.x) * scaleX) ** 2 + ((b.y - a.y) * scaleY) ** 2);
-
-  /* 1) Per-segment direction */
-  const dirs: string[] = [];
-  for (let i = 1; i < pathCells.length; i++) {
-    dirs.push(getDir(pathCells[i - 1], pathCells[i]));
-  }
-
-  /* 2) Group consecutive same-direction segments */
-  type Group = { dir: string; startIdx: number; distance: number };
-  const groups: Group[] = [];
-  let curDir = dirs[0];
-  let curStart = 0;
-  let curDist = 0;
-  for (let i = 0; i < dirs.length; i++) {
-    const segDist = cellDist(pathCells[i], pathCells[i + 1]);
-    if (dirs[i] === curDir) {
-      curDist += segDist;
+  // Filter out contiguous duplicate or very close cells to prevent division by zero
+  const cells: GridCell[] = [];
+  for (const c of pathCells) {
+    if (cells.length === 0) {
+      cells.push(c);
     } else {
-      groups.push({ dir: curDir, startIdx: curStart, distance: curDist });
-      curDir = dirs[i];
-      curStart = i;
-      curDist = segDist;
-    }
-  }
-  groups.push({ dir: curDir, startIdx: curStart, distance: curDist });
-
-  /* 3) Build human-readable steps (left / right / straight only) */
-  const steps: RouteStep[] = [];
-  for (let i = 0; i < groups.length; i++) {
-    const g = groups[i];
-    const m = Math.max(1, Math.round(g.distance));
-    let instruction: string;
-    if (i === 0) {
-      instruction = `Walk straight for ${m} m`;
-    } else {
-      const turn = turnFrom(groups[i - 1].dir, g.dir);
-      if (turn === 'straight') {
-        instruction = `Continue straight for ${m} m`;
-      } else if (turn === 'around') {
-        instruction = `Turn around and continue for ${m} m`;
-      } else {
-        instruction = `Turn ${turn} and continue for ${m} m`;
+      const prev = cells[cells.length - 1];
+      if (Math.abs(c.x - prev.x) > 0.001 || Math.abs(c.y - prev.y) > 0.001) {
+        cells.push(c);
       }
     }
+  }
+  if (cells.length < 2) return [];
+
+  // Convert to segments with physical lengths and angles
+  interface Segment {
+    startCell: GridCell;
+    endCell: GridCell;
+    dx: number;
+    dy: number;
+    length: number;
+    angle: number; // in degrees
+  }
+
+  const segments: Segment[] = [];
+  for (let i = 0; i < cells.length - 1; i++) {
+    const a = cells[i];
+    const b = cells[i + 1];
+    const dx = (b.x - a.x) * scaleX;
+    const dy = (b.y - a.y) * scaleY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    segments.push({ startCell: a, endCell: b, dx, dy, length, angle });
+  }
+
+  // Merge consecutive collinear segments and tiny zig-zags / segments shorter than 2m
+  interface MergedSegment {
+    startCell: GridCell;
+    endCell: GridCell;
+    length: number;
+    angle: number;
+    turnType: 'start' | 'straight' | 'left' | 'right' | 'slight_left' | 'slight_right' | 'around';
+  }
+
+  const merged: MergedSegment[] = [];
+  let currentStart = cells[0];
+  let currentEnd = cells[1];
+  let currentLength = segments[0].length;
+  let currentAngle = segments[0].angle;
+
+  for (let i = 1; i < segments.length; i++) {
+    const seg = segments[i];
+
+    let diff = seg.angle - currentAngle;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    const absDiff = Math.abs(diff);
+
+    // Merge if collinear (<= 20) or if the segment is shorter than 2.0 meters
+    if (absDiff <= 20 || seg.length < 2.0) {
+      currentEnd = seg.endCell;
+      currentLength += seg.length;
+      if (absDiff <= 20) {
+        currentAngle = seg.angle; // Keep tracking angle if collinear
+      }
+    } else {
+      merged.push({
+        startCell: currentStart,
+        endCell: currentEnd,
+        length: currentLength,
+        angle: currentAngle,
+        turnType: 'start',
+      });
+
+      currentStart = currentEnd;
+      currentEnd = seg.endCell;
+      currentLength = seg.length;
+      currentAngle = seg.angle;
+    }
+  }
+
+  merged.push({
+    startCell: currentStart,
+    endCell: currentEnd,
+    length: currentLength,
+    angle: currentAngle,
+    turnType: 'start',
+  });
+
+  // Determine relative turns between merged segments using strict thresholds:
+  // 0°-20°: Continue straight
+  // 20°-60°: Bear slight left/right
+  // 60°-120°: Turn left/right
+  // > 120°: Turn around
+  for (let i = 1; i < merged.length; i++) {
+    let turnDiff = merged[i].angle - merged[i - 1].angle;
+    while (turnDiff > 180) turnDiff -= 360;
+    while (turnDiff < -180) turnDiff += 360;
+
+    const absDiff = Math.abs(turnDiff);
+    let turnType: 'straight' | 'left' | 'right' | 'slight_left' | 'slight_right' | 'around';
+    
+    if (absDiff <= 20) {
+      turnType = 'straight';
+    } else if (absDiff <= 60) {
+      turnType = turnDiff >= 0 ? 'slight_left' : 'slight_right';
+    } else if (absDiff <= 120) {
+      turnType = turnDiff >= 0 ? 'left' : 'right';
+    } else {
+      turnType = 'around';
+    }
+    
+    merged[i].turnType = turnType;
+  }
+
+  // Generate natural language steps
+  const steps: RouteStep[] = [];
+  for (let i = 0; i < merged.length; i++) {
+    const m = merged[i];
+    const dist = Math.max(1, Math.round(m.length));
+    let instruction = '';
+
+    if (i === 0) {
+      instruction = `Walk straight for ${dist} m`;
+    } else if (m.turnType === 'straight') {
+      instruction = `Continue straight for ${dist} m`;
+    } else if (m.turnType === 'slight_left') {
+      instruction = `Bear slight left and continue for ${dist} m`;
+    } else if (m.turnType === 'slight_right') {
+      instruction = `Bear slight right and continue for ${dist} m`;
+    } else if (m.turnType === 'left') {
+      instruction = `Turn left and continue for ${dist} m`;
+    } else if (m.turnType === 'right') {
+      instruction = `Turn right and continue for ${dist} m`;
+    } else if (m.turnType === 'around') {
+      instruction = `Turn around and continue for ${dist} m`;
+    }
+
     steps.push({
       instruction,
-      distanceM: Math.round(g.distance * 10) / 10,
+      distanceM: Math.round(m.length * 10) / 10,
       nodeId: '',
-      gridCell: pathCells[g.startIdx],
+      gridCell: m.startCell,
     });
   }
 
@@ -383,7 +459,7 @@ export function buildRouteSteps(
     instruction: 'Arrived at destination',
     distanceM: 0,
     nodeId: '',
-    gridCell: pathCells[pathCells.length - 1],
+    gridCell: cells[cells.length - 1],
   });
 
   return steps;
