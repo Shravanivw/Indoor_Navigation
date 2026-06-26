@@ -54,6 +54,58 @@ function makeLabelSprite(text, colorHex = "#0C447C", bgAlpha = 0.93) {
   return sprite;
 }
 
+/**
+ * Validates a segment between two path grid cells against the walkability grid.
+ * Uses Bresenham's line algorithm to traverse cells between p1 and p2.
+ * Returns true if all cells along the segment are walkable (value === 0),
+ * or false if any cell is a wall (value === 1).
+ */
+function isSegmentWalkable(p1, p2, grid) {
+  if (!grid) return true; // if grid is missing, assume valid
+
+  const x0 = Math.round(p1.x);
+  const y0 = Math.round(p1.y);
+  const x1 = Math.round(p2.x);
+  const y1 = Math.round(p2.y);
+
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = (x0 < x1) ? 1 : -1;
+  const sy = (y0 < y1) ? 1 : -1;
+  let err = dx - dy;
+
+  let cx = x0;
+  let cy = y0;
+
+  const rows = grid.length;
+  const cols = rows > 0 ? grid[0].length : 0;
+
+  while (true) {
+    const gridY = rows - 1 - cy;
+    if (cx >= 0 && cx < cols && gridY >= 0 && gridY < rows) {
+      if (grid[gridY][cx] === 1) {
+        return false; // Collision with a wall
+      }
+    } else {
+      return false; // Out of bounds is treated as blocked
+    }
+
+    if (cx === x1 && cy === y1) break;
+
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      cx += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      cy += sy;
+    }
+  }
+
+  return true;
+}
+
 export default function Walk3D({ floorMap, pathGridCells = [], destination, userRoom, livePosition = null }) {
   const mountRef = useRef(null);
   const livePosRef = useRef(livePosition);
@@ -108,48 +160,29 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     scene.add(new THREE.HemisphereLight(0xffffff, 0xc8ccd1, 0.45));
 
     // ── Coordinate helpers ──────────────────────────────────────────────────
-    // pathGridCells contain raw Layout Editor pixel coordinates (e.g. x=2649).
-    // floorMap.scaleX is set to 1 by the importer (layout units, not metres).
-    // floorMap.widthM  = maxX - minX of the layout  (layout units, not metres).
-    // floorMap.gridCols = ceil(maxX)                 (includes origin offset).
-    //
-    // To convert layout pixel coords → real metres we need:
-    //   metres_per_unit = realWidthM / layoutSpanX
-    //
-    // realWidthM is stored as floorMap.realWidthM (added by importer --real-width-m arg).
-    // layoutSpanX = floorMap.widthM  (the importer sets widthM = maxX - minX).
-    //
-    // If realWidthM is not available (older imports), fall back to a reasonable
-    // heuristic: treat the floor as ~73.5m wide (Hudson F5 actual size).
-    const layoutSpanX = floorMap.widthM  ?? floorMap.gridCols ?? 5185;
-    const layoutSpanY = floorMap.heightM ?? floorMap.gridRows ?? 3239;
+    // Path coordinates (pathGridCells), grid boundaries, and room definitions
+    // are all defined in the normalized 80x80 grid space.
+    // We map this grid directly to Three.js world space in metres, centered at (0, 0).
+    const gridCols = floorMap.gridCols ?? 80;
+    const gridRows = floorMap.gridRows ?? 80;
     const realWidthM  = floorMap.realWidthM  ?? 73.579;
     const realHeightM = floorMap.realHeightM ?? 47.611;
-    const mpuX = realWidthM  / layoutSpanX;   // metres per layout unit X
-    const mpuY = realHeightM / layoutSpanY;   // metres per layout unit Y
+    const cellSizeX = realWidthM / gridCols;
+    const cellSizeZ = realHeightM / gridRows;
 
-    // The layout origin is not at 0,0 — rooms start at ~x=280, y=884.
-    // Compute the origin offset so (0,0) in world space = floor centre.
-    // We derive it from the first path cell or default to half of real size.
-    // The centring offset places the floor centre at world (0,0).
-    const cxOffset = realWidthM  / 2;
-    const czOffset = realHeightM / 2;
-
-    // Convert a Layout Editor pixel coordinate to Three.js world metres.
-    // Note: Y in layout space increases downward; Three.js Z increases forward.
-    // We flip Y so that "up" on the floor plan maps to "forward" in 3D.
-    const toWorld = (lx, ly) => ({
-      x: lx * mpuX - cxOffset,
-      z: ly * mpuY - czOffset,
+    // Convert a grid coordinate (gx, gy) to Three.js world space (X and Z in metres).
+    // The Y-axis is flipped because grid y=0 is at the top, but Three.js Z increases towards the user (bottom).
+    // worldX = (gx - gridCols / 2) * cellSizeX
+    // worldZ = (gridRows / 2 - gy) * cellSizeZ
+    const toWorld = (gx, gy) => ({
+      x: (gx - gridCols / 2) * cellSizeX,
+      z: (gridRows / 2 - gy) * cellSizeZ,
     });
 
     const widthM3d  = realWidthM;
     const heightM3d = realHeightM;
 
     const normPath = pathGridCells;
-    const destWorldPos = normPath.length > 0
-      ? toWorld(normPath[normPath.length - 1].x + 0.5, normPath[normPath.length - 1].y + 0.5)
-      : null;
 
     // Floor
     const floorMesh = new THREE.Mesh(
@@ -168,8 +201,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     scene.add(ceiling);
 
     // ── Rooms ───────────────────────────────────────────────────────────────
-    // Rooms have polygon geometry in layout pixel coordinates.
-    // We convert polygon points to world metres for correct placement.
+    // Rooms are positioned and sized directly using grid coordinates.
     const rooms = floorMap.rooms ?? [];
     for (const r of rooms) {
       const colour  = ROOM_COLOURS[r.type] ?? 0xf5f5f5;
@@ -178,39 +210,40 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
       let cx, cz, wM, hM;
       if (Array.isArray(r.polygon) && r.polygon.length >= 3) {
-        // Use polygon centroid and bounds in layout pixel space → world metres
+        // Use polygon centroid and bounds in grid coordinates
         const pxs = r.polygon.map(p => p.x);
         const pys = r.polygon.map(p => p.y);
         const polyMinX = Math.min(...pxs), polyMaxX = Math.max(...pxs);
         const polyMinY = Math.min(...pys), polyMaxY = Math.max(...pys);
-        const centreX  = (polyMinX + polyMaxX) / 2;
-        const centreY  = (polyMinY + polyMaxY) / 2;
-        const w = toWorld(centreX, centreY);
+        const centerX  = (polyMinX + polyMaxX) / 2;
+        const centerY  = (polyMinY + polyMaxY) / 2;
+        const w = toWorld(centerX, centerY);
         cx = w.x; cz = w.z;
-        wM = (polyMaxX - polyMinX) * mpuX;
-        hM = (polyMaxY - polyMinY) * mpuY;
+        wM = (polyMaxX - polyMinX) * cellSizeX;
+        hM = (polyMaxY - polyMinY) * cellSizeZ;
       } else {
-        // Fallback: use gridX/gridY (layout pixel space)
-        const w = toWorld(r.gridX + (r.gridW ?? 4) / 2, r.gridY + (r.gridH ?? 4) / 2);
+        // Use gridX/gridY and gridW/gridH directly
+        const gridW = r.gridW ?? 4;
+        const gridH = r.gridH ?? 4;
+        const centerX = r.gridX + gridW / 2;
+        const centerY = r.gridY - gridH / 2;
+        const w = toWorld(centerX, centerY);
         cx = w.x; cz = w.z;
-        wM = (r.gridW ?? 4) * mpuX;
-        hM = (r.gridH ?? 4) * mpuY;
+        wM = gridW * cellSizeX;
+        hM = gridH * cellSizeZ;
       }
-
-      // Override destination position to match path end
-      const { x: fx, z: fz } = (isDest && destWorldPos) ? destWorldPos : { x: cx, z: cz };
 
       const slabColour = isDest ? 0xb7ecd0 : isUser ? 0xbcd6f7 : colour;
       const slab = new THREE.Mesh(
         new THREE.BoxGeometry(Math.max(0.5, wM), 0.05, Math.max(0.5, hM)),
         new THREE.MeshStandardMaterial({ color: slabColour, roughness: 0.85, transparent: true, opacity: 0.92 }),
       );
-      slab.position.set(fx, 0.03, fz);
+      slab.position.set(cx, 0.03, cz);
       scene.add(slab);
 
       const labelColor = isDest ? "#059669" : isUser ? "#1d4ed8" : "#374151";
       const label = makeLabelSprite(r.name, labelColor, isDest ? 0.97 : 0.88);
-      label.position.set(fx, ROOM_WALL_H + 0.85, fz);
+      label.position.set(cx, WALL_HEIGHT * 0.75, cz);
       label.scale.set(Math.min(10, Math.max(4, wM * 0.9)), 2.2, 1);
       scene.add(label);
 
@@ -224,7 +257,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             new THREE.BoxGeometry(tableW, 0.06, tableD),
             new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7 }),
           );
-          table.position.set(fx, 0.75, fz);
+          table.position.set(cx, 0.75, cz);
           scene.add(table);
           const legGeom = new THREE.BoxGeometry(0.08, 0.72, 0.08);
           const legMat  = new THREE.MeshStandardMaterial({ color: 0x5c4530 });
@@ -233,7 +266,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             [ tableW/2-0.1, -tableD/2+0.1],[-tableW/2+0.1,-tableD/2+0.1],
           ]) {
             const leg = new THREE.Mesh(legGeom, legMat);
-            leg.position.set(fx+lx, 0.36, fz+lz);
+            leg.position.set(cx+lx, 0.36, cz+lz);
             scene.add(leg);
           }
         } else if (r.type === "RECEPTION") {
@@ -242,7 +275,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             new THREE.BoxGeometry(dW, 1.1, 0.7),
             new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 }),
           );
-          desk.position.set(fx, 0.55, fz);
+          desk.position.set(cx, 0.55, cz);
           scene.add(desk);
         } else if (r.type === "PANTRY") {
           const counterW = Math.min(wM * 0.8, 4);
@@ -250,20 +283,20 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             new THREE.BoxGeometry(counterW, 0.9, 0.6),
             new THREE.MeshStandardMaterial({ color: 0xd4b483, roughness: 0.6 }),
           );
-          counter.position.set(fx, 0.45, fz - hM/2 + 0.35);
+          counter.position.set(cx, 0.45, cz - hM/2 + 0.35);
           scene.add(counter);
           const fridge = new THREE.Mesh(
             new THREE.BoxGeometry(0.7, 1.7, 0.7),
             new THREE.MeshStandardMaterial({ color: 0xe5e7eb, roughness: 0.4 }),
           );
-          fridge.position.set(fx + counterW/2 + 0.4, 0.85, fz - hM/2 + 0.4);
+          fridge.position.set(cx + counterW/2 + 0.4, 0.85, cz - hM/2 + 0.4);
           scene.add(fridge);
         } else if (r.type === "OPEN_WORKSPACE") {
           const deskW = 1.2, deskD = 0.6, gap = 0.4;
           const cols2 = Math.max(1, Math.floor((wM - gap) / (deskW + gap)));
           const rows2 = Math.max(1, Math.floor((hM - gap) / (deskD + gap)));
-          const startX = fx - ((cols2-1)*(deskW+gap))/2;
-          const startZ = fz - ((rows2-1)*(deskD+gap))/2;
+          const startX = cx - ((cols2-1)*(deskW+gap))/2;
+          const startZ = cz - ((rows2-1)*(deskD+gap))/2;
           const dMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4a, roughness: 0.7 });
           for (let cc = 0; cc < cols2; cc++)
             for (let rr = 0; rr < rows2; rr++) {
@@ -276,21 +309,21 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             new THREE.BoxGeometry(Math.min(wM*0.5,1.5),1.2,Math.min(hM*0.4,0.8)),
             new THREE.MeshStandardMaterial({ color: 0xeceff3, roughness: 0.7 }),
           );
-          box.position.set(fx, 0.6, fz);
+          box.position.set(cx, 0.6, cz);
           scene.add(box);
         } else if (r.type === "EXIT") {
           const pole = new THREE.Mesh(
             new THREE.BoxGeometry(0.3,2.2,0.3),
             new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.4 }),
           );
-          pole.position.set(fx, 1.1, fz);
+          pole.position.set(cx, 1.1, cz);
           scene.add(pole);
         } else if (r.type === "SERVER_ROOM") {
           const rack = new THREE.Mesh(
             new THREE.BoxGeometry(Math.min(wM*0.4,0.8),1.8,Math.min(hM*0.3,0.6)),
             new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.5 }),
           );
-          rack.position.set(fx, 0.9, fz);
+          rack.position.set(cx, 0.9, cz);
           scene.add(rack);
         }
       }
@@ -309,17 +342,22 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         const pxs = r.polygon.map(p => p.x), pys = r.polygon.map(p => p.y);
         const polyMinX = Math.min(...pxs), polyMaxX = Math.max(...pxs);
         const polyMinY = Math.min(...pys), polyMaxY = Math.max(...pys);
-        const w = toWorld((polyMinX+polyMaxX)/2, (polyMinY+polyMaxY)/2);
+        const centerX  = (polyMinX + polyMaxX) / 2;
+        const centerY  = (polyMinY + polyMaxY) / 2;
+        const w = toWorld(centerX, centerY);
         cx = w.x; cz = w.z;
-        wM = (polyMaxX-polyMinX)*mpuX;
-        hM = (polyMaxY-polyMinY)*mpuY;
+        wM = (polyMaxX-polyMinX)*cellSizeX;
+        hM = (polyMaxY-polyMinY)*cellSizeZ;
       } else {
-        const w = toWorld(r.gridX+(r.gridW??4)/2, r.gridY+(r.gridH??4)/2);
+        const gridW = r.gridW ?? 4;
+        const gridH = r.gridH ?? 4;
+        const centerX = r.gridX + gridW / 2;
+        const centerY = r.gridY - gridH / 2;
+        const w = toWorld(centerX, centerY);
         cx = w.x; cz = w.z;
-        wM = (r.gridW??4)*mpuX;
-        hM = (r.gridH??4)*mpuY;
+        wM = gridW*cellSizeX;
+        hM = gridH*cellSizeZ;
       }
-      const { x: fx, z: fz } = (isDest && destWorldPos) ? destWorldPos : { x: cx, z: cz };
       const mat = isDest ? wallMatDest : wallMatNormal;
       const h   = ROOM_WALL_H;
       for (const p of [
@@ -329,7 +367,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         { pw: wt,      pd: hM, ox:  wM/2,  oz: 0     },
       ]) {
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.pw, h, p.pd), mat);
-        mesh.position.set(fx+p.ox, h/2, fz+p.oz);
+        mesh.position.set(cx+p.ox, h/2, cz+p.oz);
         scene.add(mesh);
       }
     }
@@ -366,18 +404,46 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     stateRef.current.cumDist     = cumDist;
     stateRef.current.pathLengthM = pathLengthM;
 
-    if (pathPoints.length >= 2) {
-      const curve = new THREE.CurvePath();
+    if (pathPoints.length >= 1) {
+      // Validate segments and collect valid path segments
+      const validGroups = [];
+      let currentGroup = [];
+
+      currentGroup.push(pathPoints[0]);
+
       for (let i = 1; i < pathPoints.length; i++) {
-        curve.add(new THREE.LineCurve3(pathPoints[i-1], pathPoints[i]));
+        const p1 = normPath[i - 1];
+        const p2 = normPath[i];
+        const wp2 = pathPoints[i];
+
+        if (isSegmentWalkable(p1, p2, floorMap.grid)) {
+          currentGroup.push(wp2);
+        } else {
+          console.warn(`Invalid path segment detected between grid cell (${p1.x}, ${p1.y}) and (${p2.x}, ${p2.y}) due to wall collision.`);
+          if (currentGroup.length >= 2) {
+            validGroups.push(currentGroup);
+          }
+          currentGroup = [wp2];
+        }
       }
-      const tube = new THREE.Mesh(
-        new THREE.TubeGeometry(curve, Math.max(20, pathPoints.length*2), 0.18, 8, false),
-        new THREE.MeshStandardMaterial({
-          color: 0x1d4ed8, emissive: 0x1d4ed8, emissiveIntensity: 0.32, roughness: 0.4,
-        }),
-      );
-      scene.add(tube);
+      if (currentGroup.length >= 2) {
+        validGroups.push(currentGroup);
+      }
+
+      // Render valid groups as linear Tubes
+      validGroups.forEach((group) => {
+        const curve = new THREE.CurvePath();
+        for (let i = 1; i < group.length; i++) {
+          curve.add(new THREE.LineCurve3(group[i-1], group[i]));
+        }
+        const tube = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, Math.max(10, group.length * 2), 0.18, 8, false),
+          new THREE.MeshStandardMaterial({
+            color: 0x1d4ed8, emissive: 0x1d4ed8, emissiveIntensity: 0.32, roughness: 0.4,
+          }),
+        );
+        scene.add(tube);
+      });
 
       const startDot = new THREE.Mesh(
         new THREE.SphereGeometry(0.32, 24, 24),
@@ -387,13 +453,15 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       startDot.position.y = 0.35;
       scene.add(startDot);
 
-      const pin = new THREE.Mesh(
-        new THREE.ConeGeometry(0.4, 1.2, 24),
-        new THREE.MeshStandardMaterial({ color: 0x059669, emissive: 0x059669, emissiveIntensity: 0.35 }),
-      );
-      const end = pathPoints[pathPoints.length-1];
-      pin.position.set(end.x, 1.0, end.z);
-      scene.add(pin);
+      if (pathPoints.length >= 2) {
+        const pin = new THREE.Mesh(
+          new THREE.ConeGeometry(0.4, 1.2, 24),
+          new THREE.MeshStandardMaterial({ color: 0x059669, emissive: 0x059669, emissiveIntensity: 0.35 }),
+        );
+        const end = pathPoints[pathPoints.length-1];
+        pin.position.set(end.x, 1.0, end.z);
+        scene.add(pin);
+      }
     }
 
     function sampleAt(progress) {

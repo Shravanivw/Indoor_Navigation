@@ -327,6 +327,8 @@ export async function getFloorMap(
   grid,
   scaleX: navFloorData?.scaleX ?? floor.scaleX ?? 1,
   scaleY: navFloorData?.scaleY ?? floor.scaleY ?? 1,
+  realWidthM: navFloorData?.realWidthM ?? floor.realWidthM ?? floor.widthM ?? undefined,
+  realHeightM: navFloorData?.realHeightM ?? floor.realHeightM ?? floor.heightM ?? undefined,
   rooms,
   nodes,
   edges,

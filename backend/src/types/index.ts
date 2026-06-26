@@ -78,6 +78,8 @@ export interface FloorMapData {
   grid: WalkabilityGrid;
   scaleX: number;         // metres per grid cell X
   scaleY: number;         // metres per grid cell Y
+  realWidthM?: number;
+  realHeightM?: number;
   rooms: RoomMapData[];
   nodes: GraphNode[];
   edges: GraphEdge[];
