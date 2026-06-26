@@ -72,7 +72,15 @@ export function getRoomEntryNode(
 ): string | null {
   const entries = graph.roomEntryNodes.get(roomId);
   if (!entries || entries.length === 0) return null;
-  return entries[entries.length - 1];; // In future: pick nearest to user position
+  
+  // Prefer candidates with adjacency > 0
+  for (const entry of entries) {
+    const adj = graph.adjacency.get(entry);
+    if (adj && adj.length > 0) {
+      return entry;
+    }
+  }
+  return entries[0];
 }
 
 /**

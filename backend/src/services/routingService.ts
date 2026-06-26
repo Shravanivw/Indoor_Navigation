@@ -115,6 +115,22 @@ export async function buildGraphCache(prisma: PrismaClient): Promise<void> {
   }
 }
 
+
+function getRoomCandidates(
+  roomId: string,
+  room: { gridX: number; gridY: number; floorId: string },
+  gridCols: number,
+  gridRows: number,
+  graph: NavigationGraph
+): string[] {
+  const entries = graph.roomEntryNodes.get(roomId);
+  if (entries && entries.length > 0) {
+    return entries;
+  }
+  const nearest = findNearestNode(graph, room, gridCols, gridRows);
+  return nearest ? [nearest] : [];
+}
+
 // ─── ROUTE BETWEEN ROOMS ──────────────────────────────────────────────────────
 
 export interface RouteRequest {
@@ -165,33 +181,102 @@ export async function getRoute(
   const toGridCols   = toRoom.floor?.gridCols   ?? 80;
   const toGridRows   = toRoom.floor?.gridRows   ?? 80;
 
-  const startNodeId =
-    getRoomEntryNode(fromRoomId, graph) ??
-    findNearestNode(graph, fromRoom, fromGridCols, fromGridRows);
+  const startCandidatesAll = getRoomCandidates(fromRoomId, fromRoom, fromGridCols, fromGridRows, graph);
+  const endCandidatesAll = getRoomCandidates(toRoomId, toRoom, toGridCols, toGridRows, graph);
 
-  const endNodeId =
-    getRoomEntryNode(toRoomId, graph) ??
-    findNearestNode(graph, toRoom, toGridCols, toGridRows);
+  // Filter out candidates with zero adjacency
+  const startCandidatesConnected = startCandidatesAll.filter(id => (graph.adjacency.get(id)?.length ?? 0) > 0);
+  const endCandidatesConnected = endCandidatesAll.filter(id => (graph.adjacency.get(id)?.length ?? 0) > 0);
+
+  // Filter out candidates that cannot reach the target room's graph component (respecting accessibility options)
+  const startCandidatesValid = startCandidatesConnected.filter(startId => {
+    return endCandidatesConnected.some(endId => canReach(startId, endId, graph.adjacency, options));
+  });
+  const endCandidatesValid = endCandidatesConnected.filter(endId => {
+    return startCandidatesConnected.some(startId => canReach(startId, endId, graph.adjacency, options));
+  });
+
+  // Safe fallback selection: Prefer connected candidates over disconnected candidates
+  const startNodeIdFallback = startCandidatesConnected[0] ?? startCandidatesAll[0] ?? null;
+  const endNodeIdFallback = endCandidatesConnected[0] ?? endCandidatesAll[0] ?? null;
+
+  let bestPathNodeIds: string[] | null = null;
+  let bestPathLength = Infinity;
+  let bestStartNodeId: string | null = null;
+  let bestEndNodeId: string | null = null;
+
+  for (const startId of startCandidatesValid) {
+    for (const endId of endCandidatesValid) {
+      const path = findRoute(
+        graph.adjacency,
+        graph.nodesById,
+        startId,
+        endId,
+        options
+      );
+
+      if (path) {
+        let dist = 0;
+        const scale = getFloorScale(fromRoom.floorId, fromRoom.floor?.scaleX, fromRoom.floor?.scaleY);
+        const hudsonFloor = isHudsonFloor(fromRoom.floorId);
+        const targetGridCols = hudsonFloor ? HUDSON_DISPLAY_GRID.cols : fromGridCols;
+        const targetGridRows = hudsonFloor ? HUDSON_DISPLAY_GRID.rows : fromGridRows;
+
+        const pathNodes = path.map(id => graph.nodesById.get(id)!);
+        const pathGridCells = pathNodes.map(n => {
+          if (hudsonFloor) {
+            return normaliseHudsonCell(
+              n.gridX,
+              n.gridY,
+              targetGridCols,
+              targetGridRows,
+              HUDSON_EDITOR_PX_BOUNDS.minX,
+              HUDSON_EDITOR_PX_BOUNDS.minY,
+              HUDSON_EDITOR_PX_BOUNDS.width,
+              HUDSON_EDITOR_PX_BOUNDS.height,
+            );
+          }
+          return { x: n.gridX, y: n.gridY };
+        });
+
+        for (let i = 1; i < pathGridCells.length; i++) {
+          const a = pathGridCells[i - 1];
+          const b = pathGridCells[i];
+          dist += Math.sqrt(
+            ((b.x - a.x) * scale.x) ** 2 +
+            ((b.y - a.y) * scale.y) ** 2
+          );
+        }
+
+        if (dist < bestPathLength) {
+          bestPathLength = dist;
+          bestPathNodeIds = path;
+          bestStartNodeId = startId;
+          bestEndNodeId = endId;
+        }
+      }
+    }
+  }
+
+  const startNodeId = bestStartNodeId ?? startNodeIdFallback;
+  const endNodeId = bestEndNodeId ?? endNodeIdFallback;
 
   if (!startNodeId) throw new Error(`No navigation node found for room: ${fromRoomId}`);
   if (!endNodeId)   throw new Error(`No navigation node found for room: ${toRoomId}`);
 
   console.log("FROM ROOM:", fromRoomId);
   console.log("TO ROOM:", toRoomId);
+  console.log("START CANDIDATES ALL:", startCandidatesAll);
+  console.log("END CANDIDATES ALL:", endCandidatesAll);
+  console.log("START CANDIDATES VALID:", startCandidatesValid);
+  console.log("END CANDIDATES VALID:", endCandidatesValid);
   console.log("START NODE:", startNodeId);
   console.log("END NODE:", endNodeId);
   console.log("START ADJACENCY:", graph.adjacency.get(startNodeId)?.length ?? 0);
   console.log("END ADJACENCY:", graph.adjacency.get(endNodeId)?.length ?? 0);
-  console.log("CAN REACH:", canReach(startNodeId, endNodeId, graph.adjacency));
+  console.log("CAN REACH:", canReach(startNodeId, endNodeId, graph.adjacency, options));
 
-  // Run A*
-  const pathNodeIds = findRoute(
-    graph.adjacency,
-    graph.nodesById,
-    startNodeId,
-    endNodeId,
-    options
-  );
+  const pathNodeIds = bestPathNodeIds;
 
   if (!pathNodeIds) {
     console.warn('[RoutingService] No route found between graph nodes', {
@@ -301,7 +386,8 @@ export async function getRoute(
 function canReach(
   startId: string,
   endId: string,
-  adjacency: Map<string, any[]>
+  adjacency: Map<string, any[]>,
+  options?: PathfindingOptions
 ): boolean {
   const visited = new Set<string>();
   const queue = [startId];
@@ -311,6 +397,7 @@ function canReach(
     if (visited.has(current)) continue;
     visited.add(current);
     for (const edge of (adjacency.get(current) ?? [])) {
+      if (options?.accessibleOnly && !edge.isAccessible) continue;
       queue.push(edge.nodeId);
     }
   }
