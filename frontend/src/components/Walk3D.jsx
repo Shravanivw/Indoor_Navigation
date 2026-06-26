@@ -9,7 +9,7 @@ import { createMeetingRoom } from "./models/MeetingRoomModel";
 import { createReception } from "./models/ReceptionModel";
 import { createPantry } from "./models/PantryModel";
 import { createStaircase } from "./models/StaircaseModel";
-import { createLift } from "./models/LiftModel";
+import { createLift, createLiftLobby } from "./models/LiftModel";
 import { createUtilityRoom } from "./models/UtilityRoomModel";
 import { createBooth } from "./models/BoothModel";
 
@@ -53,35 +53,38 @@ function getRoomTemplateType(room) {
   const type = (room.type ?? "").toUpperCase();
   const name = (room.name ?? "").toLowerCase();
   
+  if (name.includes("lift lobby")) {
+    return "LIFT_LOBBY";
+  }
   if (type === "CORRIDOR" || name.includes("corridor") || name.includes("passage") || name.includes("walkway") || name.includes("hallway") || name.includes("lobby area")) {
     return "CORRIDOR";
   }
-  if (name.includes("booth") || name.includes("seating") || name.includes("sitting booth")) {
+  if (type === "EXIT" || name.includes("stair") || name.includes("exit") || name.includes("escalator")) {
+    return "STAIRCASE";
+  }
+  if (name.includes("lift") || name.includes("elevator")) {
+    return "LIFT";
+  }
+  if (name.includes("booth") || name.includes("seating") || name.includes("sitting") || name.includes("sitting area")) {
     return "BOOTH";
   }
   if (type === "RECEPTION" || name.includes("reception") || name.includes("lobby") || name.includes("entrance")) {
     return "RECEPTION";
   }
+  if (type === "PANTRY" || name.includes("cafeteria") || name.includes("pantry") || name.includes("food") || name.includes("cafe") || name.includes("dining")) {
+    return "PANTRY";
+  }
+  if (type === "TOILET" || name.includes("restroom") || name.includes("toilet") || name.includes("washroom") || name.includes("shower")) {
+    return "TOILET";
+  }
+  if (type === "SERVER_ROOM" || type === "STORAGE" || name.includes("server") || name.includes("storage") || name.includes("utility") || name.includes("ahu") || name.includes("ele") || name.includes("bms") || name.includes("janitor") || name.includes("hub") || name.includes("ups") || name.includes("av room") || name.includes("monitoring") || name.includes("repair") || name.includes("store")) {
+    return "SERVER_ROOM";
+  }
   if (type === "OPEN_WORKSPACE" || type === "WORKSPACE" || name.includes("workspace") || name.includes("innovation") || name.includes("hotdesk") || name.includes("desk") || name.includes("it bar") || name.includes("support")) {
     return "OPEN_WORKSPACE";
   }
-  if (type === "MEETING_ROOM" || type === "BOARDROOM" || type === "OFFICE" || name.includes("meeting") || name.includes("board") || name.includes("cabin") || name.includes("conference")) {
+  if (type === "MEETING_ROOM" || type === "BOARDROOM" || name.includes("meeting") || name.includes("board") || name.includes("cabin") || name.includes("conference") || name.includes("training")) {
     return "MEETING_ROOM";
-  }
-  if (type === "PANTRY" || name.includes("cafeteria") || name.includes("pantry") || name.includes("food") || name.includes("cafe")) {
-    return "PANTRY";
-  }
-  if (type === "TOILET" || name.includes("restroom") || name.includes("toilet") || name.includes("washroom")) {
-    return "TOILET";
-  }
-  if (name.includes("lift") || name.includes("elevator") || name.includes("escalator")) {
-    return "LIFT";
-  }
-  if (type === "EXIT" || name.includes("stair") || name.includes("exit")) {
-    return "STAIRCASE";
-  }
-  if (type === "SERVER_ROOM" || type === "STORAGE" || name.includes("server") || name.includes("storage") || name.includes("utility")) {
-    return "SERVER_ROOM";
   }
   return "OTHER";
 }
@@ -235,6 +238,9 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       let roomModel = null;
 
       switch (template) {
+        case "LIFT_LOBBY":
+          roomModel = createLiftLobby(cx, cz, wM, hM, resources);
+          break;
         case "CORRIDOR":
           // Keep corridors 100% open and clear of any walls/props
           roomModel = null;
@@ -252,7 +258,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
           break;
         case "PANTRY":
-          roomModel = createPantry(cx, cz, wM, hM, resources);
+          roomModel = createPantry(cx, cz, wM, hM, r.name?.toLowerCase().includes("cafeteria"), resources);
           break;
         case "STAIRCASE":
           roomModel = createStaircase(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
@@ -544,6 +550,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         const nameL = (item.name ?? "").toLowerCase();
         const isImportant = item.isDest || item.isUser || 
           item.template === "RECEPTION" || 
+          item.template === "LIFT_LOBBY" || 
           item.template === "PANTRY" || 
           item.template === "STAIRCASE" || 
           item.template === "LIFT" || 
