@@ -269,7 +269,7 @@ export function findCorridorSegmentIndex(polygon, grid) {
  * Supports splitting a segment for a door opening or omitting it entirely.
  * If glassDoor is true, the split segment parts are drawn using glass frames.
  */
-export function createPolygonWalls({ polygon, wallHeight, wallThickness, material, doorSegmentIndex = -1, omitSegmentIndex = -1, doorWidth = 0.95, doorHeight = 2.0, resources, toWorld, glassDoor = false }) {
+export function createPolygonWalls({ polygon, wallHeight, wallThickness, material, doorSegmentIndex = -1, omitSegmentIndex = -1, doorWidth = 0.95, doorHeight = 2.0, resources, toWorld, glassDoor = false, glassWalls = false }) {
   const group = new THREE.Group();
   const boxGeom = resources.geometries.box;
   const wt = wallThickness;
@@ -368,12 +368,34 @@ export function createPolygonWalls({ polygon, wallHeight, wallThickness, materia
         }
       }
     } else {
-      // Draw standard solid wall along the polygon segment
-      const wall = new THREE.Mesh(boxGeom, material);
-      wall.scale.set(wt, wallHeight, len);
-      wall.position.set(midX, wallHeight / 2, midZ);
-      wall.rotation.y = angle;
-      group.add(wall);
+      if (glassWalls) {
+        // Glass wall panel
+        const glass = new THREE.Mesh(boxGeom, resources.materials.glass);
+        glass.scale.set(wt, wallHeight, len);
+        glass.position.set(midX, wallHeight / 2, midZ);
+        glass.rotation.y = angle;
+        group.add(glass);
+
+        // Top/Bottom runners
+        const frameB = new THREE.Mesh(boxGeom, resources.materials.glassFrame);
+        frameB.scale.set(wt + 0.02, 0.08, len);
+        frameB.position.set(midX, 0.04, midZ);
+        frameB.rotation.y = angle;
+        group.add(frameB);
+
+        const frameT = new THREE.Mesh(boxGeom, resources.materials.glassFrame);
+        frameT.scale.set(wt + 0.02, 0.08, len);
+        frameT.position.set(midX, wallHeight - 0.04, midZ);
+        frameT.rotation.y = angle;
+        group.add(frameT);
+      } else {
+        // Draw standard solid wall along the polygon segment
+        const wall = new THREE.Mesh(boxGeom, material);
+        wall.scale.set(wt, wallHeight, len);
+        wall.position.set(midX, wallHeight / 2, midZ);
+        wall.rotation.y = angle;
+        group.add(wall);
+      }
     }
   }
   return group;

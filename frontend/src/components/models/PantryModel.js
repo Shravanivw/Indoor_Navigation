@@ -1,10 +1,30 @@
 import * as THREE from "three";
+import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createPantry(cx, cz, wM, hM, isCafeteria, resources) {
+export function createPantry(polygon, cx, cz, wM, hM, isCafeteria, isDest, isUser, resources, toWorld, grid) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
   const cylGeom = geometries.cylinder;
+
+  // Draw polygon walls for Cafeteria / Dining Area (glass walls facing corridor)
+  if (isCafeteria && polygon && grid && toWorld) {
+    const wallMat = isDest ? materials.wallDest : materials.wallNormal;
+    const doorIndex = findCorridorSegmentIndex(polygon, grid);
+    group.add(
+      createPolygonWalls({
+        polygon,
+        wallHeight: 2.6,
+        wallThickness: 0.12,
+        material: wallMat,
+        doorSegmentIndex: doorIndex,
+        glassDoor: true,
+        glassWalls: true,
+        resources,
+        toWorld
+      })
+    );
+  }
 
   // 1. Parquet wooden floor plate
   const floorPlate = new THREE.Mesh(
@@ -87,16 +107,16 @@ export function createPantry(cx, cz, wM, hM, isCafeteria, resources) {
 
   if (isCafeteria) {
     // ── LARGE RECTANGULAR GROUP CAFETERIA TABLES ──
-    const tblW = 2.4;
-    const tblD = 1.1;
+    const tblW = 3.6;
+    const tblD = 1.2;
     
     // Spacing configuration for multiple big tables in a grid
-    const spacingX = 4.2; 
-    const spacingZ = 2.8; 
+    const spacingX = 5.0; 
+    const spacingZ = 3.2; 
     
     // Margins from walls to keep walkway open
-    const marginX = 2.2;
-    const marginZ = 2.0;
+    const marginX = 2.4;
+    const marginZ = 2.2;
     
     const cols = Math.max(1, Math.floor((wM - marginX * 2) / spacingX));
     const rows = Math.max(1, Math.floor((hM - marginZ * 2) / spacingZ));
@@ -171,10 +191,13 @@ export function createPantry(cx, cz, wM, hM, isCafeteria, resources) {
           tableGroup.add(leg);
         }
 
-        // 6 dining chairs (3 on North side, 3 on South side)
-        const chairSpacingX = tblW / 4;
-        for (let ch = -1; ch <= 1; ch++) {
-          const cxOffset = ch * chairSpacingX;
+        // Dining chairs dynamically spaced along the table sides
+        const numChairsPerSide = Math.max(3, Math.floor(tblW / 0.85));
+        const chairSpacingX = tblW / (numChairsPerSide + 1);
+        const startChairOffset = -((numChairsPerSide - 1) * chairSpacingX) / 2;
+
+        for (let ch = 0; ch < numChairsPerSide; ch++) {
+          const cxOffset = startChairOffset + ch * chairSpacingX;
           // North side facing South
           tableGroup.add(createCafeChair(cxOffset, -tblD / 2 - 0.25, Math.PI));
           // South side facing North

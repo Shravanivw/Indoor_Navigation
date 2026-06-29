@@ -251,24 +251,42 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         case "RECEPTION":
           roomModel = createReception(cx, cz, wM, hM, resources);
           break;
-        case "OPEN_WORKSPACE":
-          roomModel = createOfficeDeskCluster(cx, cz, wM, hM, r.name?.toLowerCase().includes("innovation"), resources);
+        case "OPEN_WORKSPACE": {
+          const nameLower = r.name?.toLowerCase() ?? "";
+          roomModel = createOfficeDeskCluster(cx, cz, wM, hM, nameLower.includes("innovation"), resources, nameLower.includes("it bar"));
           break;
-        case "MEETING_ROOM":
-          roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
+        }
+        case "MEETING_ROOM": {
+          const nameLower = r.name?.toLowerCase() ?? "";
+          const isBoardRoom = nameLower.includes("board");
+          const isGlassCabin = nameLower.includes("cabin") && (
+            nameLower.includes("1") ||
+            nameLower.includes("2") ||
+            nameLower.includes("3") ||
+            nameLower.includes("ctio")
+          );
+          roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid, isBoardRoom || isGlassCabin);
           break;
-        case "PANTRY":
-          roomModel = createPantry(cx, cz, wM, hM, r.name?.toLowerCase().includes("cafeteria"), resources);
+        }
+        case "PANTRY": {
+          const nameLower = r.name?.toLowerCase() ?? "";
+          const isCafeteriaOrDining = nameLower.includes("cafeteria") || nameLower.includes("dining");
+          roomModel = createPantry(roomPolygon, cx, cz, wM, hM, isCafeteriaOrDining, isDest, isUser, resources, toWorld, floorMap.grid);
           break;
+        }
         case "STAIRCASE":
           roomModel = createStaircase(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
           break;
         case "LIFT":
           roomModel = createLift(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid);
           break;
-        case "SERVER_ROOM":
-          roomModel = createUtilityRoom(roomPolygon, cx, cz, wM, hM, r.type === "SERVER_ROOM" || r.name?.toLowerCase().includes("server"), isDest, isUser, resources, toWorld, floorMap.grid);
+        case "SERVER_ROOM": {
+          const nameLower = r.name?.toLowerCase() ?? "";
+          // DMS Monitoring and Laptop Repair Room have glass walls. IT Store is opaque.
+          const isGlassUtility = nameLower.includes("monitoring") || nameLower.includes("repair");
+          roomModel = createUtilityRoom(roomPolygon, cx, cz, wM, hM, r.type === "SERVER_ROOM" || nameLower.includes("server"), isDest, isUser, resources, toWorld, floorMap.grid, isGlassUtility);
           break;
+        }
         case "TOILET":
           roomModel = new THREE.Group();
           const tDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
@@ -287,10 +305,24 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           }
           break;
         case "OTHER":
-        default:
+        default: {
           roomModel = new THREE.Group();
           const oDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
-          roomModel.add(createPolygonWalls({ polygon: roomPolygon, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSegmentIndex: oDoorIndex, doorWidth: 0.8, resources, toWorld }));
+          const nameLower = r.name?.toLowerCase() ?? "";
+          const isPKIRoom = nameLower.includes("pki");
+          const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom;
+          roomModel.add(createPolygonWalls({
+            polygon: roomPolygon,
+            wallHeight: 2.6,
+            wallThickness: 0.12,
+            material: isDest ? materials.wallDest : materials.wallNormal,
+            doorSegmentIndex: oDoorIndex,
+            doorWidth: 0.8,
+            resources,
+            toWorld,
+            glassDoor: isGlassRoom,
+            glassWalls: isGlassRoom
+          }));
           
           // Office floor plate
           const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
@@ -298,12 +330,177 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           oFloor.position.set(cx, 0.012, cz);
           roomModel.add(oFloor);
 
-          // Standard simple desk
-          const desk = new THREE.Mesh(geometries.box, materials.deskSurface);
-          desk.scale.set(Math.min(1.2, wM * 0.5), 0.75, Math.min(0.6, hM * 0.4));
-          desk.position.set(cx, 0.375, cz);
-          roomModel.add(desk);
+          if (nameLower.includes("informal")) {
+            // ── INFORMAL ROOM COLLABORATION SETUP ──
+            // Center Round Coffee Table
+            const tableTop = new THREE.Mesh(geometries.cylinder, materials.deskWood);
+            tableTop.scale.set(0.9, 0.04, 0.9);
+            tableTop.position.set(cx, 0.6, cz);
+            roomModel.add(tableTop);
+            
+            const tableShift = new THREE.Mesh(geometries.cylinder, materials.metalSilver);
+            tableShift.scale.set(0.06, 0.58, 0.06);
+            tableShift.position.set(cx, 0.29, cz);
+            roomModel.add(tableShift);
+            
+            const tableBase = new THREE.Mesh(geometries.cylinder, materials.metalDark);
+            tableBase.scale.set(0.4, 0.02, 0.4);
+            tableBase.position.set(cx, 0.01, cz);
+            roomModel.add(tableBase);
+
+            // 3 comfortable lounge chairs
+            const createLoungeChair = (angle) => {
+              const chair = new THREE.Group();
+              const dist = 0.65;
+              chair.position.set(cx + Math.cos(angle) * dist, 0, cz + Math.sin(angle) * dist);
+              chair.rotation.y = -angle - Math.PI / 2;
+
+              // Cushion seat
+              const seat = new THREE.Mesh(geometries.box, materials.cushionLounge);
+              seat.scale.set(0.45, 0.35, 0.45);
+              seat.position.y = 0.175;
+              chair.add(seat);
+
+              // Backrest
+              const back = new THREE.Mesh(geometries.box, materials.cushionLounge);
+              back.scale.set(0.45, 0.4, 0.1);
+              back.position.set(0, 0.4, 0.185);
+              chair.add(back);
+
+              return chair;
+            };
+            
+            roomModel.add(createLoungeChair(0));
+            roomModel.add(createLoungeChair((Math.PI * 2) / 3));
+            roomModel.add(createLoungeChair((Math.PI * 4) / 3));
+            
+          } else if (nameLower.includes("pax") || nameLower.includes("ml room") || nameLower.includes("aws room")) {
+            // ── 4 PAX MEETING ROOM SETUP ──
+            // Rectangular Table
+            const tableW = Math.max(1.2, Math.min(wM * 0.6, 1.6));
+            const tableD = Math.max(0.7, Math.min(hM * 0.4, 0.9));
+            const tableTop = new THREE.Mesh(geometries.box, materials.deskWood);
+            tableTop.scale.set(tableW, 0.04, tableD);
+            tableTop.position.set(cx, 0.75, cz);
+            roomModel.add(tableTop);
+
+            // Table legs
+            const legW = 0.06;
+            for (const [lx, lz] of [
+              [tableW / 2 - 0.08, tableD / 2 - 0.08],
+              [-tableW / 2 + 0.08, tableD / 2 - 0.08],
+              [tableW / 2 - 0.08, -tableD / 2 + 0.08],
+              [-tableW / 2 + 0.08, -tableD / 2 + 0.08]
+            ]) {
+              const leg = new THREE.Mesh(geometries.box, materials.metalDark);
+              leg.scale.set(legW, 0.73, legW);
+              leg.position.set(cx + lx, 0.365, cz + lz);
+              roomModel.add(leg);
+            }
+
+            // 4 Executive/Office chairs
+            const createOfficeChair = (chX, chZ, rotY) => {
+              const chair = new THREE.Group();
+              chair.position.set(chX, 0, chZ);
+              chair.rotation.y = rotY;
+
+              const base = new THREE.Mesh(geometries.box, materials.chairBase);
+              base.scale.set(0.3, 0.02, 0.3);
+              base.position.y = 0.05;
+              chair.add(base);
+
+              const shaft = new THREE.Mesh(geometries.cylinder, materials.metalSilver);
+              shaft.scale.set(0.03, 0.36, 0.03);
+              shaft.position.y = 0.23;
+              chair.add(shaft);
+
+              const seat = new THREE.Mesh(geometries.box, materials.chairFabric);
+              seat.scale.set(0.38, 0.06, 0.38);
+              seat.position.y = 0.43;
+              chair.add(seat);
+
+              const back = new THREE.Mesh(geometries.box, materials.chairFabric);
+              back.scale.set(0.36, 0.4, 0.05);
+              back.position.set(0, 0.63, 0.165);
+              chair.add(back);
+
+              return chair;
+            };
+
+            // Two on North side, two on South side
+            const offset = tableW / 4;
+            roomModel.add(createOfficeChair(cx - offset, cz - tableD / 2 - 0.25, Math.PI));
+            roomModel.add(createOfficeChair(cx + offset, cz - tableD / 2 - 0.25, Math.PI));
+            roomModel.add(createOfficeChair(cx - offset, cz + tableD / 2 + 0.25, 0));
+            roomModel.add(createOfficeChair(cx + offset, cz + tableD / 2 + 0.25, 0));
+
+          } else if (nameLower.includes("pki")) {
+            // ── PKI ROOM CUSTOM INTERIOR SETUP ──
+            const tableD = 0.65; // table depth (along Z)
+            const tableW = Math.max(1.8, wM * 0.7); // table length (along X)
+            
+            // Long table running along the south side wall
+            const tableTop = new THREE.Mesh(geometries.box, materials.deskWood);
+            tableTop.scale.set(tableW, 0.04, tableD);
+            const tz = cz + hM / 2 - tableD / 2 - 0.15;
+            tableTop.position.set(cx, 0.75, tz);
+            roomModel.add(tableTop);
+
+            // Table legs
+            const legW = 0.06;
+            for (const [lx, lz] of [
+              [tableW / 2 - 0.08, tableD / 2 - 0.08],
+              [-tableW / 2 + 0.08, tableD / 2 - 0.08],
+              [tableW / 2 - 0.08, -tableD / 2 + 0.08],
+              [-tableW / 2 + 0.08, -tableD / 2 + 0.08]
+            ]) {
+              const leg = new THREE.Mesh(geometries.box, materials.metalDark);
+              leg.scale.set(legW, 0.73, legW);
+              leg.position.set(cx + lx, 0.365, tz + lz);
+              roomModel.add(leg);
+            }
+
+            // Two office/task chairs facing South (towards the desk)
+            const createPKIChair = (chX) => {
+              const chair = new THREE.Group();
+              chair.position.set(chX, 0, tz - tableD / 2 - 0.35);
+              chair.rotation.y = Math.PI; // facing South
+
+              const base = new THREE.Mesh(geometries.box, materials.chairBase);
+              base.scale.set(0.3, 0.02, 0.3);
+              base.position.y = 0.05;
+              chair.add(base);
+
+              const shaft = new THREE.Mesh(geometries.cylinder, materials.metalSilver);
+              shaft.scale.set(0.03, 0.36, 0.03);
+              shaft.position.y = 0.23;
+              chair.add(shaft);
+
+              const seat = new THREE.Mesh(geometries.box, materials.chairFabric);
+              seat.scale.set(0.38, 0.06, 0.38);
+              seat.position.y = 0.43;
+              chair.add(seat);
+
+              const back = new THREE.Mesh(geometries.box, materials.chairFabric);
+              back.scale.set(0.36, 0.4, 0.05);
+              back.position.set(0, 0.63, 0.165);
+              chair.add(back);
+
+              return chair;
+            };
+
+            roomModel.add(createPKIChair(cx - 0.5));
+            roomModel.add(createPKIChair(cx + 0.5));
+
+          } else {
+            // Standard simple desk for other rooms
+            const desk = new THREE.Mesh(geometries.box, materials.deskSurface);
+            desk.scale.set(Math.min(1.2, wM * 0.5), 0.75, Math.min(0.6, hM * 0.4));
+            desk.position.set(cx, 0.375, cz);
+            roomModel.add(desk);
+          }
           break;
+        }
       }
 
       if (roomModel) {

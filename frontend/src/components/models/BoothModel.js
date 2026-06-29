@@ -14,18 +14,20 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
   // 1. Find corridor segment index to omit it (creating the open alcove opening)
   const doorIndex = findCorridorSegmentIndex(polygon, grid);
 
-  // 2. Build 3-sided polygon walls (omitting the corridor-facing segment)
-  group.add(
-    createPolygonWalls({
-      polygon,
-      wallHeight,
-      wallThickness: wt,
-      material: wallMat,
-      omitSegmentIndex: doorIndex,
-      resources,
-      toWorld
-    })
-  );
+  // 2. Build 3-sided polygon walls (only for phone booths! Sitting booths have NO walls)
+  if (isPhoneBooth) {
+    group.add(
+      createPolygonWalls({
+        polygon,
+        wallHeight,
+        wallThickness: wt,
+        material: wallMat,
+        omitSegmentIndex: doorIndex,
+        resources,
+        toWorld
+      })
+    );
+  }
 
   // 3. Add custom carpet floor plate inside
   const floorPlate = new THREE.Mesh(
@@ -71,105 +73,68 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
     group.add(notebook);
 
   } else {
-    if (hM > wM && hM >= 1.6) {
+    // ── TWO BOOTHS SIDE-BY-SIDE (Diner-style booths) ──
+    const numBooths = wM > 3.0 ? 2 : 1;
+    const boothW = wM / numBooths;
+    
+    for (let b = 0; b < numBooths; b++) {
+      // Calculate center of this specific booth
+      const boothCX = cx - wM / 2 + (b + 0.5) * boothW;
+
       const seatW = 0.45;
-      const seatL = hM - 0.2;
+      const seatL = hM - 0.15; // use most of the height/depth
       const seatY = 0.45;
 
+      // Sofa Left (West side of this booth, facing East)
       const seatLGroup = new THREE.Group();
-      seatLGroup.position.set(cx - wM / 2 + seatW / 2 + 0.05, 0, cz);
+      seatLGroup.position.set(boothCX - boothW / 2 + seatW / 2 + 0.02, 0, cz);
       const sLBase = new THREE.Mesh(boxGeom, materials.chairFabric);
       sLBase.scale.set(seatW, seatY, seatL);
       sLBase.position.y = seatY / 2;
       seatLGroup.add(sLBase);
       const sLBack = new THREE.Mesh(boxGeom, materials.chairFabric);
-      sLBack.scale.set(0.08, 0.8, seatL);
-      sLBack.position.set(-seatW / 2 + 0.04, 0.75, 0);
+      sLBack.scale.set(0.06, 0.8, seatL);
+      sLBack.position.set(-seatW / 2 + 0.03, 0.75, 0);
       seatLGroup.add(sLBack);
       group.add(seatLGroup);
 
+      // Sofa Right (East side of this booth, facing West)
       const seatRGroup = new THREE.Group();
-      seatRGroup.position.set(cx + wM / 2 - seatW / 2 - 0.05, 0, cz);
+      seatRGroup.position.set(boothCX + boothW / 2 - seatW / 2 - 0.02, 0, cz);
       const sRBase = new THREE.Mesh(boxGeom, materials.chairFabric);
       sRBase.scale.set(seatW, seatY, seatL);
       sRBase.position.y = seatY / 2;
       seatRGroup.add(sRBase);
       const sRBack = new THREE.Mesh(boxGeom, materials.chairFabric);
-      sRBack.scale.set(0.08, 0.8, seatL);
-      sRBack.position.set(seatW / 2 - 0.04, 0.75, 0);
+      sRBack.scale.set(0.06, 0.8, seatL);
+      sRBack.position.set(seatW / 2 - 0.03, 0.75, 0);
       seatRGroup.add(sRBack);
       group.add(seatRGroup);
 
-      const tblW = wM - seatW * 2 - 0.3;
-      if (tblW > 0.3) {
+      // Table in the middle of this booth, running from the back wall
+      const tblW = boothW - seatW * 2 - 0.15;
+      if (tblW > 0.2) {
         const table = new THREE.Group();
-        table.position.set(cx, 0, cz);
+        const tblLen = seatL - 0.1;
+        const tblZ = cz - hM / 2 + tblLen / 2 + 0.05;
+        table.position.set(boothCX, 0, tblZ);
+        
         const top = new THREE.Mesh(boxGeom, materials.deskWood);
-        top.scale.set(tblW, 0.04, seatL - 0.1);
+        top.scale.set(tblW, 0.04, tblLen);
         top.position.y = 0.73;
         table.add(top);
+        
         const leg = new THREE.Mesh(cylGeom, materials.metalDark);
-        leg.scale.set(0.06, 0.71, 0.06);
-        leg.position.y = 0.355;
+        leg.scale.set(0.05, 0.71, 0.05);
+        leg.position.set(0, 0.355, 0);
         table.add(leg);
+        
         const base = new THREE.Mesh(boxGeom, materials.metalDark);
-        base.scale.set(tblW * 0.8, 0.02, 0.35);
-        base.position.y = 0.01;
+        base.scale.set(tblW * 0.7, 0.02, 0.25);
+        base.position.set(0, 0.01, 0);
         table.add(base);
 
         group.add(table);
-      }
-
-    } else {
-      const sofaW = wM - 0.2;
-      const sofaD = Math.min(0.55, hM - 0.3);
-      const sofaH = 0.44;
-
-      if (sofaD > 0.15) {
-        const sofa = new THREE.Group();
-        sofa.position.set(cx, 0, cz - hM / 2 + sofaD / 2 + 0.1);
-
-        const seat = new THREE.Mesh(boxGeom, materials.cushionLounge);
-        seat.scale.set(sofaW, sofaH, sofaD);
-        seat.position.y = sofaH / 2;
-        sofa.add(seat);
-
-        const back = new THREE.Mesh(boxGeom, materials.cushionLounge);
-        back.scale.set(sofaW, 0.55, 0.1);
-        back.position.set(0, sofaH + 0.275, -sofaD / 2 + 0.05);
-        sofa.add(back);
-
-        const armL = new THREE.Mesh(boxGeom, materials.cushionLounge);
-        armL.scale.set(0.1, sofaH + 0.15, sofaD);
-        armL.position.set(-sofaW / 2 + 0.05, (sofaH + 0.15) / 2, 0);
-        sofa.add(armL);
-
-        const armR = new THREE.Mesh(boxGeom, materials.cushionLounge);
-        armR.scale.set(0.1, sofaH + 0.15, sofaD);
-        armR.position.set(sofaW / 2 - 0.05, (sofaH + 0.15) / 2, 0);
-        sofa.add(armR);
-
-        group.add(sofa);
-
-        const coffeeTableZ = cz + hM / 4;
-        if (cz + hM / 2 - coffeeTableZ > 0.3 && sofaW > 0.8) {
-          const ct = new THREE.Group();
-          ct.position.set(cx, 0, coffeeTableZ);
-          const ctTop = new THREE.Mesh(boxGeom, materials.deskWood);
-          ctTop.scale.set(0.5, 0.03, 0.4);
-          ctTop.position.y = 0.38;
-          ct.add(ctTop);
-          const ctLeg = new THREE.Mesh(cylGeom, materials.metalSilver);
-          ctLeg.scale.set(0.04, 0.36, 0.04);
-          ctLeg.position.y = 0.18;
-          ct.add(ctLeg);
-          const ctBase = new THREE.Mesh(cylGeom, materials.metalDark);
-          ctBase.scale.set(0.3, 0.015, 0.3);
-          ctBase.position.y = 0.01;
-          ct.add(ctBase);
-
-          group.add(ct);
-        }
       }
     }
   }

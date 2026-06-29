@@ -1,9 +1,29 @@
 import * as THREE from "three";
 
-export function createOfficeDeskCluster(cx, cz, wM, hM, isInnovation, resources) {
+export function createOfficeDeskCluster(cx, cz, wM, hM, isInnovation, resources, isITBar = false) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
+
+  const createSofa = (sx, sz, rotY) => {
+    const sofa = new THREE.Group();
+    sofa.position.set(sx, 0, sz);
+    sofa.rotation.y = rotY;
+
+    // Cushion base
+    const baseMesh = new THREE.Mesh(boxGeom, materials.cushionLounge);
+    baseMesh.scale.set(1.6, 0.3, 0.6);
+    baseMesh.position.y = 0.25;
+    sofa.add(baseMesh);
+
+    // Backrest
+    const backMesh = new THREE.Mesh(boxGeom, materials.cushionLounge);
+    backMesh.scale.set(1.6, 0.5, 0.15);
+    backMesh.position.set(0, 0.6, 0.225);
+    sofa.add(backMesh);
+
+    return sofa;
+  };
   const cylGeom = geometries.cylinder;
 
   // Floor plate decoration (rug/carpet zone for open workspaces)
@@ -105,7 +125,49 @@ export function createOfficeDeskCluster(cx, cz, wM, hM, isInnovation, resources)
   };
 
   // Generate layouts
-  if (isInnovation && wM >= 4.5 && hM >= 4.5) {
+  if (isITBar) {
+    // ── IT BAR SPECIAL DESIGN (ONE BIG DESK, TWO SOFAS) ──
+    const deskGroup = new THREE.Group();
+    deskGroup.position.set(cx, 0, cz - 0.8);
+
+    // Big desk top (maple wood)
+    const top = new THREE.Mesh(boxGeom, materials.deskWood);
+    top.scale.set(2.2, 0.05, 0.9);
+    top.position.y = 0.75;
+    deskGroup.add(top);
+
+    // Thick legs
+    const legW = 0.08;
+    for (const [lx, lz] of [
+      [2.2 / 2 - 0.1, 0.9 / 2 - 0.1],
+      [-2.2 / 2 + 0.1, 0.9 / 2 - 0.1],
+      [2.2 / 2 - 0.1, -0.9 / 2 + 0.1],
+      [-2.2 / 2 + 0.1, -0.9 / 2 + 0.1]
+    ]) {
+      const leg = new THREE.Mesh(boxGeom, materials.metalDark);
+      leg.scale.set(legW, 0.725, legW);
+      leg.position.set(lx, 0.3625, lz);
+      deskGroup.add(leg);
+    }
+    
+    // Add a couple of laptop props on the desk to make it look active!
+    const laptop = new THREE.Mesh(boxGeom, materials.keyboard);
+    laptop.scale.set(0.4, 0.02, 0.25);
+    laptop.position.set(-0.4, 0.78, 0);
+    deskGroup.add(laptop);
+
+    const laptop2 = new THREE.Mesh(boxGeom, materials.keyboard);
+    laptop2.scale.set(0.4, 0.02, 0.25);
+    laptop2.position.set(0.4, 0.78, 0);
+    deskGroup.add(laptop2);
+
+    group.add(deskGroup);
+
+    // Two comfortable sofas facing each other in front of the IT Bar counter
+    group.add(createSofa(cx - 1.5, cz + 0.8, Math.PI / 2));
+    group.add(createSofa(cx + 1.5, cz + 0.8, -Math.PI / 2));
+
+  } else if (isInnovation && wM >= 4.5 && hM >= 4.5) {
     // ── INNOVATION / COLLABORATIVE AREA ──
     // Half of the room is desks, the other half is collaborative (rug, sofa, whiteboard)
     const midX = cx;

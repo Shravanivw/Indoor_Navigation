@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createUtilityRoom(polygon, cx, cz, wM, hM, isServerRoom, isDest, isUser, resources, toWorld, grid) {
+export function createUtilityRoom(polygon, cx, cz, wM, hM, isServerRoom, isDest, isUser, resources, toWorld, grid, glassWalls = false) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
@@ -11,7 +11,7 @@ export function createUtilityRoom(polygon, cx, cz, wM, hM, isServerRoom, isDest,
   const wallHeight = 2.6;
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
-  // 1. Build polygon walls with corridor door
+  // 1. Build polygon walls with corridor door (glass partition if glassWalls is enabled)
   const doorIndex = findCorridorSegmentIndex(polygon, grid);
   group.add(
     createPolygonWalls({
@@ -22,6 +22,8 @@ export function createUtilityRoom(polygon, cx, cz, wM, hM, isServerRoom, isDest,
       doorSegmentIndex: doorIndex,
       doorWidth: 0.9,
       doorHeight: 2.0,
+      glassDoor: glassWalls,
+      glassWalls: glassWalls,
       resources,
       toWorld
     })

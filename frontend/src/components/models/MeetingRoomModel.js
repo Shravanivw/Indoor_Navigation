@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid) {
+export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid, glassWalls = false) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
@@ -19,6 +19,7 @@ export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resou
       material: wallMat,
       doorSegmentIndex: doorIndex,
       glassDoor: true, // glass partition on the corridor wall
+      glassWalls,
       resources,
       toWorld
     })
