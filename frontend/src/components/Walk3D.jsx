@@ -286,7 +286,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         case "SERVER_ROOM": {
           const nameLower = r.name?.toLowerCase() ?? "";
           // DMS Monitoring and Laptop Repair Room have glass walls. IT Store is opaque.
-          const isGlassUtility = nameLower.includes("monitoring") || nameLower.includes("repair");
+          const isGlassUtility = nameLower.includes("monitoring") || nameLower.includes("repair") || nameLower.includes("av room");
           roomModel = createUtilityRoom(roomPolygon, cx, cz, wM, hM, r.type === "SERVER_ROOM" || nameLower.includes("server"), isDest, isUser, resources, toWorld, floorMap.grid, isGlassUtility);
           break;
         }
@@ -313,7 +313,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           const oDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
           const nameLower = r.name?.toLowerCase() ?? "";
           const isPKIRoom = nameLower.includes("pki");
-          const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom;
+          const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom || nameLower.includes("vr lab") || nameLower.includes("medical room");
           roomModel.add(createPolygonWalls({
             polygon: roomPolygon,
             wallHeight: 2.6,
