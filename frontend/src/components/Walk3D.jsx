@@ -245,9 +245,12 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           // Keep corridors 100% open and clear of any walls/props
           roomModel = null;
           break;
-        case "BOOTH":
-          roomModel = createBooth(roomPolygon, cx, cz, wM, hM, r.name?.toLowerCase().includes("phone"), isDest, isUser, resources, toWorld, floorMap.grid);
+        case "BOOTH": {
+          const nameLower = r.name?.toLowerCase() ?? "";
+          const isSittingArea1 = nameLower.includes("sitting area 1");
+          roomModel = createBooth(roomPolygon, cx, cz, wM, hM, nameLower.includes("phone"), isDest, isUser, resources, toWorld, floorMap.grid, isSittingArea1);
           break;
+        }
         case "RECEPTION":
           roomModel = createReception(cx, cz, wM, hM, resources);
           break;

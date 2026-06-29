@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUser, resources, toWorld, grid) {
+export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUser, resources, toWorld, grid, isSittingArea1 = false) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
@@ -14,8 +14,61 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
   // 1. Find corridor segment index to omit it (creating the open alcove opening)
   const doorIndex = findCorridorSegmentIndex(polygon, grid);
 
-  // 2. Build 3-sided polygon walls (only for phone booths! Sitting booths have NO walls)
-  if (isPhoneBooth) {
+  // 2. Build walls based on booth type
+  if (isSittingArea1) {
+    // Custom wall setup: West wall, East wall, Center divider wall (running North-South)
+    const wallL = new THREE.Mesh(boxGeom, wallMat);
+    wallL.scale.set(wt, wallHeight, hM);
+    wallL.position.set(cx - wM / 2, wallHeight / 2, cz);
+    group.add(wallL);
+
+    const wallR = new THREE.Mesh(boxGeom, wallMat);
+    wallR.scale.set(wt, wallHeight, hM);
+    wallR.position.set(cx + wM / 2, wallHeight / 2, cz);
+    group.add(wallR);
+
+    const wallC = new THREE.Mesh(boxGeom, wallMat);
+    wallC.scale.set(wt, wallHeight, hM);
+    wallC.position.set(cx, wallHeight / 2, cz);
+    group.add(wallC);
+
+    // Back wall (South wall)
+    const wallB = new THREE.Mesh(boxGeom, wallMat);
+    wallB.scale.set(wM, wallHeight, wt);
+    wallB.position.set(cx, wallHeight / 2, cz + hM / 2); // South wall is the back wall
+    group.add(wallB);
+
+    // Front wall (North wall) with two alcove openings:
+    // Layout: [Left wall segment] [Alcove 1] [Middle wall segment] [Alcove 2] [Right wall segment]
+    const aw = wM * 0.32; // Width of each alcove opening (about 32% of total width)
+
+    // Left front wall segment: from (cx - wM / 2) to (cx - wM / 4 - aw / 2)
+    const wLeftSeg = wM / 4 - aw / 2;
+    if (wLeftSeg > 0.05) {
+      const wallFLeft = new THREE.Mesh(boxGeom, wallMat);
+      wallFLeft.scale.set(wLeftSeg, wallHeight, wt);
+      wallFLeft.position.set(cx - 3 * wM / 8 - aw / 4, wallHeight / 2, cz - hM / 2);
+      group.add(wallFLeft);
+    }
+
+    // Middle front wall segment: from (cx - wM / 4 + aw / 2) to (cx + wM / 4 - aw / 2)
+    const wMidSeg = wM / 2 - aw;
+    if (wMidSeg > 0.05) {
+      const wallFMid = new THREE.Mesh(boxGeom, wallMat);
+      wallFMid.scale.set(wMidSeg, wallHeight, wt);
+      wallFMid.position.set(cx, wallHeight / 2, cz - hM / 2);
+      group.add(wallFMid);
+    }
+
+    // Right front wall segment: from (cx + wM / 4 + aw / 2) to (cx + wM / 2)
+    const wRightSeg = wM / 4 - aw / 2;
+    if (wRightSeg > 0.05) {
+      const wallFRight = new THREE.Mesh(boxGeom, wallMat);
+      wallFRight.scale.set(wRightSeg, wallHeight, wt);
+      wallFRight.position.set(cx + 3 * wM / 8 + aw / 4, wallHeight / 2, cz - hM / 2);
+      group.add(wallFRight);
+    }
+  } else if (isPhoneBooth) {
     group.add(
       createPolygonWalls({
         polygon,
@@ -71,6 +124,68 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
     notebook.scale.set(0.28, 0.015, 0.2);
     notebook.position.set(cx, shelfY + 0.025, cz - hM / 2 + shelfD / 2 + 0.05);
     group.add(notebook);
+
+  } else if (isSittingArea1) {
+    // ── CUSTOM SITTING AREA 1 (TWO ALCOVES WITH SINGLE SEATS & CIRCULAR TABLES) ──
+    const leftCX = cx - wM / 4;
+    const rightCX = cx + wM / 4;
+
+    const createCafeStool = (sx, sz, rotY) => {
+      const chair = new THREE.Group();
+      chair.position.set(sx, 0, sz);
+      chair.rotation.y = rotY;
+
+      // Base
+      const base = new THREE.Mesh(boxGeom, materials.chairBase);
+      base.scale.set(0.32, 0.02, 0.32);
+      base.position.y = 0.05;
+      chair.add(base);
+
+      // Shaft
+      const shaft = new THREE.Mesh(cylGeom, materials.metalSilver);
+      shaft.scale.set(0.03, 0.36, 0.03);
+      shaft.position.y = 0.23;
+      chair.add(shaft);
+
+      // Seat
+      const seat = new THREE.Mesh(boxGeom, materials.chairFabric);
+      seat.scale.set(0.36, 0.06, 0.36);
+      seat.position.y = 0.43;
+      chair.add(seat);
+
+      // Backrest
+      const back = new THREE.Mesh(boxGeom, materials.chairFabric);
+      back.scale.set(0.34, 0.38, 0.05);
+      back.position.set(0, 0.63, 0.155);
+      chair.add(back);
+
+      return chair;
+    };
+
+    const addTableAndChair = (alcoveCX) => {
+      // Circular table placed slightly towards the open North side
+      const tblTop = new THREE.Mesh(cylGeom, materials.deskWood);
+      tblTop.scale.set(0.65, 0.03, 0.65);
+      tblTop.position.set(alcoveCX, 0.65, cz - hM / 6);
+      group.add(tblTop);
+
+      const tblShaft = new THREE.Mesh(cylGeom, materials.metalSilver);
+      tblShaft.scale.set(0.05, 0.63, 0.05);
+      tblShaft.position.set(alcoveCX, 0.315, cz - hM / 6);
+      group.add(tblShaft);
+
+      const tblBase = new THREE.Mesh(cylGeom, materials.metalDark);
+      tblBase.scale.set(0.35, 0.02, 0.35);
+      tblBase.position.set(alcoveCX, 0.01, cz - hM / 6);
+      group.add(tblBase);
+
+      // Stool placed at the back South side of the alcove facing North (outwards, rotY = 0)
+      group.add(createCafeStool(alcoveCX, cz + hM / 4, 0));
+    };
+
+    // Build alcoves 1 and 2
+    addTableAndChair(leftCX);
+    addTableAndChair(rightCX);
 
   } else {
     // ── TWO BOOTHS SIDE-BY-SIDE (Diner-style booths) ──
