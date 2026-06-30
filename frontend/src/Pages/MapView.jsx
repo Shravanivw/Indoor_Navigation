@@ -13,11 +13,11 @@ function formatDist(metres) {
   return `${Math.round(metres)} m`;
 }
 
-export default function MapView({ destination, userLocation, route, routeLoading, buildings, buildingId, onSelectBuilding, onBack }) {
+export default function MapView({ destination, userLocation, route, routeLoading, buildings, buildingId, selectedFloorId, onSelectBuilding, onBack }) {
   const [mapData, setMapData]   = useState(null);
   const [view3D, setView3D]     = useState(false);
 
-  const floorId = destination?.floor?.id ?? userLocation?.floor?.id ?? DEFAULT_FLOOR_ID;
+  const floorId = selectedFloorId ?? destination?.floor?.id ?? userLocation?.floor?.id ?? DEFAULT_FLOOR_ID;
 
   // Fetch real floor map from backend
   useEffect(() => {

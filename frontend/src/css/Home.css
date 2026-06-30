@@ -164,3 +164,81 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Dropdowns Form styling */
+.home-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.home-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.home-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-dropdown-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.home-dropdown {
+  background: rgba(255, 255, 255, 0.1);
+  border: 0.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #fff;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.home-dropdown option {
+  background: #111b27;
+  color: #fff;
+}
+
+.home-dropdown:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.home-go-btn {
+  background: #14b8a6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms;
+  margin-top: 6px;
+}
+
+.home-go-btn:hover:not(:disabled) {
+  background: #0d9488;
+}
+
+.home-go-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

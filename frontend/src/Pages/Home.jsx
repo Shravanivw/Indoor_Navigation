@@ -13,35 +13,25 @@ const QUICK_FIND_TYPES = [
 
 export default function Home({
   userLocation,
+  onChangeUserLocation,
+  destination,
+  onChangeDestination,
+  route,
+  onSelectRoute,
   buildings = [],
-  buildingId,
+  selectedBuildingId,
   onSelectBuilding,
-  floorId,
-  onSearch,
+  floors = [],
+  selectedFloorId,
+  onSelectFloor,
+  rooms = [],
   onSelectQuick,
   onSelectRecent,
+  fetchRoute,
+  goTo,
 }) {
   const RECENTS_KEY = "indoorNav.recentDestinations";
-  const [rooms, setRooms] = useState([]);
   const [recentRooms, setRecentRooms] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Load rooms for the active floor (for Quick Find chips)
-  useEffect(() => {
-    if (!floorId) return;
-    setLoading(true);
-    (async () => {
-      try {
-        const res  = await fetch(`${API_BASE}/floors/${floorId}/map`);
-        const json = await res.json();
-        setRooms(json.success && json.data?.rooms ? json.data.rooms : []);
-      } catch (err) {
-        console.error("Failed to load floor map:", err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [floorId]);
 
   // Read recent destinations from localStorage — updated whenever the user navigates
   useEffect(() => {
@@ -59,43 +49,114 @@ export default function Home({
     return () => window.removeEventListener("focus", loadRecents);
   }, []);
 
-  const getFloorLabel = (floor) => {
-    if (floor == null) return "";
-    return typeof floor === "object" ? floor.level : floor;
+  const handleNavigate = async () => {
+    if (!userLocation?.id || !destination?.id) return;
+    const fetchedRoute = await fetchRoute(userLocation, destination);
+    onSelectRoute(fetchedRoute);
+    goTo("map");
   };
-
-  const userLocationText =
-    typeof userLocation === "string"
-      ? userLocation
-      : userLocation
-      ? `${userLocation.name}${userLocation.floor ? ` — Floor ${getFloorLabel(userLocation.floor)}` : ""}`
-      : "Unknown location";
 
   return (
     <div className="home-page">
       <div className="home-hero">
-        <div className="home-hero-label">Your location</div>
-        <div className="home-hero-loc">{userLocationText}</div>
-        <div className="home-hero-search" onClick={onSearch}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <span>Where do you want to go?</span>
+        <h1 className="home-title">Indoor Navigation</h1>
+
+        <div className="home-form">
+          <div className="home-form-field">
+            <label className="home-dropdown-label">Building</label>
+            <select
+              className="home-dropdown"
+              value={selectedBuildingId || ""}
+              onChange={(e) => onSelectBuilding(e.target.value)}
+            >
+              {buildings.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="home-form-field">
+            <label className="home-dropdown-label">Floor</label>
+            <select
+              className="home-dropdown"
+              value={selectedFloorId || ""}
+              onChange={(e) => onSelectFloor(e.target.value)}
+            >
+              <option value="">Select Floor</option>
+              {floors.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="home-form-field">
+            <label className="home-dropdown-label">From</label>
+            <select
+              className="home-dropdown"
+              disabled={!selectedFloorId}
+              value={userLocation?.id || ""}
+              onChange={(e) => {
+                const r = rooms.find((room) => room.id === e.target.value);
+                onChangeUserLocation(r || null);
+              }}
+            >
+              {!selectedFloorId ? (
+                <option value="">Select Floor first</option>
+              ) : (
+                <>
+                  <option value="">Select Source Room</option>
+                  {rooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </div>
+
+          <div className="home-form-field">
+            <label className="home-dropdown-label">To</label>
+            <select
+              className="home-dropdown"
+              disabled={!selectedFloorId}
+              value={destination?.id || ""}
+              onChange={(e) => {
+                const r = rooms.find((room) => room.id === e.target.value);
+                onChangeDestination(r || null);
+              }}
+            >
+              {!selectedFloorId ? (
+                <option value="">Select Floor first</option>
+              ) : (
+                <>
+                  <option value="">Select Destination Room</option>
+                  {rooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            className="home-go-btn"
+            disabled={!userLocation || !destination || userLocation.id === destination.id}
+            onClick={handleNavigate}
+          >
+            Let's Go →
+          </button>
         </div>
       </div>
 
       <div className="home-scroll">
-        {buildings.length > 1 && (
-          <>
-            <div className="home-section-title">Building</div>
-            <BuildingChips
-              buildings={buildings}
-              buildingId={buildingId}
-              onSelectBuilding={onSelectBuilding}
-            />
-          </>
-        )}
-
         <div className="home-section-title">Quick find</div>
         <div className="home-quick-grid">
           {QUICK_FIND_TYPES.map((q, i) => {
@@ -117,7 +178,7 @@ export default function Home({
                 </div>
                 <div className="home-quick-name">{q.label}</div>
                 <div className="home-quick-dist">
-                  {match ? `Floor ${match.floor?.level ?? "G"}` : loading ? "…" : "—"}
+                  {match ? `Floor ${match.floor?.level ?? "G"}` : "—"}
                 </div>
               </div>
             );

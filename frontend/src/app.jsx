@@ -29,9 +29,11 @@ export default function App() {
   const [userLocation, setUserLocation]   = useState(null);
 
   // Multi-building state
-  const [buildings, setBuildings]   = useState([]);
-  const [buildingId, setBuildingId] = useState(() => localStorage.getItem(BUILDING_STORAGE_KEY) || null);
-  const [floorId, setFloorId]       = useState(null);
+  const [buildings, setBuildings]                   = useState([]);
+  const [selectedBuildingId, setSelectedBuildingId] = useState(() => localStorage.getItem(BUILDING_STORAGE_KEY) || null);
+  const [floors, setFloors]                         = useState([]);
+  const [selectedFloorId, setSelectedFloorId]       = useState(null);
+  const [rooms, setRooms]                           = useState([]);
 
   // Load buildings list once
   useEffect(() => {
@@ -41,8 +43,8 @@ export default function App() {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length) {
           setBuildings(json.data);
-          if (!buildingId || !json.data.some(b => b.id === buildingId)) {
-            setBuildingId(json.data[0].id);
+          if (!selectedBuildingId || !json.data.some(b => b.id === selectedBuildingId)) {
+            setSelectedBuildingId(json.data[0].id);
           }
         }
       } catch (err) {
@@ -51,40 +53,78 @@ export default function App() {
     })();
   }, []);
 
-  // When building changes: persist, fetch its first floor, then default the
-  // user location to that floor's Reception (or first room) so routing stays
-  // within the active building.
+  // When building changes: persist, fetch its floors, and reset floor & routing states
   useEffect(() => {
-    if (!buildingId) return;
-    localStorage.setItem(BUILDING_STORAGE_KEY, buildingId);
+    if (!selectedBuildingId) return;
+    localStorage.setItem(BUILDING_STORAGE_KEY, selectedBuildingId);
     let cancelled = false;
     (async () => {
       try {
-        const floorsRes = await fetch(`${API_BASE}/buildings/${buildingId}/floors`);
+        const floorsRes = await fetch(`${API_BASE}/buildings/${selectedBuildingId}/floors`);
         const floorsJson = await floorsRes.json();
-        if (!floorsJson.success || !floorsJson.data?.length) return;
-        const firstFloorId = floorsJson.data[0].id;
         if (cancelled) return;
-        setFloorId(firstFloorId);
 
-        const mapRes = await fetch(`${API_BASE}/floors/${firstFloorId}/map`);
-        const mapJson = await mapRes.json();
-        if (cancelled || !mapJson.success || !mapJson.data?.rooms?.length) return;
-        const rooms = mapJson.data.rooms;
-        const reception = rooms.find(r => r.type === "RECEPTION") ?? rooms[0];
-        setUserLocation(reception);
+        if (floorsJson.success && Array.isArray(floorsJson.data)) {
+          setFloors(floorsJson.data);
+          setSelectedFloorId(null); // resets floor selection
+        } else {
+          setFloors([]);
+          setSelectedFloorId(null);
+        }
+
+        // Reset routing states
+        setUserLocation(null);
         setDestination(null);
         setRoute(null);
+        setRooms([]);
       } catch (err) {
-        console.error("Failed to load default location for building:", err);
+        console.error("Failed to load floors for building:", err);
       }
     })();
     return () => { cancelled = true; };
-  }, [buildingId]);
+  }, [selectedBuildingId]);
 
-  // QR code handler — reads ?qr=LOC-GF-BOARDROOM (or ?location=…) from the URL.
+  // When floor changes: fetch its rooms, and reset routing states
+  useEffect(() => {
+    if (!selectedFloorId) {
+      setRooms([]);
+      setUserLocation(null);
+      setDestination(null);
+      setRoute(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        // Reset routing states
+        setUserLocation(null);
+        setDestination(null);
+        setRoute(null);
+
+        const mapRes = await fetch(`${API_BASE}/floors/${selectedFloorId}/map`);
+        const mapJson = await mapRes.json();
+        if (cancelled) return;
+
+        if (mapJson.success && Array.isArray(mapJson.data?.rooms)) {
+          setRooms(mapJson.data.rooms);
+
+          // Default user location to Reception (or first room) of the newly selected floor
+          const rList = mapJson.data.rooms;
+          const reception = rList.find(r => r.type === "RECEPTION") ?? rList[0];
+          setUserLocation(reception);
+        } else {
+          setRooms([]);
+        }
+      } catch (err) {
+        console.error("Failed to load rooms for floor:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedFloorId]);
+
+  // QR code handler — reads ?qr=LOC-5-AR_VR_LAB (or ?location=…) from the URL.
   // Fires when a user scans a physical QR sticker placed in the office.
-  // Resolves the room (including "Reception") and sets it as the start location.
+  // Resolves the room and sets it as the start location.
   useEffect(() => {
     async function handleQRParam() {
       const params = new URLSearchParams(window.location.search);
@@ -97,10 +137,10 @@ export default function App() {
         if (json.success && json.data) {
           setUserLocation(json.data);   // set scanned room as start location
           // Switch active building to wherever the QR-scanned room lives
-          if (json.data.floor?.buildingId && json.data.floor.buildingId !== buildingId) {
-            setBuildingId(json.data.floor.buildingId);
+          if (json.data.floor?.buildingId && json.data.floor.buildingId !== selectedBuildingId) {
+            setSelectedBuildingId(json.data.floor.buildingId);
           }
-          if (json.data.floor?.id) setFloorId(json.data.floor.id);
+          if (json.data.floor?.id) setSelectedFloorId(json.data.floor.id);
           setPage("search");            // take them straight to Search to pick a destination
         }
       } catch (err) {
@@ -194,23 +234,32 @@ export default function App() {
         {page === "home" && (
           <Home
             userLocation={userLocation}
+            onChangeUserLocation={setUserLocation}
+            destination={destination}
+            onChangeDestination={setDestination}
+            route={route}
+            onSelectRoute={setRoute}
             buildings={buildings}
-            buildingId={buildingId}
-            onSelectBuilding={setBuildingId}
-            floorId={floorId}
-            onSearch={() => goTo("search")}
+            selectedBuildingId={selectedBuildingId}
+            onSelectBuilding={setSelectedBuildingId}
+            floors={floors}
+            selectedFloorId={selectedFloorId}
+            onSelectFloor={setSelectedFloorId}
+            rooms={rooms}
             onSelectQuick={selectDestinationWithRoute}
             onSelectRecent={selectDestinationWithRoute}
+            fetchRoute={fetchRoute}
+            goTo={goTo}
           />
         )}
 
         {page === "search" && (
           <Search
             userLocation={userLocation}
-            floorId={floorId}
+            floorId={selectedFloorId}
             buildings={buildings}
-            buildingId={buildingId}
-            onSelectBuilding={setBuildingId}
+            buildingId={selectedBuildingId}
+            onSelectBuilding={setSelectedBuildingId}
             onBack={() => goBack("home")}
             onSelectDestination={selectDestination}
           />
@@ -230,9 +279,10 @@ export default function App() {
             route={route}
             routeLoading={routeLoading}
             buildings={buildings}
-            buildingId={buildingId}
-            onSelectBuilding={setBuildingId}
-            onBack={() => goBack("search")}
+            buildingId={selectedBuildingId}
+            selectedFloorId={selectedFloorId}
+            onSelectBuilding={setSelectedBuildingId}
+            onBack={() => goBack("home")}
           />
         )}
 
