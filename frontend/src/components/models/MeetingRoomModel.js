@@ -14,7 +14,7 @@ export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resou
   group.add(
     createPolygonWalls({
       polygon,
-      wallHeight: 2.6,
+      wallHeight: 3.0,
       wallThickness: 0.12,
       material: wallMat,
       doorSegmentIndex: doorIndex,

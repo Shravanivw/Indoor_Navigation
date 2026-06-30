@@ -12,8 +12,9 @@ import { createStaircase } from "./models/StaircaseModel";
 import { createLift, createLiftLobby } from "./models/LiftModel";
 import { createUtilityRoom } from "./models/UtilityRoomModel";
 import { createBooth } from "./models/BoothModel";
+import { initCeilingInfrastructure, addRoomCeiling, finalizeCeilingInfrastructure } from "./models/CeilingInfrastructure";
 
-const WALL_HEIGHT  = 2.7;
+const WALL_HEIGHT  = 3.0;
 const EYE_HEIGHT   = 1.75;
 const WALK_SPEED   = 1.4; // metres / second
 
@@ -178,14 +179,8 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     floorMesh.rotation.x = -Math.PI / 2;
     scene.add(floorMesh);
 
-    // Ceiling
-    const ceiling = new THREE.Mesh(
-      new THREE.PlaneGeometry(widthM3d, heightM3d),
-      materials.ceiling
-    );
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = WALL_HEIGHT;
-    scene.add(ceiling);
+    // Ceiling Infrastructure
+    const ceilingInfra = initCeilingInfrastructure(scene, resources);
 
     // ── Rooms & Models ───────────────────────────────────────────────────────
     const rooms = floorMap.rooms ?? [];
@@ -293,7 +288,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         case "TOILET":
           roomModel = new THREE.Group();
           const tDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
-          roomModel.add(createPolygonWalls({ polygon: roomPolygon, wallHeight: 2.6, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSegmentIndex: tDoorIndex, doorWidth: 0.8, resources, toWorld }));
+          roomModel.add(createPolygonWalls({ polygon: roomPolygon, wallHeight: 3.0, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSegmentIndex: tDoorIndex, doorWidth: 0.8, resources, toWorld }));
           // Toilet floor
           const tFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorTile);
           tFloor.rotation.x = -Math.PI / 2;
@@ -316,7 +311,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom || nameLower.includes("vr lab") || nameLower.includes("medical room");
           roomModel.add(createPolygonWalls({
             polygon: roomPolygon,
-            wallHeight: 2.6,
+            wallHeight: 3.0,
             wallThickness: 0.12,
             material: isDest ? materials.wallDest : materials.wallNormal,
             doorSegmentIndex: oDoorIndex,
@@ -535,7 +530,13 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           name: r.name
         });
       }
+
+      // Add ceiling infrastructure for this room
+      addRoomCeiling(ceilingInfra, r, template, cx, cz, wM, hM, roomPolygon, toWorld);
     }
+
+    // Finalize all accumulated instanced ceiling items
+    finalizeCeilingInfrastructure(ceilingInfra, scene);
 
     // ── Destination Landmark Floating Pin ──────────────────────────────────
     if (destination && rooms.length > 0) {

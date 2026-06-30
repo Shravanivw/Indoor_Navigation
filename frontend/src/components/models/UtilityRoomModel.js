@@ -8,7 +8,7 @@ export function createUtilityRoom(polygon, cx, cz, wM, hM, isServerRoom, isDest,
   const cylGeom = geometries.cylinder;
 
   const wt = 0.12;
-  const wallHeight = 2.6;
+  const wallHeight = 3.0;
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
   // 1. Build polygon walls with corridor door (glass partition if glassWalls is enabled)

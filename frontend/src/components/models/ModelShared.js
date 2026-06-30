@@ -125,16 +125,21 @@ export function initSharedResources() {
       emissiveIntensity: 0.25,
     }),
     glass: new THREE.MeshPhysicalMaterial({
-      color: 0xdbeafe,
+      color: 0xdfefff, // soft light blue-tinted glass
       transparent: true,
-      opacity: 0.25,
-      roughness: 0.1,
-      metalness: 0.1,
+      opacity: 0.55,
       transmission: 0.6,
-      ior: 1.2,
+      roughness: 0.08,
+      metalness: 0.0,
+      ior: 1.45,
+      thickness: 0.03,
       side: THREE.DoubleSide,
     }),
-    glassFrame: new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.5, metalness: 0.8 }),
+    glassFrame: new THREE.MeshStandardMaterial({
+      color: 0x1e293b, // anodized dark slate frame
+      roughness: 0.35,
+      metalness: 0.85
+    }),
     ceiling: new THREE.MeshStandardMaterial({ color: 0xfbfbfb, roughness: 0.9, side: THREE.DoubleSide }),
 
     // Furniture/Prop materials

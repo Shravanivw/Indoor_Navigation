@@ -8,7 +8,7 @@ export function createLift(polygon, cx, cz, wM, hM, isDest, isUser, resources, t
   const cylGeom = geometries.cylinder;
 
   const wt = 0.12;
-  const wallHeight = 2.6;
+  const wallHeight = 3.0;
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
   // 1. Find corridor segment index
@@ -135,7 +135,7 @@ export function createLiftLobby(cx, cz, wM, hM, resources) {
   const cylGeom = geometries.cylinder;
 
   const wt = 0.12;
-  const wallHeight = 2.6;
+  const wallHeight = 3.0;
 
   // 1. Tile floor
   const floorPlate = new THREE.Mesh(

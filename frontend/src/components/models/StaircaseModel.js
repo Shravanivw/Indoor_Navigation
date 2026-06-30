@@ -8,7 +8,7 @@ export function createStaircase(polygon, cx, cz, wM, hM, isDest, isUser, resourc
   const cylGeom = geometries.cylinder;
 
   const wt = 0.12;
-  const wallHeight = 2.6;
+  const wallHeight = 3.0;
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
   // 1. Build polygon walls with a corridor-facing doorway

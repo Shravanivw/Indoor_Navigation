@@ -14,7 +14,7 @@ export function createPantry(polygon, cx, cz, wM, hM, isCafeteria, isDest, isUse
     group.add(
       createPolygonWalls({
         polygon,
-        wallHeight: 2.6,
+        wallHeight: 3.0,
         wallThickness: 0.12,
         material: wallMat,
         doorSegmentIndex: doorIndex,

@@ -8,7 +8,7 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
   const cylGeom = geometries.cylinder;
 
   const wt = 0.12;
-  const wallHeight = 2.6;
+  const wallHeight = 3.0;
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
   // 1. Find corridor segment index to omit it (creating the open alcove opening)
