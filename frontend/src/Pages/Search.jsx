@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import TopBar from "../components/TopBar";
 import "../css/Search.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
@@ -92,46 +91,68 @@ export default function Search({
 
   return (
     <div className="search-page">
-      <TopBar title="Search" onBack={onBack} />
-
-      <div className="search-selectors-row">
-        <div className="search-select-field">
-          <label className="search-select-label">Building</label>
-          <select
-            className="search-dropdown"
-            value={buildingId || ""}
-            onChange={(e) => onSelectBuilding(e.target.value)}
+      <div className="search-hero">
+        <div className="search-hero-top">
+          <button
+            type="button"
+            className="search-back-btn"
+            onClick={onBack}
+            aria-label="Go back"
           >
-            {buildings.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+          </button>
+          <span className="search-hero-title">Search Destinations</span>
         </div>
 
-        <div className="search-select-field">
-          <label className="search-select-label">Floor</label>
-          <select
-            className="search-dropdown"
-            value={floorId || ""}
-            onChange={(e) => onSelectFloor(e.target.value)}
-          >
-            <option value="">Select Floor</option>
-            {floors.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+        <div className="search-location-card">
+          <span className="search-location-subtitle">Searching in</span>
+          <div className="search-location-selectors">
+            <div className="search-select-wrapper">
+              <select
+                className="search-inline-select"
+                value={buildingId || ""}
+                onChange={(e) => onSelectBuilding(e.target.value)}
+              >
+                {buildings.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <svg className="search-select-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 1l4 4 4-4" />
+              </svg>
+            </div>
 
-      <div className="search-body">
+            <span className="search-location-separator">·</span>
+
+            <div className="search-select-wrapper">
+              <select
+                className="search-inline-select"
+                value={floorId || ""}
+                onChange={(e) => onSelectFloor(e.target.value)}
+              >
+                <option value="">Select Floor</option>
+                {floors.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+              <svg className="search-select-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 1l4 4 4-4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
         <div className="search-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <svg className="search-bar-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
             className="search-input"
@@ -141,15 +162,21 @@ export default function Search({
             autoFocus
           />
           {query && (
-            <div onClick={() => { setQuery(""); setCategory(null); setSelected(null); }} style={{ cursor: "pointer" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => { setQuery(""); setCategory(null); setSelected(null); }}
+              aria-label="Clear search"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
-            </div>
+            </button>
           )}
         </div>
-
+      </div>
+      <div className="search-body">
         <div className="category-row">
           {CATEGORIES.map(cat => (
             <button
