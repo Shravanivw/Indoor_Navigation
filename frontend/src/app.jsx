@@ -256,12 +256,17 @@ export default function App() {
         {page === "search" && (
           <Search
             userLocation={userLocation}
-            floorId={selectedFloorId}
+            onChangeUserLocation={setUserLocation}
             buildings={buildings}
             buildingId={selectedBuildingId}
             onSelectBuilding={setSelectedBuildingId}
+            floors={floors}
+            floorId={selectedFloorId}
+            onSelectFloor={setSelectedFloorId}
+            rooms={rooms}
             onBack={() => goBack("home")}
             onSelectDestination={selectDestination}
+            fetchRoute={fetchRoute}
           />
         )}
 

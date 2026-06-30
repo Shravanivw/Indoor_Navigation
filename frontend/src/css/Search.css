@@ -206,41 +206,179 @@
   font-size: 16px;
 }
 
-.search-confirm-bar {
-  position: absolute;
-  bottom: 70px;
-  left: 16px;
-  right: 16px;
-  background: #fff;
-  border: 0.5px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 12px 14px;
+/* Building and Floor selectors row inside Search screen */
+.search-selectors-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  gap: 12px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.scb-name {
-  font-size: 13px;
+.search-select-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.search-select-label {
+  font-size: 10px;
   font-weight: 600;
-  color: #111;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.scb-sub {
-  font-size: 11px;
-  color: #6b7280;
-  margin-top: 2px;
+.search-dropdown {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
 }
 
-.search-go-btn {
-  padding: 9px 14px;
-  background: #0f766e;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
+/* Route Confirmation Sheet Bottom Drawer styling */
+.route-confirm-sheet-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.route-confirm-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 20px 24px 34px;
+  box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.15);
+  animation: slideUp 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.route-confirm-handle {
+  width: 36px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  align-self: center;
+  margin-bottom: 4px;
+}
+
+.route-confirm-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+}
+
+.route-confirm-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.route-confirm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.route-confirm-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.route-confirm-select {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+}
+
+.route-confirm-dest-value {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.route-confirm-meta {
+  display: flex;
+  justify-content: space-between;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 0.5px solid #e2e8f0;
+}
+
+.route-confirm-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rc-meta-lbl {
+  font-size: 9px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.rc-meta-val {
   font-size: 12px;
   font-weight: 600;
+  color: #0f172a;
+}
+
+.route-confirm-go-btn {
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  transition: background 150ms;
+  text-align: center;
+}
+
+.route-confirm-go-btn:hover:not(:disabled) {
+  background: #0d9488;
+}
+
+.route-confirm-go-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

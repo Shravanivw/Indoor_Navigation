@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import TopBar from "../components/TopBar";
 import FloorMap from "../components/FloorMap";
 import Walk3D from "../components/Walk3D";
-import BuildingChips from "../components/BuildingChips";
 import "../css/MapView.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
@@ -52,12 +51,6 @@ export default function MapView({ destination, userLocation, route, routeLoading
         subtitle={`From ${userLocationText}`}
         onBack={onBack}
       />
-      <BuildingChips
-        buildings={buildings}
-        buildingId={buildingId}
-        onSelectBuilding={onSelectBuilding}
-      />
-
       <div className="map-canvas">
         {/* Bird's eye / 3D walkthrough render branch */}
         {view3D ? (

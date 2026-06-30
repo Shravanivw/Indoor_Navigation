@@ -1,33 +1,23 @@
 import { useState, useEffect } from "react";
-import BuildingChips from "../components/BuildingChips";
 import "../css/Home.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
-
 const QUICK_FIND_TYPES = [
-  { label: "Meeting rooms", type: "MEETING_ROOM", icon: "grid",  color: "#EAF3DE", iconColor: "#639922" },
-  { label: "Cafeteria",     type: "PANTRY",        icon: "coffee",color: "#FAEEDA", iconColor: "#BA7517" },
-  { label: "Reception",     type: "RECEPTION",     icon: "home",  color: "#E6F1FB", iconColor: "#378ADD" },
-  { label: "Emergency exit",type: "EXIT",           icon: "alert", color: "#FCEBEB", iconColor: "#E24B4A" },
+  { label: "Meeting rooms", type: "MEETING_ROOM", icon: "grid",   color: "#EAF3DE", iconColor: "#639922" },
+  { label: "Cafeteria",     type: "PANTRY",        icon: "coffee", color: "#FAEEDA", iconColor: "#BA7517" },
+  { label: "Restrooms",     type: "RESTROOM",      icon: "toilet", color: "#F3E8FF", iconColor: "#8B5CF6" },
+  { label: "Reception",     type: "RECEPTION",     icon: "home",   color: "#E6F1FB", iconColor: "#378ADD" },
+  { label: "Emergency exit",type: "EXIT",          icon: "alert",  color: "#FCEBEB", iconColor: "#E24B4A" },
 ];
 
 export default function Home({
   userLocation,
-  onChangeUserLocation,
-  destination,
-  onChangeDestination,
-  route,
-  onSelectRoute,
   buildings = [],
   selectedBuildingId,
-  onSelectBuilding,
   floors = [],
   selectedFloorId,
-  onSelectFloor,
   rooms = [],
   onSelectQuick,
   onSelectRecent,
-  fetchRoute,
   goTo,
 }) {
   const RECENTS_KEY = "indoorNav.recentDestinations";
@@ -49,118 +39,37 @@ export default function Home({
     return () => window.removeEventListener("focus", loadRecents);
   }, []);
 
-  const handleNavigate = async () => {
-    if (!userLocation?.id || !destination?.id) return;
-    const fetchedRoute = await fetchRoute(userLocation, destination);
-    onSelectRoute(fetchedRoute);
-    goTo("map");
-  };
+  const activeBuilding = buildings.find((b) => b.id === selectedBuildingId);
+  const activeBuildingName = activeBuilding ? activeBuilding.name : "Hudson";
+  const activeFloor = floors.find((f) => f.id === selectedFloorId);
+  const activeFloorLevel = activeFloor ? activeFloor.name : "5th Floor";
+  const locationName = userLocation ? userLocation.name : "Reception";
 
   return (
     <div className="home-page">
       <div className="home-hero">
-        <h1 className="home-title">Indoor Navigation</h1>
+        <div className="home-location-card">
+          <span className="home-location-subtitle">You are at</span>
+          <span className="home-location-title">{locationName}</span>
+          <span className="home-location-meta">
+            {activeBuildingName} · {activeFloorLevel}
+          </span>
+        </div>
 
-        <div className="home-form">
-          <div className="home-form-field">
-            <label className="home-dropdown-label">Building</label>
-            <select
-              className="home-dropdown"
-              value={selectedBuildingId || ""}
-              onChange={(e) => onSelectBuilding(e.target.value)}
-            >
-              {buildings.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="home-form-field">
-            <label className="home-dropdown-label">Floor</label>
-            <select
-              className="home-dropdown"
-              value={selectedFloorId || ""}
-              onChange={(e) => onSelectFloor(e.target.value)}
-            >
-              <option value="">Select Floor</option>
-              {floors.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="home-form-field">
-            <label className="home-dropdown-label">From</label>
-            <select
-              className="home-dropdown"
-              disabled={!selectedFloorId}
-              value={userLocation?.id || ""}
-              onChange={(e) => {
-                const r = rooms.find((room) => room.id === e.target.value);
-                onChangeUserLocation(r || null);
-              }}
-            >
-              {!selectedFloorId ? (
-                <option value="">Select Floor first</option>
-              ) : (
-                <>
-                  <option value="">Select Source Room</option>
-                  {rooms.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
-          </div>
-
-          <div className="home-form-field">
-            <label className="home-dropdown-label">To</label>
-            <select
-              className="home-dropdown"
-              disabled={!selectedFloorId}
-              value={destination?.id || ""}
-              onChange={(e) => {
-                const r = rooms.find((room) => room.id === e.target.value);
-                onChangeDestination(r || null);
-              }}
-            >
-              {!selectedFloorId ? (
-                <option value="">Select Floor first</option>
-              ) : (
-                <>
-                  <option value="">Select Destination Room</option>
-                  {rooms.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
-          </div>
-
-          <button
-            type="button"
-            className="home-go-btn"
-            disabled={!userLocation || !destination || userLocation.id === destination.id}
-            onClick={handleNavigate}
-          >
-            Let's Go →
-          </button>
+        <div className="home-search-bar" onClick={() => goTo("search")}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span className="home-search-placeholder">Where would you like to go?</span>
         </div>
       </div>
 
       <div className="home-scroll">
-        <div className="home-section-title">Quick find</div>
+        <div className="home-section-title">Quick Actions</div>
         <div className="home-quick-grid">
           {QUICK_FIND_TYPES.map((q, i) => {
-            const match = rooms.find(r => r.type === q.type);
+            const match = rooms.find((r) => r.type === q.type);
             const disabled = !match;
             return (
               <div
@@ -170,10 +79,11 @@ export default function Home({
               >
                 <div className="home-quick-icon" style={{ background: q.color }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={q.iconColor} strokeWidth="2">
-                    {q.icon === "grid"   && <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></>}
-                    {q.icon === "coffee" && <><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></>}
-                    {q.icon === "home"   && <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>}
-                    {q.icon === "alert"  && <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>}
+                    {q.icon === "grid"   && <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></>}
+                    {q.icon === "coffee" && <><path d="M18 8h1a4 4 0 010 8h-1" /><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" /><line x1="6" y1="1" x2="6" y2="4" /><line x1="10" y1="1" x2="10" y2="4" /><line x1="14" y1="1" x2="14" y2="4" /></>}
+                    {q.icon === "home"   && <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />}
+                    {q.icon === "alert"  && <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>}
+                    {q.icon === "toilet" && <><circle cx="6" cy="5" r="2" /><path d="M4 8h4v8H6v5H4v-5H2V8z" /><circle cx="18" cy="5" r="2" /><path d="M16 8h4v6h-1v7h-2v-7h-1V8z" /></>}
                   </svg>
                 </div>
                 <div className="home-quick-name">{q.label}</div>
@@ -185,7 +95,7 @@ export default function Home({
           })}
         </div>
 
-        <div className="home-section-title">Recent destinations</div>
+        <div className="home-section-title">Recent Destinations</div>
         {recentRooms.length === 0 ? (
           <div style={{ color: "#9ca3af", fontSize: 13, padding: "12px 0" }}>No recent destinations yet.</div>
         ) : (
@@ -193,8 +103,8 @@ export default function Home({
             <div key={room.id || i} className="home-recent-item" onClick={() => onSelectRecent(room)}>
               <div className="home-recent-icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" strokeWidth="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                  <circle cx="12" cy="10" r="3" />
                 </svg>
               </div>
               <div className="home-recent-info">

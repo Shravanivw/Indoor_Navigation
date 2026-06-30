@@ -3,45 +3,74 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
-  background: #fff;
+  background: #f8fafc;
 }
 
 .home-hero {
   background: #0f766e;
-  padding: 16px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   flex-shrink: 0;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
-.home-hero-label {
+.home-location-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-location-subtitle {
   font-size: 11px;
-  color: rgba(255,255,255,0.7);
-  margin-bottom: 4px;
-}
-
-.home-hero-loc {
-  font-size: 15px;
   font-weight: 600;
-  color: #E6F1FB;
-  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.home-hero-search {
-  background: rgba(255,255,255,0.12);
-  border: 0.5px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  padding: 10px 12px;
+.home-location-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.home-location-meta {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+}
+
+.home-search-bar {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   cursor: pointer;
-  color: rgba(255,255,255,0.65);
-  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 120ms, box-shadow 120ms;
+}
+
+.home-search-bar:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.home-search-placeholder {
+  font-size: 15px;
+  color: #9ca3af;
+  font-weight: 500;
 }
 
 .home-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px;
+  padding: 20px 16px;
 }
 
 .home-scroll::-webkit-scrollbar { display: none; }
@@ -49,66 +78,85 @@
 .home-section-title {
   font-size: 11px;
   font-weight: 600;
-  color: #6b7280;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  margin-top: 8px;
 }
 
 .home-quick-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 24px;
 }
 
 .home-quick-card {
   background: #fff;
-  border: 0.5px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
+  border: 0.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: transform 120ms, box-shadow 120ms;
+}
+
+.home-quick-card:active:not(.is-disabled) {
+  transform: scale(0.97);
 }
 
 .home-quick-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .home-quick-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #111;
+  color: #0f172a;
 }
 
 .home-quick-dist {
   font-size: 11px;
-  color: #6b7280;
+  color: #64748b;
+}
+
+.home-quick-card.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .home-recent-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 0.5px solid #f3f4f6;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 0.5px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 8px;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
+  transition: transform 120ms;
 }
 
-.home-recent-item:last-child { border-bottom: none; }
+.home-recent-item:active {
+  transform: scale(0.99);
+}
 
 .home-recent-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: #f9fafb;
+  border-radius: 10px;
+  background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -119,126 +167,17 @@
 
 .home-recent-name {
   font-size: 13px;
-  color: #111;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .home-recent-sub {
   font-size: 11px;
-  color: #6b7280;
+  color: #64748b;
   margin-top: 2px;
 }
 
 .home-recent-arr {
-  color: #9ca3af;
+  color: #94a3b8;
   font-size: 18px;
-}
-/* Building selector chips */
-.home-building-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-.home-building-chip {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #4b5563;
-  cursor: pointer;
-  transition: background 120ms, color 120ms, border-color 120ms;
-}
-.home-building-chip:hover {
-  border-color: #0f766e;
-  color: #0f766e;
-}
-.home-building-chip.is-active {
-  background: #0f766e;
-  border-color: #0f766e;
-  color: #fff;
-}
-
-.home-quick-card.is-disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Dropdowns Form styling */
-.home-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 16px 0;
-  text-align: center;
-}
-
-.home-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 0.5px solid rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
-  padding: 16px;
-}
-
-.home-form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.home-dropdown-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.home-dropdown {
-  background: rgba(255, 255, 255, 0.1);
-  border: 0.5px solid rgba(255, 255, 255, 0.25);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #fff;
-  outline: none;
-  cursor: pointer;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.home-dropdown option {
-  background: #111b27;
-  color: #fff;
-}
-
-.home-dropdown:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.home-go-btn {
-  background: #14b8a6;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 150ms;
-  margin-top: 6px;
-}
-
-.home-go-btn:hover:not(:disabled) {
-  background: #0d9488;
-}
-
-.home-go-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
