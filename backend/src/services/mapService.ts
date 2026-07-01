@@ -4,6 +4,12 @@
 import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
+import {
+  getHudsonProjectionBounds,
+  projectHudsonCoordinate,
+  loadHudsonLayoutRooms,
+  HUDSON_LAYOUT_FILES
+} from '../utils/projection';
 import type { FloorMapData, RoomMapData, GraphNode} from '../types';
 
 type LayoutPoint = { x: number; y: number };
@@ -117,35 +123,17 @@ function normaliseRoomName(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function loadHudsonLayoutRooms(layoutFile: string): LayoutRoom[] {
-  const parsed = loadJsonCandidates<{ rooms?: LayoutRoom[] }>([
-    path.join('src', 'data', layoutFile),
-  ]);
-  return Array.isArray(parsed?.rooms) ? parsed.rooms : [];
-}
-
 function projectHudsonLayoutRooms(
   rooms: RoomMapData[],
   gridCols: number,
   gridRows: number,
-  layoutFile: string,
+  floorId: string,
 ): RoomMapData[] {
+  const bounds = getHudsonProjectionBounds(floorId);
+  const layoutFile = HUDSON_LAYOUT_FILES[floorId];
+  if (!bounds || !layoutFile) return rooms;
+
   const layoutRooms = loadHudsonLayoutRooms(layoutFile);
-  if (layoutRooms.length === 0) return rooms;
-
-  const allPoints = layoutRooms.flatMap((room) => [
-    ...room.polygon,
-    ...(room.doors ?? []),
-  ]);
-  if (allPoints.length === 0) return rooms;
-
-  const minX = Math.min(...allPoints.map((point) => point.x));
-  const maxX = Math.max(...allPoints.map((point) => point.x));
-  const minY = Math.min(...allPoints.map((point) => point.y));
-  const maxY = Math.max(...allPoints.map((point) => point.y));
-  const spanX = Math.max(1, maxX - minX);
-  const spanY = Math.max(1, maxY - minY);
-
   const roomByName = new Map(
     layoutRooms.map((room) => [normaliseRoomName(room.id), room])
   );
@@ -153,36 +141,32 @@ function projectHudsonLayoutRooms(
   return rooms.flatMap((room) => {
     const layout = roomByName.get(normaliseRoomName(room.name));
     if (!layout || !Array.isArray(layout.polygon) || layout.polygon.length < 3) {
-      // Hudson map should be driven by Hudson_5th.json only.
       return [];
     }
 
     const xs = layout.polygon.map((point) => point.x);
     const ys = layout.polygon.map((point) => point.y);
-    const left = ((Math.min(...xs) - minX) / spanX) * gridCols;
-    const right = ((Math.max(...xs) - minX) / spanX) * gridCols;
-    const top = ((Math.min(...ys) - minY) / spanY) * gridRows;
-    const bottom = ((Math.max(...ys) - minY) / spanY) * gridRows;
-    const projectedTop = gridRows - bottom;
-    const projectedBottom = gridRows - top;
+    const leftX = ((Math.min(...xs) - bounds.minX) / bounds.spanX) * gridCols;
+    const rightX = ((Math.max(...xs) - bounds.minX) / bounds.spanX) * gridCols;
+    const topY = ((Math.min(...ys) - bounds.minY) / bounds.spanY) * gridRows;
+    const bottomY = ((Math.max(...ys) - bounds.minY) / bounds.spanY) * gridRows;
+    const projectedTop = gridRows - bottomY;
+    const projectedBottom = gridRows - topY;
 
     const projectedRoom: RoomMapData = {
       ...room,
-      gridX: Math.round(left),
+      gridX: Math.round(leftX),
       gridY: Math.round(projectedBottom),
-      gridW: Math.max(2, Math.round(right - left)),
+      gridW: Math.max(2, Math.round(rightX - leftX)),
       gridH: Math.max(2, Math.round(projectedBottom - projectedTop)),
-      centreX: (left + right) / 2,
+      centreX: (leftX + rightX) / 2,
       centreY: (projectedTop + projectedBottom) / 2,
-      polygon: layout.polygon.map((point) => ({
-        x: ((point.x - minX) / spanX) * gridCols,
-        y: gridRows - (((point.y - minY) / spanY) * gridRows),
-      })),
+      polygon: layout.polygon.map((point) => projectHudsonCoordinate(point.x, point.y, gridCols, gridRows, bounds)),
       doors: (layout.doors ?? []).map((door) => ({
         id: door.id,
         width: door.width,
-        x: ((door.x - minX) / spanX) * gridCols,
-        y: gridRows - (((door.y - minY) / spanY) * gridRows),
+        x: projectHudsonCoordinate(door.x, door.y, gridCols, gridRows, bounds).x,
+        y: projectHudsonCoordinate(door.x, door.y, gridCols, gridRows, bounds).y,
       })),
       layoutSource: layoutFile,
     };
@@ -191,45 +175,25 @@ function projectHudsonLayoutRooms(
 }
 
 function projectHudsonLayoutNodes(
-  nodes:any[],
+  nodes: any[],
   gridCols: number,
   gridRows: number,
-  layoutFile: string,
+  floorId: string,
 ): any[] {
+  const bounds = getHudsonProjectionBounds(floorId);
+  if (!bounds) return nodes;
 
-  const layoutRooms = loadHudsonLayoutRooms(layoutFile);
-  if (layoutRooms.length === 0) return nodes;
-
-  const allPoints = layoutRooms.flatMap((room) => [
-    ...room.polygon,
-    ...(room.doors ?? []),
-  ]);
-
-  if (allPoints.length === 0) return nodes;
-
-  const minX = Math.min(...allPoints.map((point) => point.x));
-  const maxX = Math.max(...allPoints.map((point) => point.x));
-  const minY = Math.min(...allPoints.map((point) => point.y));
-  const maxY = Math.max(...allPoints.map((point) => point.y));
-
-  const spanX = Math.max(1, maxX - minX);
-  const spanY = Math.max(1, maxY - minY);
-
-  return nodes.map(node => ({
-    ...node,
-
-    gridX: ((node.gridX - minX) / spanX) * gridCols,
-
-    gridY:
-      gridRows -
-      (((node.gridY - minY) / spanY) * gridRows),
-
-    realX: ((node.realX - minX) / spanX) * gridCols,
-
-    realY:
-      gridRows -
-      (((node.realY - minY) / spanY) * gridRows),
-  }));
+  return nodes.map(node => {
+    const ptGrid = projectHudsonCoordinate(node.gridX, node.gridY, gridCols, gridRows, bounds);
+    const ptReal = projectHudsonCoordinate(node.realX, node.realY, gridCols, gridRows, bounds);
+    return {
+      ...node,
+      gridX: ptGrid.x,
+      gridY: ptGrid.y,
+      realX: ptReal.x,
+      realY: ptReal.y,
+    };
+  });
 }
 
 export async function getFloorGeometry(prisma: PrismaClient, floorId: string): Promise<FloorGeometryData | null> {
@@ -317,19 +281,18 @@ export async function getFloorMap(
   const gridCols = navFloorData?.gridCols ?? floor.gridCols ?? grid[0]?.length ?? 50;
 
   if (requiresHudsonProjection(floor.id)) {
-    const layoutFile = floor.id === 'floor-hudson-f6' ? 'Hudson_6th_Floor.json' : 'Hudson_5th.json';
     rooms = projectHudsonLayoutRooms(
       rooms,
       gridCols,
       gridRows,
-      layoutFile
+      floor.id
     );
 
     nodes = projectHudsonLayoutNodes(
       nodes,
       gridCols,
       gridRows,
-      layoutFile
+      floor.id
     );
   }
 

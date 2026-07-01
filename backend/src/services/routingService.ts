@@ -4,6 +4,7 @@
 import { PrismaClient } from '@prisma/client';
 import { findRoute, buildRouteSteps, estimateSeconds } from '../engine/astar';
 import { buildGraph, getRoomEntryNode, validateGraph } from '../engine/graphBuilder';
+import { getHudsonProjectionBounds, projectHudsonCoordinate } from '../utils/projection';
 import type {
   RouteResult,
   PathfindingOptions,
@@ -18,17 +19,6 @@ import type { NavigationGraph } from '../engine/graphBuilder';
 // ─── GRAPH CACHE ──────────────────────────────────────────────────────────────
 let graphCache: Map<string, NavigationGraph> = new Map();
 let globalGraph: NavigationGraph | null = null;
-
-// ─── HUDSON FLOOR ROUTE GRAPH BOUNDS ─────────────────────────────────────────
-// The editor-generated Hudson graph uses raw pixel coordinates in the
-// Hudson_5th.json coordinate space (approx 646..5465 x 884..4123). The map
-// display uses a projected 80x80 grid from nav_hudson_f5.json.
-const HUDSON_EDITOR_PX_BOUNDS = {
-  minX: 280,
-  minY: 884,
-  width: 5185,
-  height: 3239,
-};
 
 const HUDSON_DISPLAY_GRID = {
   cols: 80,
@@ -47,25 +37,6 @@ function getFloorScale(floorId: string, scaleX?: number | null, scaleY?: number 
   return {
     x: scaleX ?? 1,
     y: scaleY ?? 1,
-  };
-}
-
-/**
- * Normalise a raw Hudson editor coordinate into the projected 80x80 map grid.
- */
-function normaliseHudsonCell(
-  rawX: number,
-  rawY: number,
-  gridCols: number,
-  gridRows: number,
-  minX: number,
-  minY: number,
-  width: number,
-  height: number,
-): GridCell {
-  return {
-    x: ((rawX - minX) / width) * gridCols,
-    y: gridRows - (((rawY - minY) / height) * gridRows),
   };
 }
 
@@ -308,23 +279,18 @@ export async function getRoute(
   // Build path details
   const pathNodes = pathNodeIds.map(id => graph.nodesById.get(id)!);
 
-  // ── COORDINATE NORMALISATION ────────────────────────────────────────────────
-  // Hudson editor graph nodes are stored in raw Hudson pixel space, but the UI
-  // floor map is rendered on the projected 80x80 Hudson grid.
   const hudsonFloor = isHudsonFloor(fromRoom.floorId);
   const targetGridCols = hudsonFloor ? HUDSON_DISPLAY_GRID.cols : fromGridCols;
   const targetGridRows = hudsonFloor ? HUDSON_DISPLAY_GRID.rows : fromGridRows;
+  const bounds = hudsonFloor ? getHudsonProjectionBounds(fromRoom.floorId) : null;
   const pathGridCells: GridCell[] = pathNodes.map(n => {
-    if (hudsonFloor) {
-      return normaliseHudsonCell(
+    if (hudsonFloor && bounds) {
+      return projectHudsonCoordinate(
         n.gridX,
         n.gridY,
         targetGridCols,
         targetGridRows,
-        HUDSON_EDITOR_PX_BOUNDS.minX,
-        HUDSON_EDITOR_PX_BOUNDS.minY,
-        HUDSON_EDITOR_PX_BOUNDS.width,
-        HUDSON_EDITOR_PX_BOUNDS.height,
+        bounds
       );
     }
     return { x: n.gridX, y: n.gridY };
@@ -423,6 +389,7 @@ function findNearestNode(
   gridRows: number,
 ): string | null {
   const hudson = isHudsonFloor(room.floorId);
+  const bounds = hudson ? getHudsonProjectionBounds(room.floorId) : null;
   let bestId: string | null = null;
   let bestDist = Infinity;
 
@@ -431,16 +398,13 @@ function findNearestNode(
 
     let nx: number;
     let ny: number;
-    if (hudson) {
-      const cell = normaliseHudsonCell(
+    if (hudson && bounds) {
+      const cell = projectHudsonCoordinate(
         node.gridX,
         node.gridY,
         gridCols,
         gridRows,
-        HUDSON_EDITOR_PX_BOUNDS.minX,
-        HUDSON_EDITOR_PX_BOUNDS.minY,
-        HUDSON_EDITOR_PX_BOUNDS.width,
-        HUDSON_EDITOR_PX_BOUNDS.height,
+        bounds
       );
       nx = cell.x;
       ny = cell.y;
