@@ -866,7 +866,7 @@ export default function FloorMap({
                       }}
                     >
                       <span className="segment-num">{idx + 1}.</span>
-                      <span className="segment-path">{pair.from.replace('editor-floor-hudson-f5-node-', '').replace('manual-node-', '')} → {pair.to.replace('editor-floor-hudson-f5-node-', '').replace('manual-node-', '')}</span>
+                      <span className="segment-path">{pair.from.replace(/^editor-floor-[a-zA-Z0-9]+-f\d+-node-/, '').replace('manual-node-', '')} → {pair.to.replace(/^editor-floor-[a-zA-Z0-9]+-f\d+-node-/, '').replace('manual-node-', '')}</span>
                       {!edgeExists && <span className="segment-deleted-badge">deleted</span>}
                     </button>
                   );

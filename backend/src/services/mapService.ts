@@ -45,7 +45,17 @@ type NavFloorData = {
 const FLOOR_DATA_MAP: Record<string, { clean: string; nav?: string }> = {
   'floor-gf':         { clean: 'floor_ganges_clean.json', nav: 'nav_ganges_g.json' },
   'floor-hudson-f5':  { clean: 'floor_hudson_clean.json', nav: 'nav_hudson_f5.json' },
+  'floor-hudson-f6':  { clean: 'floor_hudson_6th_clean.json', nav: 'nav_hudson_f6.json' },
 };
+
+export const HUDSON_LAYOUT_FLOORS = [
+  'floor-hudson-f5',
+  'floor-hudson-f6'
+];
+
+export function requiresHudsonProjection(floorId: string): boolean {
+  return HUDSON_LAYOUT_FLOORS.includes(floorId);
+}
 
 function dataPath(name: string): string {
   return path.join(process.cwd(), 'src', 'data', name);
@@ -107,9 +117,9 @@ function normaliseRoomName(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function loadHudsonLayoutRooms(): LayoutRoom[] {
+function loadHudsonLayoutRooms(layoutFile: string): LayoutRoom[] {
   const parsed = loadJsonCandidates<{ rooms?: LayoutRoom[] }>([
-    path.join('src', 'data', 'Hudson_5th.json'),
+    path.join('src', 'data', layoutFile),
   ]);
   return Array.isArray(parsed?.rooms) ? parsed.rooms : [];
 }
@@ -118,8 +128,9 @@ function projectHudsonLayoutRooms(
   rooms: RoomMapData[],
   gridCols: number,
   gridRows: number,
+  layoutFile: string,
 ): RoomMapData[] {
-  const layoutRooms = loadHudsonLayoutRooms();
+  const layoutRooms = loadHudsonLayoutRooms(layoutFile);
   if (layoutRooms.length === 0) return rooms;
 
   const allPoints = layoutRooms.flatMap((room) => [
@@ -173,7 +184,7 @@ function projectHudsonLayoutRooms(
         x: ((door.x - minX) / spanX) * gridCols,
         y: gridRows - (((door.y - minY) / spanY) * gridRows),
       })),
-      layoutSource: 'Hudson_5th.json',
+      layoutSource: layoutFile,
     };
     return [projectedRoom];
   });
@@ -183,9 +194,10 @@ function projectHudsonLayoutNodes(
   nodes:any[],
   gridCols: number,
   gridRows: number,
+  layoutFile: string,
 ): any[] {
 
-  const layoutRooms = loadHudsonLayoutRooms();
+  const layoutRooms = loadHudsonLayoutRooms(layoutFile);
   if (layoutRooms.length === 0) return nodes;
 
   const allPoints = layoutRooms.flatMap((room) => [
@@ -304,19 +316,22 @@ export async function getFloorMap(
   const gridRows = navFloorData?.gridRows ?? floor.gridRows ?? grid.length ?? 50;
   const gridCols = navFloorData?.gridCols ?? floor.gridCols ?? grid[0]?.length ?? 50;
 
-  if (floor.id === 'floor-hudson-f5') {
+  if (requiresHudsonProjection(floor.id)) {
+    const layoutFile = floor.id === 'floor-hudson-f6' ? 'Hudson_6th_Floor.json' : 'Hudson_5th.json';
     rooms = projectHudsonLayoutRooms(
       rooms,
       gridCols,
-      gridRows
+      gridRows,
+      layoutFile
     );
 
     nodes = projectHudsonLayoutNodes(
       nodes,
       gridCols,
-      gridRows
+      gridRows,
+      layoutFile
     );
-}
+  }
 
   return {
   floorId: floor.id,

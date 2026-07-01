@@ -308,7 +308,7 @@ async function main() {
     const roomBounds = bounds(room.polygon);
     const centre = centroid(room.polygon);
     const id = roomDbId(floor.id, room.id);
-    const code = `${codeify(options.buildingName)}_${codeify(room.id)}`;
+    const code = `${codeify(options.buildingName)}_${codeify(options.level)}_${codeify(room.id)}`;
 
     await prisma.room.upsert({
       where: { id },

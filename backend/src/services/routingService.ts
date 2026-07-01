@@ -69,12 +69,14 @@ function normaliseHudsonCell(
   };
 }
 
+import { requiresHudsonProjection } from './mapService';
+
 /**
- * Returns true when the floor is Hudson F5 — these nodes need normalisation
+ * Returns true when the floor is a Hudson Floor — these nodes need normalisation
  * because they are stored in raw DWG pixel space (0–5465), not grid space.
  */
 function isHudsonFloor(floorId: string): boolean {
-  return floorId === 'floor-hudson-f5';
+  return requiresHudsonProjection(floorId);
 }
 
 export async function buildGraphCache(prisma: PrismaClient): Promise<void> {

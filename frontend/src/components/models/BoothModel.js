@@ -16,6 +16,19 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
 
   // 2. Build walls based on booth type
   if (isSittingArea1) {
+    // Determine if the door/opening faces South or North relative to the room centroid
+    let isDoorSouth = false;
+    if (polygon && polygon.length >= 3) {
+      const p1 = polygon[doorIndex];
+      const p2 = polygon[(doorIndex + 1) % polygon.length];
+      const doorMidY = (p1.y + p2.y) / 2;
+      const ys = polygon.map(p => p.y);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      const centerY = (minY + maxY) / 2;
+      isDoorSouth = doorMidY > centerY;
+    }
+
     // Custom wall setup: West wall, East wall, Center divider wall (running North-South)
     const wallL = new THREE.Mesh(boxGeom, wallMat);
     wallL.scale.set(wt, wallHeight, hM);
@@ -32,22 +45,23 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
     wallC.position.set(cx, wallHeight / 2, cz);
     group.add(wallC);
 
-    // Back wall (South wall)
+    // Back wall (South or North wall)
     const wallB = new THREE.Mesh(boxGeom, wallMat);
     wallB.scale.set(wM, wallHeight, wt);
-    wallB.position.set(cx, wallHeight / 2, cz + hM / 2); // South wall is the back wall
+    wallB.position.set(cx, wallHeight / 2, isDoorSouth ? cz - hM / 2 : cz + hM / 2);
     group.add(wallB);
 
-    // Front wall (North wall) with two alcove openings:
+    // Front wall with two alcove openings:
     // Layout: [Left wall segment] [Alcove 1] [Middle wall segment] [Alcove 2] [Right wall segment]
     const aw = wM * 0.32; // Width of each alcove opening (about 32% of total width)
+    const frontZ = isDoorSouth ? cz + hM / 2 : cz - hM / 2;
 
     // Left front wall segment: from (cx - wM / 2) to (cx - wM / 4 - aw / 2)
     const wLeftSeg = wM / 4 - aw / 2;
     if (wLeftSeg > 0.05) {
       const wallFLeft = new THREE.Mesh(boxGeom, wallMat);
       wallFLeft.scale.set(wLeftSeg, wallHeight, wt);
-      wallFLeft.position.set(cx - 3 * wM / 8 - aw / 4, wallHeight / 2, cz - hM / 2);
+      wallFLeft.position.set(cx - 3 * wM / 8 - aw / 4, wallHeight / 2, frontZ);
       group.add(wallFLeft);
     }
 
@@ -56,7 +70,7 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
     if (wMidSeg > 0.05) {
       const wallFMid = new THREE.Mesh(boxGeom, wallMat);
       wallFMid.scale.set(wMidSeg, wallHeight, wt);
-      wallFMid.position.set(cx, wallHeight / 2, cz - hM / 2);
+      wallFMid.position.set(cx, wallHeight / 2, frontZ);
       group.add(wallFMid);
     }
 
@@ -65,7 +79,7 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
     if (wRightSeg > 0.05) {
       const wallFRight = new THREE.Mesh(boxGeom, wallMat);
       wallFRight.scale.set(wRightSeg, wallHeight, wt);
-      wallFRight.position.set(cx + 3 * wM / 8 + aw / 4, wallHeight / 2, cz - hM / 2);
+      wallFRight.position.set(cx + 3 * wM / 8 + aw / 4, wallHeight / 2, frontZ);
       group.add(wallFRight);
     }
   } else if (isPhoneBooth) {
@@ -130,6 +144,19 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
     const leftCX = cx - wM / 4;
     const rightCX = cx + wM / 4;
 
+    // Determine if the door/opening faces South or North relative to the room centroid
+    let isDoorSouth = false;
+    if (polygon && polygon.length >= 3) {
+      const p1 = polygon[doorIndex];
+      const p2 = polygon[(doorIndex + 1) % polygon.length];
+      const doorMidY = (p1.y + p2.y) / 2;
+      const ys = polygon.map(p => p.y);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      const centerY = (minY + maxY) / 2;
+      isDoorSouth = doorMidY > centerY;
+    }
+
     const createCafeStool = (sx, sz, rotY) => {
       const chair = new THREE.Group();
       chair.position.set(sx, 0, sz);
@@ -163,24 +190,27 @@ export function createBooth(polygon, cx, cz, wM, hM, isPhoneBooth, isDest, isUse
     };
 
     const addTableAndChair = (alcoveCX) => {
-      // Circular table placed slightly towards the open North side
+      // Circular table placed slightly towards the open side
+      const tblZ = isDoorSouth ? cz + hM / 6 : cz - hM / 6;
       const tblTop = new THREE.Mesh(cylGeom, materials.deskWood);
       tblTop.scale.set(0.65, 0.03, 0.65);
-      tblTop.position.set(alcoveCX, 0.65, cz - hM / 6);
+      tblTop.position.set(alcoveCX, 0.65, tblZ);
       group.add(tblTop);
 
       const tblShaft = new THREE.Mesh(cylGeom, materials.metalSilver);
       tblShaft.scale.set(0.05, 0.63, 0.05);
-      tblShaft.position.set(alcoveCX, 0.315, cz - hM / 6);
+      tblShaft.position.set(alcoveCX, 0.315, tblZ);
       group.add(tblShaft);
 
       const tblBase = new THREE.Mesh(cylGeom, materials.metalDark);
       tblBase.scale.set(0.35, 0.02, 0.35);
-      tblBase.position.set(alcoveCX, 0.01, cz - hM / 6);
+      tblBase.position.set(alcoveCX, 0.01, tblZ);
       group.add(tblBase);
 
-      // Stool placed at the back South side of the alcove facing North (outwards, rotY = 0)
-      group.add(createCafeStool(alcoveCX, cz + hM / 4, 0));
+      // Stool placed at the back side of the alcove facing the opening
+      const stoolZ = isDoorSouth ? cz - hM / 4 : cz + hM / 4;
+      const stoolRot = isDoorSouth ? Math.PI : 0;
+      group.add(createCafeStool(alcoveCX, stoolZ, stoolRot));
     };
 
     // Build alcoves 1 and 2
