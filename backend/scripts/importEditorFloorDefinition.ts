@@ -299,6 +299,15 @@ async function main() {
       },
     });
     await prisma.node.deleteMany({ where: { floorId: floor.id } });
+    await prisma.navSession.deleteMany({
+      where: {
+        OR: [
+          { fromRoom: { floorId: floor.id } },
+          { toRoom: { floorId: floor.id } },
+        ],
+      },
+    });
+    await prisma.room.deleteMany({ where: { floorId: floor.id } });
   }
 
   const roomIdMap = new Map<string, string>();
