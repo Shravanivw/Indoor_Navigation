@@ -394,6 +394,14 @@ async function main() {
 
   console.log(`  Upserting ${parsed.graph.edges.length} graph edges...`);
   for (const edge of parsed.graph.edges) {
+    if (floor.id === 'floor-hudson-f6') {
+      const isN4N34 = (edge.from === 'N4' && edge.to === 'N34') || (edge.from === 'N34' && edge.to === 'N4');
+      if (isN4N34) {
+        console.log(`  [Hudson F6] Skipping raw N4-N34 corridor edge (will inject split edges)...`);
+        continue;
+      }
+    }
+
     const fromId = graphNodeIdMap.get(edge.from);
     const toId = graphNodeIdMap.get(edge.to);
     const fromNode = graphNodeByEditorId.get(edge.from);
@@ -418,6 +426,43 @@ async function main() {
       update: {
         weight: edge.distance ?? distance(fromNode, toNode),
         isAccessible: true,
+      },
+    });
+  }
+
+  if (floor.id === 'floor-hudson-f6') {
+    console.log("  [Hudson F6] Injecting split corridor edges to connect BYOD component...");
+    const fromId_n4 = nodeDbId(floor.id, 'N4');
+    const toId_n37 = nodeDbId(floor.id, 'N37');
+    const toId_n34 = nodeDbId(floor.id, 'N34');
+
+    await prisma.edge.upsert({
+      where: { id: `editor-${floor.id}-edge-n4-n37` },
+      create: {
+        id: `editor-${floor.id}-edge-n4-n37`,
+        fromNodeId: fromId_n4,
+        toNodeId: toId_n37,
+        weight: 120.0,
+        isAccessible: true,
+        isBidirectional: true,
+      },
+      update: {
+        weight: 120.0,
+      },
+    });
+
+    await prisma.edge.upsert({
+      where: { id: `editor-${floor.id}-edge-n37-n34` },
+      create: {
+        id: `editor-${floor.id}-edge-n37-n34`,
+        fromNodeId: toId_n37,
+        toNodeId: toId_n34,
+        weight: 287.0,
+        isAccessible: true,
+        isBidirectional: true,
+      },
+      update: {
+        weight: 287.0,
       },
     });
   }
