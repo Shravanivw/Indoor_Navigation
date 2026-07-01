@@ -1,5 +1,5 @@
 import ezdxf, collections
-doc = ezdxf.readfile(r'backend\data_source\VWITS-HUDON PUNE_5TH FLOOR_LAYOUT.dxf')
+doc = ezdxf.readfile(r'data_source\VWITS-HUDON PUNE_6TH FLOOR.dxf')
 msp = doc.modelspace()
 counts = collections.Counter()
 for e in msp:

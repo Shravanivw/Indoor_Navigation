@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -23,7 +24,10 @@ from pathlib import Path
 def run_command(cmd: list[str], description: str):
     print(f"\n>>> Running: {description}...")
     print(f"    Command: {' '.join(cmd)}")
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    is_windows = os.name == "nt"
+    res = subprocess.run(cmd, capture_output=True, text=True, env=env, shell=is_windows)
     if res.returncode != 0:
         print(f"ERROR: {description} failed!", file=sys.stderr)
         print(res.stderr, file=sys.stderr)
