@@ -14,6 +14,10 @@ import { createUtilityRoom } from "./models/UtilityRoomModel";
 import { createBooth } from "./models/BoothModel";
 import { initCeilingInfrastructure, addRoomCeiling, finalizeCeilingInfrastructure } from "./models/CeilingInfrastructure";
 
+// Layout Resolver and Furniture Generator
+import { resolveRoomLayout } from "./layouts/LayoutResolver";
+import { generateFurniture } from "./layouts/FurnitureLayoutGenerator";
+
 const WALL_HEIGHT  = 3.0;
 const EYE_HEIGHT   = 1.75;
 const WALK_SPEED   = 1.4; // metres / second
@@ -250,8 +254,13 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           roomModel = createReception(cx, cz, wM, hM, resources);
           break;
         case "OPEN_WORKSPACE": {
-          const nameLower = r.name?.toLowerCase() ?? "";
-          roomModel = createOfficeDeskCluster(cx, cz, wM, hM, nameLower.includes("innovation"), resources, nameLower.includes("it bar"));
+          const layoutConfig = resolveRoomLayout(r, floorMap);
+          if (layoutConfig) {
+            roomModel = generateFurniture(layoutConfig, cx, cz, wM, hM, resources);
+          } else {
+            const nameLower = r.name?.toLowerCase() ?? "";
+            roomModel = createOfficeDeskCluster(cx, cz, wM, hM, nameLower.includes("innovation"), resources, nameLower.includes("it bar"));
+          }
           break;
         }
         case "MEETING_ROOM": {
