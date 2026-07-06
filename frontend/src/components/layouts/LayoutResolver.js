@@ -8,13 +8,13 @@
 
 // Define mappings for workspaces (maps room ID or room name to layout configuration)
 const WORKSPACE_LAYOUT_MAPPINGS = {
-  "Workspace 8": {
+  "Workspace 1": {
     type: "CUSTOM",
     customItems: [
-      { type: "Pod6", x: -8.0, z: -0.2, rotation: 0 },
-      { type: "CollabIsland", x: -2.0, z: 0.2, rotation: 0 },
-      { type: "HighTable", x: 3.5, z: -0.2, rotation: 0 },
-      { type: "Pod8", x: 9.0, z: -0.2, rotation: 0 }
+      { type: "DeskBench", x: 0.5, z: 0.0, rotation: 0, desksAcross: 3, deskSides: 2, dividerType: "glass" },
+      { type: "Lockers", x: -3.0, z: 0.5, rotation: Math.PI / 2, width: 1.5, height: 1.6, depth: 0.5 },
+      { type: "Plant", x: -3.0, z: -1.5 },
+      { type: "Plant", x: 3.0, z: 1.5 }
     ]
   }
 };

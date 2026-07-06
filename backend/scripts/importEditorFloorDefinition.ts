@@ -465,6 +465,52 @@ async function main() {
         weight: 287.0,
       },
     });
+
+    console.log("  [Hudson F6] Injecting missing corridor edges to connect isolated subgraphs...");
+    const extraEdges = [
+      { from: 'N10', to: 'N15', weight: 37.0 },
+      { from: 'N37', to: 'N43', weight: 20.0 },
+      { from: 'N24', to: 'N56', weight: 31.0 },
+      { from: 'N5', to: 'N9', weight: 52.0 },
+      { from: 'J127', to: 'N40', weight: 49.2 }
+    ];
+
+    for (const edgeInfo of extraEdges) {
+      const fromNodeId = nodeDbId(floor.id, edgeInfo.from);
+      const toNodeId = nodeDbId(floor.id, edgeInfo.to);
+      const edgeId = `editor-${floor.id}-edge-extra-${slugify(edgeInfo.from)}-to-${slugify(edgeInfo.to)}`;
+      
+      await prisma.edge.upsert({
+        where: { id: edgeId },
+        create: {
+          id: edgeId,
+          fromNodeId,
+          toNodeId,
+          weight: edgeInfo.weight,
+          isAccessible: true,
+          isBidirectional: true,
+        },
+        update: {
+          weight: edgeInfo.weight,
+        },
+      });
+
+      const revEdgeId = `editor-${floor.id}-edge-extra-${slugify(edgeInfo.to)}-to-${slugify(edgeInfo.from)}`;
+      await prisma.edge.upsert({
+        where: { id: revEdgeId },
+        create: {
+          id: revEdgeId,
+          fromNodeId: toNodeId,
+          toNodeId: fromNodeId,
+          weight: edgeInfo.weight,
+          isAccessible: true,
+          isBidirectional: true,
+        },
+        update: {
+          weight: edgeInfo.weight,
+        },
+      });
+    }
   }
 
   const graphNodes = parsed.graph.nodes;
@@ -476,7 +522,20 @@ async function main() {
     const roomId = roomIdMap.get(room.id);
     if (!roomId) continue;
 
-    for (const door of room.doors ?? []) {
+    const roomDoors = room.doors && room.doors.length > 0 ? room.doors : [];
+    if (roomDoors.length === 0 && room.polygon && room.polygon.length > 0) {
+      const avg = room.polygon.reduce(
+        (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
+        { x: 0, y: 0 }
+      );
+      roomDoors.push({
+        id: 'centroid-door',
+        x: avg.x / room.polygon.length,
+        y: avg.y / room.polygon.length
+      });
+    }
+
+    for (const door of roomDoors) {
       if (importedDoorKeys.has(`${room.id}:${door.id}`)) {
         continue;
       }

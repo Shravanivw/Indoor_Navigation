@@ -13,6 +13,17 @@ import {
   layoutReceptionDesk
 } from "./LayoutModules";
 import {
+  createChair,
+  createDeskBench,
+  createTable,
+  createSofa,
+  createCabinet,
+  createPrinter,
+  createLockers,
+  createCoffeeMachine,
+  createTVDisplay,
+  createWhiteboard,
+  createPottedPlant,
   createDeskUnit,
   createSofaUnit,
   createWhiteboardUnit,
@@ -96,16 +107,55 @@ export function generateFurniture(layoutConfig, cx, cz, wM, hM, resources) {
 
       let model = null;
       switch (item.type) {
+        // Parametric Furniture Components
+        case "DeskBench":
+          model = createDeskBench(worldX, worldZ, item, resources);
+          break;
+        case "Table":
+          model = createTable(worldX, worldZ, item, resources);
+          break;
+        case "Chair":
+          model = createChair(worldX, worldZ, item, resources);
+          break;
+        case "Sofa":
+          model = createSofa(worldX, worldZ, item, resources);
+          break;
+        case "Cabinet":
+          model = createCabinet(worldX, worldZ, item, resources);
+          break;
+
+        // Landmark Modules
+        case "Printer":
+          model = createPrinter(worldX, worldZ, resources);
+          break;
+        case "Lockers":
+          model = createLockers(worldX, worldZ, item, resources);
+          break;
+        case "CoffeeMachine":
+          model = createCoffeeMachine(worldX, worldZ, resources);
+          break;
+        case "TVDisplay":
+          model = createTVDisplay(worldX, worldZ, item, resources);
+          break;
+        case "Whiteboard":
+          model = createWhiteboard(worldX, worldZ, rotation, resources);
+          break;
+        case "Plant":
+        case "PottedPlant":
+          model = createPottedPlant(worldX, worldZ, resources);
+          break;
+
+        // Legacy / High-level composite layouts (backward compatibility)
         case "Desk":
           model = createDeskUnit(worldX, worldZ, rotation, resources);
           break;
-        case "Sofa":
+        case "SofaUnit":
           model = createSofaUnit(worldX, worldZ, rotation, resources);
           break;
-        case "Whiteboard":
+        case "WhiteboardUnit":
           model = createWhiteboardUnit(worldX, worldZ, rotation, resources);
           break;
-        case "Plant":
+        case "PlantUnit":
           model = createPlantUnit(worldX, worldZ, resources);
           break;
         case "Pod6":
