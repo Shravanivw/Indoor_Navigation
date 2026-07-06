@@ -2,11 +2,34 @@ import { useState, useEffect } from "react";
 import "../css/Home.css";
 
 const QUICK_FIND_TYPES = [
-  { label: "Meeting rooms", type: "MEETING_ROOM", icon: "grid",   color: "#EAF3DE", iconColor: "#639922" },
-  { label: "Cafeteria",     type: "PANTRY",        icon: "coffee", color: "#FAEEDA", iconColor: "#BA7517" },
-  { label: "Restrooms",     type: "RESTROOM",      icon: "toilet", color: "#F3E8FF", iconColor: "#8B5CF6" },
-  { label: "Reception",     type: "RECEPTION",     icon: "home",   color: "#E6F1FB", iconColor: "#378ADD" },
-  { label: "Emergency exit",type: "EXIT",          icon: "alert",  color: "#FCEBEB", iconColor: "#E24B4A" },
+  {
+    label: "Cafeteria",
+    icon: "coffee",
+    color: "#FAEEDA",
+    iconColor: "#BA7517",
+    match: (r) => r.type === "PANTRY" || /cafeteria/i.test(r.name),
+  },
+  {
+    label: "Restrooms",
+    icon: "toilet",
+    color: "#F3E8FF",
+    iconColor: "#8B5CF6",
+    match: (r) => r.type === "TOILET" || r.type === "RESTROOM" || /restroom|toilet/i.test(r.name),
+  },
+  {
+    label: "Reception",
+    icon: "home",
+    color: "#E6F1FB",
+    iconColor: "#378ADD",
+    match: (r) => r.type === "RECEPTION",
+  },
+  {
+    label: "Emergency exit",
+    icon: "alert",
+    color: "#FCEBEB",
+    iconColor: "#E24B4A",
+    match: (r) => r.type === "EXIT" || /staircase|emergency.exit/i.test(r.name),
+  },
 ];
 
 export default function Home({
@@ -69,7 +92,7 @@ export default function Home({
         <div className="home-section-title">Quick Actions</div>
         <div className="home-quick-grid">
           {QUICK_FIND_TYPES.map((q, i) => {
-            const match = rooms.find((r) => r.type === q.type);
+            const match = rooms.find((r) => q.match(r));
             const disabled = !match;
             return (
               <div
@@ -79,7 +102,6 @@ export default function Home({
               >
                 <div className="home-quick-icon" style={{ background: q.color }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={q.iconColor} strokeWidth="2">
-                    {q.icon === "grid"   && <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></>}
                     {q.icon === "coffee" && <><path d="M18 8h1a4 4 0 010 8h-1" /><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" /><line x1="6" y1="1" x2="6" y2="4" /><line x1="10" y1="1" x2="10" y2="4" /><line x1="14" y1="1" x2="14" y2="4" /></>}
                     {q.icon === "home"   && <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />}
                     {q.icon === "alert"  && <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>}
