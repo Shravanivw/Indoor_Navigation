@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import "../css/Search.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
@@ -31,11 +31,20 @@ export default function Search({
   const [selected, setSelected] = useState(null);
   const [loading,  setLoading]  = useState(false);
   const [localUserLocation, setLocalUserLocation] = useState(userLocation);
+  const [fromQuery, setFromQuery] = useState(userLocation?.name || "");
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
+  const [activeFromSuggestionIndex, setActiveFromSuggestionIndex] = useState(-1);
 
   // Sync starting location when user location props update
   useEffect(() => {
     setLocalUserLocation(userLocation);
+    setFromQuery(userLocation?.name || "");
   }, [userLocation]);
+
+  // Keep the input text in sync when source location changes via selection/props.
+  useEffect(() => {
+    setFromQuery(localUserLocation?.name || "");
+  }, [localUserLocation]);
 
   // Scope search to the active floor
   const activeFloorId = floorId ?? userLocation?.floor?.id ?? userLocation?.floorId ?? null;
@@ -65,6 +74,36 @@ export default function Search({
     }, 300);
     return () => clearTimeout(timeout);
   }, [query, category, activeFloorId]);
+
+  const normalizedFromQuery = fromQuery.trim().toLowerCase();
+  const filteredSourceRooms = useMemo(() => {
+    if (!normalizedFromQuery) return rooms.slice(0, 8);
+    return rooms
+      .filter((r) => r.name?.toLowerCase().includes(normalizedFromQuery))
+      .slice(0, 8);
+  }, [rooms, normalizedFromQuery]);
+
+  const hasExactFromMatch = useMemo(() => {
+    return rooms.some((r) => r.name?.toLowerCase() === normalizedFromQuery);
+  }, [rooms, normalizedFromQuery]);
+
+  const handleFromInputChange = (value) => {
+    setFromQuery(value);
+    setShowFromSuggestions(true);
+    setActiveFromSuggestionIndex(-1);
+
+    const exactMatch = rooms.find(
+      (r) => r.name?.toLowerCase() === value.trim().toLowerCase()
+    );
+    setLocalUserLocation(exactMatch || null);
+  };
+
+  const handleFromSelect = (room) => {
+    setLocalUserLocation(room);
+    setFromQuery(room.name);
+    setShowFromSuggestions(false);
+    setActiveFromSuggestionIndex(-1);
+  };
 
   const handleStartNavigation = async () => {
     if (!localUserLocation || !selected) return;
@@ -237,23 +276,101 @@ export default function Search({
             <div className="route-confirm-title">Confirm Route</div>
             
             <div className="route-confirm-fields">
-              <div className="route-confirm-field">
+              <div className="route-confirm-field route-confirm-field-from">
                 <label className="route-confirm-label">From</label>
-                <select
-                  className="route-confirm-select"
-                  value={localUserLocation?.id || ""}
-                  onChange={(e) => {
-                    const r = rooms.find(room => room.id === e.target.value);
-                    setLocalUserLocation(r || null);
-                  }}
-                >
-                  <option value="">Select starting room</option>
-                  {rooms.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="route-confirm-autocomplete">
+                  <input
+                    type="text"
+                    className="route-confirm-input"
+                    placeholder="Type to search starting room"
+                    value={fromQuery}
+                    onFocus={() => setShowFromSuggestions(true)}
+                    onBlur={() => {
+                      setShowFromSuggestions(false);
+                      setActiveFromSuggestionIndex(-1);
+                    }}
+                    onChange={(e) => handleFromInputChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        if (!showFromSuggestions) setShowFromSuggestions(true);
+                        if (filteredSourceRooms.length > 0) {
+                          setActiveFromSuggestionIndex((prev) =>
+                            prev < filteredSourceRooms.length - 1 ? prev + 1 : 0
+                          );
+                        }
+                        return;
+                      }
+
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        if (!showFromSuggestions) setShowFromSuggestions(true);
+                        if (filteredSourceRooms.length > 0) {
+                          setActiveFromSuggestionIndex((prev) =>
+                            prev > 0 ? prev - 1 : filteredSourceRooms.length - 1
+                          );
+                        }
+                        return;
+                      }
+
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (showFromSuggestions && activeFromSuggestionIndex >= 0 && filteredSourceRooms[activeFromSuggestionIndex]) {
+                          handleFromSelect(filteredSourceRooms[activeFromSuggestionIndex]);
+                          return;
+                        }
+                        if (hasExactFromMatch && localUserLocation) {
+                          setShowFromSuggestions(false);
+                          return;
+                        }
+                        if (filteredSourceRooms.length > 0) {
+                          handleFromSelect(filteredSourceRooms[0]);
+                          return;
+                        }
+                        setShowFromSuggestions(false);
+                      }
+                      if (e.key === "Escape") {
+                        setShowFromSuggestions(false);
+                        setActiveFromSuggestionIndex(-1);
+                      }
+                    }}
+                    role="combobox"
+                    aria-expanded={showFromSuggestions}
+                    aria-controls="from-location-suggestions"
+                    aria-autocomplete="list"
+                  />
+
+                  {showFromSuggestions && (
+                    <div
+                      id="from-location-suggestions"
+                      className="route-confirm-suggestions"
+                      role="listbox"
+                      aria-label="Starting room suggestions"
+                    >
+                      {filteredSourceRooms.length === 0 && (
+                        <div className="route-confirm-suggestion-empty">No matching locations</div>
+                      )}
+                      {filteredSourceRooms.map((r, idx) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          className={`route-confirm-suggestion ${(localUserLocation?.id === r.id || activeFromSuggestionIndex === idx) ? "active" : ""}`}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onPointerDown={(e) => e.preventDefault()}
+                          onClick={() => handleFromSelect(r)}
+                          role="option"
+                          aria-selected={localUserLocation?.id === r.id || activeFromSuggestionIndex === idx}
+                        >
+                          {r.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                </div>
+                {fromQuery && !localUserLocation && (
+                  <div className="route-confirm-field-hint">Please select a valid location from suggestions.</div>
+                )}
               </div>
 
               <div className="route-confirm-field">
