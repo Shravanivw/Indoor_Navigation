@@ -206,6 +206,22 @@ function distance(a: Point, b: Point): number {
   return Math.round(Math.hypot(b.x - a.x, b.y - a.y) * 100) / 100;
 }
 
+function distanceToSegment(p: Point, a: Point, b: Point): { dist: number; t: number } {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const l2 = dx * dx + dy * dy;
+  if (l2 === 0) {
+    const dist = Math.hypot(p.x - a.x, p.y - a.y);
+    return { dist, t: 0 };
+  }
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const closestX = a.x + t * dx;
+  const closestY = a.y + t * dy;
+  const dist = Math.hypot(p.x - closestX, p.y - closestY);
+  return { dist, t };
+}
+
 function nodeDbId(floorId: string, nodeId: string): string {
   return `editor-${floorId}-node-${slugify(nodeId)}`;
 }
@@ -392,122 +408,60 @@ async function main() {
     });
   }
 
-  console.log(`  Upserting ${parsed.graph.edges.length} graph edges...`);
-  for (const edge of parsed.graph.edges) {
-    if (floor.id === 'floor-hudson-f6') {
-      const isN4N34 = (edge.from === 'N4' && edge.to === 'N34') || (edge.from === 'N34' && edge.to === 'N4');
-      if (isN4N34) {
-        console.log(`  [Hudson F6] Skipping raw N4-N34 corridor edge (will inject split edges)...`);
-        continue;
-      }
-    }
+  console.log(`  Upserting ${parsed.graph.edges.length} graph edges (with automatic splitting)...`);
+  const threshold = 5.0; // Distance threshold in layout units to detect intermediate nodes
 
-    const fromId = graphNodeIdMap.get(edge.from);
-    const toId = graphNodeIdMap.get(edge.to);
+  for (const edge of parsed.graph.edges) {
     const fromNode = graphNodeByEditorId.get(edge.from);
     const toNode = graphNodeByEditorId.get(edge.to);
 
-    if (!fromId || !toId || !fromNode || !toNode) {
+    if (!fromNode || !toNode) {
       console.warn(`  [WARN] Skipping edge ${edge.from} -> ${edge.to}; node missing`);
       continue;
     }
 
-    const id = `editor-${floor.id}-edge-${slugify(edge.from)}-${slugify(edge.to)}`;
-    await prisma.edge.upsert({
-      where: { id },
-      create: {
-        id,
-        fromNodeId: fromId,
-        toNodeId: toId,
-        weight: edge.distance ?? distance(fromNode, toNode),
-        isAccessible: true,
-        isBidirectional: true,
-      },
-      update: {
-        weight: edge.distance ?? distance(fromNode, toNode),
-        isAccessible: true,
-      },
-    });
-  }
+    // Find all nodes that lie on this segment (excluding endpoints)
+    const onSegmentNodes: { id: string; dbId: string; node: EditorGraphNode; t: number }[] = [];
+    for (const node of parsed.graph.nodes) {
+      if (node.id === edge.from || node.id === edge.to) continue;
 
-  if (floor.id === 'floor-hudson-f6') {
-    console.log("  [Hudson F6] Injecting split corridor edges to connect BYOD component...");
-    const fromId_n4 = nodeDbId(floor.id, 'N4');
-    const toId_n37 = nodeDbId(floor.id, 'N37');
-    const toId_n34 = nodeDbId(floor.id, 'N34');
+      const { dist, t } = distanceToSegment(node, fromNode, toNode);
+      if (dist < threshold && t > 0.001 && t < 0.999) {
+        const dbId = graphNodeIdMap.get(node.id);
+        if (dbId) {
+          onSegmentNodes.push({ id: node.id, dbId, node, t });
+        }
+      }
+    }
 
-    await prisma.edge.upsert({
-      where: { id: `editor-${floor.id}-edge-n4-n37` },
-      create: {
-        id: `editor-${floor.id}-edge-n4-n37`,
-        fromNodeId: fromId_n4,
-        toNodeId: toId_n37,
-        weight: 120.0,
-        isAccessible: true,
-        isBidirectional: true,
-      },
-      update: {
-        weight: 120.0,
-      },
-    });
-
-    await prisma.edge.upsert({
-      where: { id: `editor-${floor.id}-edge-n37-n34` },
-      create: {
-        id: `editor-${floor.id}-edge-n37-n34`,
-        fromNodeId: toId_n37,
-        toNodeId: toId_n34,
-        weight: 287.0,
-        isAccessible: true,
-        isBidirectional: true,
-      },
-      update: {
-        weight: 287.0,
-      },
-    });
-
-    console.log("  [Hudson F6] Injecting missing corridor edges to connect isolated subgraphs...");
-    const extraEdges = [
-      { from: 'N10', to: 'N15', weight: 37.0 },
-      { from: 'N37', to: 'N43', weight: 20.0 },
-      { from: 'N24', to: 'N56', weight: 31.0 },
-      { from: 'N5', to: 'N9', weight: 52.0 },
-      { from: 'J127', to: 'N40', weight: 49.2 }
+    // If there are intermediate nodes on this edge, we split it into smaller segments
+    const orderedNodes: { id: string; dbId: string; node: EditorGraphNode }[] = [
+      { id: edge.from, dbId: graphNodeIdMap.get(edge.from)!, node: fromNode },
+      ...onSegmentNodes.sort((a, b) => a.t - b.t),
+      { id: edge.to, dbId: graphNodeIdMap.get(edge.to)!, node: toNode }
     ];
 
-    for (const edgeInfo of extraEdges) {
-      const fromNodeId = nodeDbId(floor.id, edgeInfo.from);
-      const toNodeId = nodeDbId(floor.id, edgeInfo.to);
-      const edgeId = `editor-${floor.id}-edge-extra-${slugify(edgeInfo.from)}-to-${slugify(edgeInfo.to)}`;
-      
+    // Create edges between consecutive nodes in the split segment
+    for (let i = 0; i < orderedNodes.length - 1; i++) {
+      const u = orderedNodes[i];
+      const v = orderedNodes[i + 1];
+
+      const edgeId = `editor-${floor.id}-edge-${slugify(u.id)}-${slugify(v.id)}`;
+      const weight = distance(u.node, v.node);
+
       await prisma.edge.upsert({
         where: { id: edgeId },
         create: {
           id: edgeId,
-          fromNodeId,
-          toNodeId,
-          weight: edgeInfo.weight,
+          fromNodeId: u.dbId,
+          toNodeId: v.dbId,
+          weight,
           isAccessible: true,
           isBidirectional: true,
         },
         update: {
-          weight: edgeInfo.weight,
-        },
-      });
-
-      const revEdgeId = `editor-${floor.id}-edge-extra-${slugify(edgeInfo.to)}-to-${slugify(edgeInfo.from)}`;
-      await prisma.edge.upsert({
-        where: { id: revEdgeId },
-        create: {
-          id: revEdgeId,
-          fromNodeId: toNodeId,
-          toNodeId: fromNodeId,
-          weight: edgeInfo.weight,
+          weight,
           isAccessible: true,
-          isBidirectional: true,
-        },
-        update: {
-          weight: edgeInfo.weight,
         },
       });
     }
