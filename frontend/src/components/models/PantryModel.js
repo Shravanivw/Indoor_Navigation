@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createPantry(polygon, cx, cz, wM, hM, isCafeteria, isDest, isUser, resources, toWorld, grid) {
+export function createPantry(polygon, cx, cz, wM, hM, isCafeteria, isDest, isUser, resources, toWorld, grid, isFloor6 = false) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
   const cylGeom = geometries.cylinder;
 
   // Draw polygon walls for Cafeteria / Dining Area (glass walls facing corridor)
-  if (isCafeteria && polygon && grid && toWorld) {
+  if ((isCafeteria || isFloor6) && polygon && grid && toWorld) {
     const wallMat = isDest ? materials.wallDest : materials.wallNormal;
     const doorIndex = findCorridorSegmentIndex(polygon, grid);
     group.add(
