@@ -56,6 +56,25 @@ function makeLabelSprite(text, colorHex = "#0C447C", bgAlpha = 0.93) {
   return sprite;
 }
 
+function isCabinRoom(room) {
+  const nameLower = (room.name ?? "").toLowerCase();
+  const type = (room.type ?? "").toUpperCase();
+  if (nameLower.includes("dining") || nameLower.includes("toilet") || nameLower.includes("restroom") || nameLower.includes("lobby")) {
+    return false;
+  }
+  const cabinKeywords = [
+    "cabin", "ciso", "director", "manager", "ctio", "cfo", "vp", 
+    "executive", "president", "officer", "head", "mulliner"
+  ];
+  if (cabinKeywords.some(keyword => nameLower.includes(keyword))) {
+    return true;
+  }
+  if (type === "OFFICE" && (nameLower.includes("security") || nameLower.includes("soc room") || nameLower.includes("office"))) {
+    return true;
+  }
+  return false;
+}
+
 function getRoomTemplateType(room, isFloor6Or7 = false) {
   const type = (room.type ?? "").toUpperCase();
   const name = (room.name ?? "").toLowerCase();
@@ -194,7 +213,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     // ── Rooms & Models ───────────────────────────────────────────────────────
     const rooms = floorMap.rooms ?? [];
-    const isFloor6Or7 = floorMap?.id === "floor-hudson-f6" || floorMap?.id === "floor-hudson-f7";
+    const isFloor6Or7 = String(floorMap?.level) === "6" || String(floorMap?.level) === "7";
     let destinationPin = null;
     const labelSprites = [];
 
@@ -317,38 +336,9 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         case "MEETING_ROOM": {
           const nameLower = r.name?.toLowerCase() ?? "";
           const isBoardRoom = nameLower.includes("board");
-          const isCabin = nameLower.includes("cabin") || nameLower.includes("ciso") || nameLower.includes("office");
           
-          if (isFloor6Or7 && isCabin) {
-            // Render Floor 6 Cabin / Head Cabin / CISO Office (Executive Office template)
-            roomModel = new THREE.Group();
-            
-            // 1. Walls: glass front wall facing corridor, solid concrete walls elsewhere
-            const doorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
-            const hasGlassWalls = nameLower.includes("large cabin 2") || nameLower.includes("ciso");
-            roomModel.add(createPolygonWalls({
-              polygon: roomPolygon,
-              wallHeight: 3.0,
-              wallThickness: 0.12,
-              material: isDest ? materials.wallDest : materials.wallNormal,
-              doorSegmentIndex: doorIndex,
-              glassDoor: true,
-              glassWalls: hasGlassWalls,
-              resources,
-              toWorld
-            }));
-            
-            // 2. Floor: Carpet
-            const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
-            oFloor.rotation.x = -Math.PI / 2;
-            oFloor.position.set(cx, 0.012, cz);
-            roomModel.add(oFloor);
-            
-            // 3. Furniture: Executive Desk, Executive Chair, Visitor Chairs, Plant
-            const execFurniture = layoutExecutiveDesk(cx, cz, wM, hM, resources);
-            roomModel.add(execFurniture);
-          } else if (isFloor6Or7) {
-            // Render Floor 6 Meeting Rooms (with glass front corridor walls)
+          if (isFloor6Or7) {
+            // Render Floor 6/7 Meeting Rooms (with glass front corridor walls)
             roomModel = new THREE.Group();
             
             // 1. Walls: glass front wall facing corridor, solid side/rear walls
@@ -372,96 +362,102 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             oFloor.position.set(cx, 0.012, cz);
             roomModel.add(oFloor);
             
-            const tableW = Math.max(1.2, Math.min(wM * 0.62, 4.2));
-            const tableD = Math.max(0.7, Math.min(hM * 0.42, 1.8));
-            const rug = new THREE.Mesh(
-              new THREE.PlaneGeometry(tableW + 1.2, tableD + 1.2),
-              materials.floorCarpet
-            );
-            rug.rotation.x = -Math.PI / 2;
-            rug.position.set(cx, 0.015, cz);
-            roomModel.add(rug);
-            
-            // 3. Conference Table
-            const tableTop = new THREE.Mesh(geometries.box, materials.deskWood);
-            tableTop.scale.set(tableW, 0.05, tableD);
-            tableTop.position.set(cx, 0.75, cz);
-            roomModel.add(tableTop);
-            
-            if (tableW > 1.8) {
-              const drum1 = new THREE.Mesh(geometries.cylinder, materials.metalDark);
-              drum1.scale.set(0.4, 0.72, 0.4);
-              drum1.position.set(cx - tableW / 4, 0.36, cz);
-              roomModel.add(drum1);
-              const drum2 = new THREE.Mesh(geometries.cylinder, materials.metalDark);
-              drum2.scale.set(0.4, 0.72, 0.4);
-              drum2.position.set(cx + tableW / 4, 0.36, cz);
-              roomModel.add(drum2);
+            if (isCabinRoom(r)) {
+              // 3. Furniture: Reusable executive office layout module
+              const execFurniture = layoutExecutiveDesk(cx, cz, wM, hM, resources);
+              roomModel.add(execFurniture);
             } else {
-              const drum = new THREE.Mesh(geometries.cylinder, materials.metalDark);
-              drum.scale.set(0.35, 0.72, 0.35);
-              drum.position.set(cx, 0.36, cz);
-              roomModel.add(drum);
+              const tableW = Math.max(1.2, Math.min(wM * 0.62, 4.2));
+              const tableD = Math.max(0.7, Math.min(hM * 0.42, 1.8));
+              const rug = new THREE.Mesh(
+                new THREE.PlaneGeometry(tableW + 1.2, tableD + 1.2),
+                materials.floorCarpet
+              );
+              rug.rotation.x = -Math.PI / 2;
+              rug.position.set(cx, 0.015, cz);
+              roomModel.add(rug);
+              
+              // 3. Conference Table
+              const tableTop = new THREE.Mesh(geometries.box, materials.deskWood);
+              tableTop.scale.set(tableW, 0.05, tableD);
+              tableTop.position.set(cx, 0.75, cz);
+              roomModel.add(tableTop);
+              
+              if (tableW > 1.8) {
+                const drum1 = new THREE.Mesh(geometries.cylinder, materials.metalDark);
+                drum1.scale.set(0.4, 0.72, 0.4);
+                drum1.position.set(cx - tableW / 4, 0.36, cz);
+                roomModel.add(drum1);
+                const drum2 = new THREE.Mesh(geometries.cylinder, materials.metalDark);
+                drum2.scale.set(0.4, 0.72, 0.4);
+                drum2.position.set(cx + tableW / 4, 0.36, cz);
+                roomModel.add(drum2);
+              } else {
+                const drum = new THREE.Mesh(geometries.cylinder, materials.metalDark);
+                drum.scale.set(0.35, 0.72, 0.35);
+                drum.position.set(cx, 0.36, cz);
+                roomModel.add(drum);
+              }
+              
+              // 4. Executive Chairs
+              const chairSpacing = 0.65;
+              const numChairsPerSide = Math.max(1, Math.floor(tableW / chairSpacing));
+              const chairStartX = cx - ((numChairsPerSide - 1) * chairSpacing) / 2;
+              
+              const createMeetingChair = (chX, chZ, rotY) => {
+                const chairGroup = new THREE.Group();
+                chairGroup.position.set(chX, 0, chZ);
+                chairGroup.rotation.y = rotY;
+                
+                const base = new THREE.Mesh(geometries.box, materials.chairBase);
+                base.scale.set(0.38, 0.02, 0.38);
+                base.position.y = 0.05;
+                chairGroup.add(base);
+                
+                const shaft = new THREE.Mesh(geometries.cylinder, materials.metalSilver);
+                shaft.scale.set(0.04, 0.36, 0.04);
+                shaft.position.y = 0.23;
+                chairGroup.add(shaft);
+                
+                const seat = new THREE.Mesh(geometries.box, materials.chairFabric);
+                seat.scale.set(0.44, 0.08, 0.42);
+                seat.position.y = 0.45;
+                chairGroup.add(seat);
+                
+                const back = new THREE.Mesh(geometries.box, materials.chairFabric);
+                back.scale.set(0.4, 0.5, 0.06);
+                back.position.set(0, 0.76, 0.18);
+                chairGroup.add(back);
+                
+                return chairGroup;
+              };
+              
+              for (let i = 0; i < numChairsPerSide; i++) {
+                const x = chairStartX + i * chairSpacing;
+                roomModel.add(createMeetingChair(x, cz - tableD / 2 - 0.32, Math.PI));
+                roomModel.add(createMeetingChair(x, cz + tableD / 2 + 0.32, 0));
+              }
+              
+              if (tableW > 2.2) {
+                roomModel.add(createMeetingChair(cx + tableW / 2 + 0.32, cz, -Math.PI / 2));
+                roomModel.add(createMeetingChair(cx - tableW / 2 - 0.32, cz, Math.PI / 2));
+              }
+              
+              // 5. TV Display + Whiteboard + Plant
+              const tvGroup = new THREE.Group();
+              tvGroup.position.set(cx, 1.4, cz - tableD / 2 - 0.85);
+              const tvBezel = new THREE.Mesh(geometries.box, materials.metalDark);
+              tvBezel.scale.set(1.2, 0.7, 0.04);
+              tvGroup.add(tvBezel);
+              const tvScreen = new THREE.Mesh(geometries.box, materials.screenGlow);
+              tvScreen.scale.set(1.15, 0.65, 0.005);
+              tvScreen.position.z = 0.022;
+              tvGroup.add(tvScreen);
+              roomModel.add(tvGroup);
+              
+              roomModel.add(createWhiteboardUnit(cx - wM / 2.5, cz + hM / 2.5, Math.PI / 4, resources));
+              roomModel.add(createPlantUnit(cx + wM / 2.5, cz - hM / 2.5, resources));
             }
-            
-            // 4. Executive Chairs
-            const chairSpacing = 0.65;
-            const numChairsPerSide = Math.max(1, Math.floor(tableW / chairSpacing));
-            const chairStartX = cx - ((numChairsPerSide - 1) * chairSpacing) / 2;
-            
-            const createMeetingChair = (chX, chZ, rotY) => {
-              const chairGroup = new THREE.Group();
-              chairGroup.position.set(chX, 0, chZ);
-              chairGroup.rotation.y = rotY;
-              
-              const base = new THREE.Mesh(geometries.box, materials.chairBase);
-              base.scale.set(0.38, 0.02, 0.38);
-              base.position.y = 0.05;
-              chairGroup.add(base);
-              
-              const shaft = new THREE.Mesh(geometries.cylinder, materials.metalSilver);
-              shaft.scale.set(0.04, 0.36, 0.04);
-              shaft.position.y = 0.23;
-              chairGroup.add(shaft);
-              
-              const seat = new THREE.Mesh(geometries.box, materials.chairFabric);
-              seat.scale.set(0.44, 0.08, 0.42);
-              seat.position.y = 0.45;
-              chairGroup.add(seat);
-              
-              const back = new THREE.Mesh(geometries.box, materials.chairFabric);
-              back.scale.set(0.4, 0.5, 0.06);
-              back.position.set(0, 0.76, 0.18);
-              chairGroup.add(back);
-              
-              return chairGroup;
-            };
-            
-            for (let i = 0; i < numChairsPerSide; i++) {
-              const x = chairStartX + i * chairSpacing;
-              roomModel.add(createMeetingChair(x, cz - tableD / 2 - 0.32, Math.PI));
-              roomModel.add(createMeetingChair(x, cz + tableD / 2 + 0.32, 0));
-            }
-            
-            if (tableW > 2.2) {
-              roomModel.add(createMeetingChair(cx + tableW / 2 + 0.32, cz, -Math.PI / 2));
-              roomModel.add(createMeetingChair(cx - tableW / 2 - 0.32, cz, Math.PI / 2));
-            }
-            
-            // 5. TV Display + Whiteboard + Plant
-            const tvGroup = new THREE.Group();
-            tvGroup.position.set(cx, 1.4, cz - tableD / 2 - 0.85);
-            const tvBezel = new THREE.Mesh(geometries.box, materials.metalDark);
-            tvBezel.scale.set(1.2, 0.7, 0.04);
-            tvGroup.add(tvBezel);
-            const tvScreen = new THREE.Mesh(geometries.box, materials.screenGlow);
-            tvScreen.scale.set(1.15, 0.65, 0.005);
-            tvScreen.position.z = 0.022;
-            tvGroup.add(tvScreen);
-            roomModel.add(tvGroup);
-            
-            roomModel.add(createWhiteboardUnit(cx - wM / 2.5, cz + hM / 2.5, Math.PI / 4, resources));
-            roomModel.add(createPlantUnit(cx + wM / 2.5, cz - hM / 2.5, resources));
           } else {
             // Original logic for Floor 5
             const isGlassCabin = nameLower.includes("cabin") && (
@@ -470,7 +466,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
               nameLower.includes("3") ||
               nameLower.includes("ctio")
             );
-            roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid, isBoardRoom || isGlassCabin);
+            roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid, isBoardRoom || isGlassCabin, isCabinRoom(r));
           }
           break;
         }
@@ -525,7 +521,8 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           const oDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
           const nameLower = r.name?.toLowerCase() ?? "";
           const isPKIRoom = nameLower.includes("pki");
-          const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom || nameLower.includes("vr lab") || nameLower.includes("medical room") || (isFloor6Or7 && nameLower.includes("thinking"));
+          const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom || nameLower.includes("vr lab") || nameLower.includes("medical room") || (isFloor6Or7 && (nameLower.includes("thinking") || nameLower.includes("huddle") || nameLower.includes("breakout") || nameLower.includes("lounge")));
+          const isCabin = isCabinRoom(r);
           roomModel.add(createPolygonWalls({
             polygon: roomPolygon,
             wallHeight: 3.0,
@@ -535,7 +532,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             doorWidth: 0.8,
             resources,
             toWorld,
-            glassDoor: isGlassRoom,
+            glassDoor: isGlassRoom || isCabin,
             glassWalls: isGlassRoom
           }));
           
@@ -545,7 +542,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           oFloor.position.set(cx, 0.012, cz);
           roomModel.add(oFloor);
 
-          if (nameLower.includes("informal")) {
+          if (nameLower.includes("informal") || nameLower.includes("huddle") || nameLower.includes("thinking") || nameLower.includes("breakout") || nameLower.includes("lounge")) {
             // ── INFORMAL ROOM COLLABORATION SETUP ──
             // Center Round Coffee Table
             const tableTop = new THREE.Mesh(geometries.cylinder, materials.deskWood);
@@ -707,6 +704,10 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             roomModel.add(createPKIChair(cx - 0.5));
             roomModel.add(createPKIChair(cx + 0.5));
 
+          } else if (isCabinRoom(r)) {
+            // If it is a cabin mapped to OTHER (like Mulliner or Information Security), render executive desk layout!
+            const execFurniture = layoutExecutiveDesk(cx, cz, wM, hM, resources);
+            roomModel.add(execFurniture);
           } else {
             // Standard simple desk for other rooms
             const desk = new THREE.Mesh(geometries.box, materials.deskSurface);

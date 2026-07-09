@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
+import { layoutExecutiveDesk } from "../layouts/LayoutModules";
 
-export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid, glassWalls = false) {
+export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid, glassWalls = false, isCabin = false) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
@@ -24,6 +25,19 @@ export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resou
       toWorld
     })
   );
+
+  if (isCabin) {
+    // 2. Floor: Carpet floor plate
+    const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
+    oFloor.rotation.x = -Math.PI / 2;
+    oFloor.position.set(cx, 0.012, cz);
+    group.add(oFloor);
+
+    // 3. Furniture: Executive Office layout
+    const execFurniture = layoutExecutiveDesk(cx, cz, wM, hM, resources);
+    group.add(execFurniture);
+    return group;
+  }
 
   // 2. Table base rug
   const tableW = Math.max(1.2, Math.min(wM * 0.62, 4.2));

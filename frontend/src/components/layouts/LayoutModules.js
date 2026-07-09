@@ -3,7 +3,8 @@ import {
   createDeskUnit,
   createSofaUnit,
   createWhiteboardUnit,
-  createPlantUnit
+  createPlantUnit,
+  createCabinet
 } from "./FurnitureModels";
 
 /**
@@ -482,6 +483,62 @@ export function layoutExecutiveDesk(cx, cz, wM, hM, resources) {
 
   group.add(createVisitorChair(cx - 0.5));
   group.add(createVisitorChair(cx + 0.5));
+
+  // Low storage credenza or cabinet
+  if (wM > 2.8) {
+    const cabinetW = 1.2;
+    const cabinetH = 0.75;
+    const cabinetD = 0.45;
+    const cab = createCabinet(cx + wM / 2 - cabinetD / 2 - 0.15, cz, {
+      width: cabinetW,
+      height: cabinetH,
+      depth: cabinetD,
+      rotation: Math.PI / 2,
+      style: "closed-doors",
+      finish: "wood"
+    }, resources);
+    group.add(cab);
+  } else {
+    const cabinetW = 0.8;
+    const cabinetH = 0.75;
+    const cabinetD = 0.4;
+    const cab = createCabinet(cx, cz - hM / 2 + cabinetD / 2 + 0.15, {
+      width: cabinetW,
+      height: cabinetH,
+      depth: cabinetD,
+      style: "closed-doors",
+      finish: "wood"
+    }, resources);
+    group.add(cab);
+  }
+
+  // Laptop/Monitor setup on the desk
+  const laptopGroup = new THREE.Group();
+  laptopGroup.position.set(cx, 0.77, cz - 0.2);
+  const laptopBase = new THREE.Mesh(geometries.box, materials.metalSilver);
+  laptopBase.scale.set(0.28, 0.015, 0.2);
+  laptopGroup.add(laptopBase);
+  const laptopScreen = new THREE.Mesh(geometries.box, materials.screenGlow);
+  laptopScreen.scale.set(0.28, 0.18, 0.01);
+  laptopScreen.position.set(0, 0.1, -0.1);
+  laptopScreen.rotation.x = -0.15;
+  laptopGroup.add(laptopScreen);
+  group.add(laptopGroup);
+
+  // Optional wall-mounted TV for larger cabins
+  if (wM > 3.5 && hM > 3.5) {
+    const tvGroup = new THREE.Group();
+    tvGroup.position.set(cx - wM / 2 + 0.08, 1.5, cz);
+    tvGroup.rotation.y = Math.PI / 2;
+    const tvBezel = new THREE.Mesh(geometries.box, materials.metalDark);
+    tvBezel.scale.set(1.2, 0.7, 0.04);
+    tvGroup.add(tvBezel);
+    const tvScreen = new THREE.Mesh(geometries.box, materials.screenGlow);
+    tvScreen.scale.set(1.15, 0.65, 0.005);
+    tvScreen.position.z = 0.022;
+    tvGroup.add(tvScreen);
+    group.add(tvGroup);
+  }
 
   // Small planter in the corner
   group.add(createPlantUnit(cx + wM / 2.5, cz - hM / 2.5, resources));
