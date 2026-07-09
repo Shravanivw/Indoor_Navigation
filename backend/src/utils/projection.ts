@@ -23,6 +23,7 @@ export interface LayoutRoom {
 export const HUDSON_LAYOUT_FILES: Record<string, string> = {
   'floor-hudson-f5': 'Hudson_5th.json',
   'floor-hudson-f6': 'Hudson_6th_Floor.json',
+  'floor-hudson-f7': 'Hudson_7th.json',
 };
 
 const boundsCache = new Map<string, ProjectionBounds>();

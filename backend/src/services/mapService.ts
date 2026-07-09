@@ -52,11 +52,13 @@ const FLOOR_DATA_MAP: Record<string, { clean: string; nav?: string }> = {
   'floor-gf':         { clean: 'floor_ganges_clean.json', nav: 'nav_ganges_g.json' },
   'floor-hudson-f5':  { clean: 'floor_hudson_clean.json', nav: 'nav_hudson_f5.json' },
   'floor-hudson-f6':  { clean: 'floor_hudson_6th_clean.json', nav: 'nav_hudson_f6.json' },
+  'floor-hudson-f7':  { clean: 'floor_hudson_7th_clean.json', nav: 'nav_hudson_f7.json' },
 };
 
 export const HUDSON_LAYOUT_FLOORS = [
   'floor-hudson-f5',
-  'floor-hudson-f6'
+  'floor-hudson-f6',
+  'floor-hudson-f7'
 ];
 
 export function requiresHudsonProjection(floorId: string): boolean {

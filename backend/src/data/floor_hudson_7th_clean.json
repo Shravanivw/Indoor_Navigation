@@ -1,0 +1,19 @@
+{
+  "boundingBox": {
+    "minX": 0,
+    "minY": 0,
+    "maxX": 1000,
+    "maxY": 1000,
+    "widthM": 1.0,
+    "heightM": 1.0
+  },
+  "walls": [],
+  "rooms": [],
+  "meta": {
+    "originalWalls": 0,
+    "originalLabels": 0,
+    "totalWalls": 0,
+    "totalRooms": 0,
+    "cleanedAt": "2026-07-09T07:14:43.519791+00:00"
+  }
+}

@@ -48,8 +48,14 @@ def main():
 
     # Define intermediate and final file paths
     # Match the naming conventions of existing floors
-    clean_suffix = "6th_clean" if "f6" in args.floor_id else "clean"
-    nav_suffix = "f6" if "f6" in args.floor_id else f"f{args.level}"
+    if args.floor_id == "floor-hudson-f5":
+        clean_suffix = "clean"
+    elif args.floor_id == "floor-hudson-f6":
+        clean_suffix = "6th_clean"
+    else:
+        clean_suffix = f"{args.level}th_clean"
+
+    nav_suffix = f"f{args.level}"
 
     raw_json = Path(f"src/data/floor_{args.floor_id}_raw.json")
     clean_json = Path(f"src/data/floor_hudson_{clean_suffix}.json")

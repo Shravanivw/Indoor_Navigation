@@ -56,7 +56,7 @@ function makeLabelSprite(text, colorHex = "#0C447C", bgAlpha = 0.93) {
   return sprite;
 }
 
-function getRoomTemplateType(room, isFloor6 = false) {
+function getRoomTemplateType(room, isFloor6Or7 = false) {
   const type = (room.type ?? "").toUpperCase();
   const name = (room.name ?? "").toLowerCase();
   
@@ -84,17 +84,17 @@ function getRoomTemplateType(room, isFloor6 = false) {
   if (type === "TOILET" || name.includes("restroom") || name.includes("toilet") || name.includes("washroom") || name.includes("shower")) {
     return "TOILET";
   }
-  if (type === "SERVER_ROOM" || type === "STORAGE" || name.includes("server") || name.includes("storage") || name.includes("utility") || name.includes("ahu") || name.includes("ele") || name.includes("bms") || name.includes("janitor") || name.includes("hub") || name.includes("ups") || name.includes("av room") || name.includes("monitoring") || name.includes("repair") || name.includes("store") || (isFloor6 && name.includes("battery"))) {
-    if (isFloor6 && name.includes("thinking")) {
+  if (type === "SERVER_ROOM" || type === "STORAGE" || name.includes("server") || name.includes("storage") || name.includes("utility") || name.includes("ahu") || name.includes("ele") || name.includes("bms") || name.includes("janitor") || name.includes("hub") || name.includes("ups") || name.includes("av room") || name.includes("monitoring") || name.includes("repair") || name.includes("store") || (isFloor6Or7 && name.includes("battery"))) {
+    if (isFloor6Or7 && name.includes("thinking")) {
       // Let it fall through to OTHER/MEETING_ROOM since it's a collab room, not utility
     } else {
       return "SERVER_ROOM";
     }
   }
-  if (type === "OPEN_WORKSPACE" || type === "WORKSPACE" || name.includes("workspace") || name.includes("innovation") || name.includes("hotdesk") || name.includes("desk") || name.includes("it bar") || name.includes("support") || (isFloor6 && (name.includes("lab") || name.includes("noc") || name.includes("gui") || name.includes("big data") || name.includes("workstation")))) {
+  if (type === "OPEN_WORKSPACE" || type === "WORKSPACE" || name.includes("workspace") || name.includes("innovation") || name.includes("hotdesk") || name.includes("desk") || name.includes("it bar") || name.includes("support") || (isFloor6Or7 && (name.includes("lab") || name.includes("noc") || name.includes("gui") || name.includes("big data") || name.includes("workstation")))) {
     return "OPEN_WORKSPACE";
   }
-  if (type === "MEETING_ROOM" || type === "BOARDROOM" || name.includes("meeting") || name.includes("board") || name.includes("cabin") || name.includes("conference") || name.includes("training") || (isFloor6 && (name.includes("pax") || name.includes("nerd") || name.includes("lean") || name.includes("ciso") || name.includes("office") || name.includes("adaptive") || name.includes("opensource")))) {
+  if (type === "MEETING_ROOM" || type === "BOARDROOM" || name.includes("meeting") || name.includes("board") || name.includes("cabin") || name.includes("conference") || name.includes("training") || (isFloor6Or7 && (name.includes("pax") || name.includes("nerd") || name.includes("lean") || name.includes("ciso") || name.includes("office") || name.includes("adaptive") || name.includes("opensource")))) {
     return "MEETING_ROOM";
   }
   return "OTHER";
@@ -194,7 +194,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     // ── Rooms & Models ───────────────────────────────────────────────────────
     const rooms = floorMap.rooms ?? [];
-    const isFloor6 = floorMap?.id === "floor-hudson-f6";
+    const isFloor6Or7 = floorMap?.id === "floor-hudson-f6" || floorMap?.id === "floor-hudson-f7";
     let destinationPin = null;
     const labelSprites = [];
 
@@ -240,7 +240,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           ];
 
       // Route through the template renderer
-      const template = getRoomTemplateType(r, isFloor6);
+      const template = getRoomTemplateType(r, isFloor6Or7);
       let roomModel = null;
 
       switch (template) {
@@ -271,7 +271,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           }
 
           const nameLower = r.name?.toLowerCase() ?? "";
-          const isClosedWorkspace = isFloor6 && (
+          const isClosedWorkspace = isFloor6Or7 && (
             nameLower.includes("lab") ||
             nameLower.includes("noc") ||
             nameLower.includes("gui") ||
@@ -319,7 +319,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           const isBoardRoom = nameLower.includes("board");
           const isCabin = nameLower.includes("cabin") || nameLower.includes("ciso") || nameLower.includes("office");
           
-          if (isFloor6 && isCabin) {
+          if (isFloor6Or7 && isCabin) {
             // Render Floor 6 Cabin / Head Cabin / CISO Office (Executive Office template)
             roomModel = new THREE.Group();
             
@@ -347,7 +347,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             // 3. Furniture: Executive Desk, Executive Chair, Visitor Chairs, Plant
             const execFurniture = layoutExecutiveDesk(cx, cz, wM, hM, resources);
             roomModel.add(execFurniture);
-          } else if (isFloor6) {
+          } else if (isFloor6Or7) {
             // Render Floor 6 Meeting Rooms (with glass front corridor walls)
             roomModel = new THREE.Group();
             
@@ -477,7 +477,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         case "PANTRY": {
           const nameLower = r.name?.toLowerCase() ?? "";
           const isCafeteriaOrDining = nameLower.includes("cafeteria") || nameLower.includes("dining");
-          roomModel = createPantry(roomPolygon, cx, cz, wM, hM, isCafeteriaOrDining, isDest, isUser, resources, toWorld, floorMap.grid, isFloor6);
+          roomModel = createPantry(roomPolygon, cx, cz, wM, hM, isCafeteriaOrDining, isDest, isUser, resources, toWorld, floorMap.grid, isFloor6Or7);
           break;
         }
         case "STAIRCASE":
@@ -493,7 +493,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           const isServer = r.type === "SERVER_ROOM" || nameLower.includes("server") || nameLower.includes("ups") || nameLower.includes("battery");
           roomModel = createUtilityRoom(roomPolygon, cx, cz, wM, hM, isServer, isDest, isUser, resources, toWorld, floorMap.grid, isGlassUtility);
           
-          if (isFloor6 && roomModel) {
+          if (isFloor6Or7 && roomModel) {
             // Add tile floor plate to the utility room model
             const uFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorTile);
             uFloor.rotation.x = -Math.PI / 2;
@@ -525,7 +525,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           const oDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
           const nameLower = r.name?.toLowerCase() ?? "";
           const isPKIRoom = nameLower.includes("pki");
-          const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom || nameLower.includes("vr lab") || nameLower.includes("medical room") || (isFloor6 && nameLower.includes("thinking"));
+          const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom || nameLower.includes("vr lab") || nameLower.includes("medical room") || (isFloor6Or7 && nameLower.includes("thinking"));
           roomModel.add(createPolygonWalls({
             polygon: roomPolygon,
             wallHeight: 3.0,
