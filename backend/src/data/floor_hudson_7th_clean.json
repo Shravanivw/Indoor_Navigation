@@ -2,10 +2,10 @@
   "boundingBox": {
     "minX": 0,
     "minY": 0,
-    "maxX": 1000,
-    "maxY": 1000,
-    "widthM": 1.0,
-    "heightM": 1.0
+    "maxX": 76735,
+    "maxY": 48874,
+    "widthM": 76.735,
+    "heightM": 48.874
   },
   "walls": [],
   "rooms": [],
