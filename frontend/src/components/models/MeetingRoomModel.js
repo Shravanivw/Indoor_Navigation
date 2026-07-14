@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { createPolygonWalls, findCorridorSegmentIndex } from "./ModelShared";
 
-export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid, glassWalls = false) {
+export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, grid, glassWalls = false, extraWallParams = {}) {
   const group = new THREE.Group();
   const { geometries, materials } = resources;
   const boxGeom = geometries.box;
@@ -9,7 +9,9 @@ export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resou
 
   const wallMat = isDest ? materials.wallDest : materials.wallNormal;
 
-  // 1. Draw polygon walls using the corridor-facing segment as glass partition
+  // 1. Draw polygon walls using the corridor-facing segment as glass partition.
+  //    extraWallParams lets the caller upgrade the corridor wall to a full-height
+  //    frameless glass entrance (glass door + adjacent glass panels).
   const doorIndex = findCorridorSegmentIndex(polygon, grid);
   group.add(
     createPolygonWalls({
@@ -21,7 +23,8 @@ export function createMeetingRoom(polygon, cx, cz, wM, hM, isDest, isUser, resou
       glassDoor: true, // glass partition on the corridor wall
       glassWalls,
       resources,
-      toWorld
+      toWorld,
+      ...extraWallParams
     })
   );
 

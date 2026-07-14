@@ -127,13 +127,16 @@ export function initSharedResources() {
     glass: new THREE.MeshPhysicalMaterial({
       color: 0xdfefff, // soft light blue-tinted glass
       transparent: true,
-      opacity: 0.55,
-      transmission: 0.6,
-      roughness: 0.08,
-      metalness: 0.0,
-      ior: 1.45,
-      thickness: 0.03,
+      opacity: 0.22,
+      transmission: 0.92,
+      roughness: 0.03,
+      metalness: 0.1,
+      ior: 1.5,
+      thickness: 0.05,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.03,
       side: THREE.DoubleSide,
+      depthWrite: false,
     }),
     glassFrame: new THREE.MeshStandardMaterial({
       color: 0x1e293b, // anodized dark slate frame
@@ -274,7 +277,7 @@ export function findCorridorSegmentIndex(polygon, grid) {
  * Supports splitting a segment for a door opening or omitting it entirely.
  * If glassDoor is true, the split segment parts are drawn using glass frames.
  */
-export function createPolygonWalls({ polygon, wallHeight, wallThickness, material, doorSegmentIndex = -1, omitSegmentIndex = -1, doorWidth = 0.95, doorHeight = 2.0, resources, toWorld, glassDoor = false, glassWalls = false }) {
+export function createPolygonWalls({ polygon, wallHeight, wallThickness, material, doorSegmentIndex = -1, omitSegmentIndex = -1, doorWidth = 0.95, doorHeight = 2.0, resources, toWorld, glassDoor = false, glassWalls = false, addVisualDoor = false }) {
   const group = new THREE.Group();
   const boxGeom = resources.geometries.box;
   const wt = wallThickness;
@@ -303,6 +306,9 @@ export function createPolygonWalls({ polygon, wallHeight, wallThickness, materia
 
       const dirX = dx / len;
       const dirZ = dz / len;
+
+      const headerMidX = wp1.x + dirX * (leftLen + doorWidth / 2);
+      const headerMidZ = wp1.z + dirZ * (leftLen + doorWidth / 2);
 
       const renderSeg = (segMidX, segMidZ, segLen, isRight) => {
         if (glassDoor) {
@@ -348,9 +354,6 @@ export function createPolygonWalls({ polygon, wallHeight, wallThickness, materia
       // 3. Lintel header above doorway
       const headerH = wallHeight - doorHeight;
       if (headerH > 0.05) {
-        const headerMidX = wp1.x + dirX * (leftLen + doorWidth / 2);
-        const headerMidZ = wp1.z + dirZ * (leftLen + doorWidth / 2);
-
         const header = new THREE.Mesh(boxGeom, material);
         header.scale.set(wt, headerH, doorWidth);
         header.position.set(headerMidX, doorHeight + headerH / 2, headerMidZ);
@@ -371,6 +374,58 @@ export function createPolygonWalls({ polygon, wallHeight, wallThickness, materia
           fSideR.rotation.y = angle;
           group.add(fSideR);
         }
+      }
+
+      // 4. Frameless tempered glass door inside the opening
+      if (addVisualDoor) {
+        const doorGroup = new THREE.Group();
+        doorGroup.position.set(headerMidX, 0, headerMidZ);
+        doorGroup.rotation.y = angle;
+
+        // Clear Tempered Glass Panel
+        const doorGlass = new THREE.Mesh(boxGeom, resources.materials.glass);
+        doorGlass.scale.set(0.012, doorHeight - 0.02, doorWidth - 0.015);
+        doorGlass.position.y = (doorHeight - 0.02) / 2 + 0.01;
+        doorGroup.add(doorGlass);
+
+        // Slim Black runners/trim (top and bottom)
+        const topTrim = new THREE.Mesh(boxGeom, resources.materials.glassFrame);
+        topTrim.scale.set(0.016, 0.02, doorWidth - 0.015);
+        topTrim.position.y = doorHeight - 0.01;
+        doorGroup.add(topTrim);
+
+        const bottomTrim = new THREE.Mesh(boxGeom, resources.materials.glassFrame);
+        bottomTrim.scale.set(0.016, 0.02, doorWidth - 0.015);
+        bottomTrim.position.y = 0.01;
+        doorGroup.add(bottomTrim);
+
+        // Modern Stainless Steel Pull Handle (positioned vertically near the opening side)
+        const handleZ = doorWidth / 2 - 0.12; 
+        const handleH = 0.6; 
+        const handleD = 0.016; 
+        const handleOffset = 0.035; 
+
+        // Outer Pull Handle
+        const outerHandle = new THREE.Mesh(resources.geometries.cylinder, resources.materials.metalSilver);
+        outerHandle.scale.set(handleD, handleH, handleD);
+        outerHandle.position.set(handleOffset, 1.0, handleZ);
+        doorGroup.add(outerHandle);
+
+        // Inner Pull Handle
+        const innerHandle = new THREE.Mesh(resources.geometries.cylinder, resources.materials.metalSilver);
+        innerHandle.scale.set(handleD, handleH, handleD);
+        innerHandle.position.set(-handleOffset, 1.0, handleZ);
+        doorGroup.add(innerHandle);
+
+        // Connect brackets through the glass
+        for (const by of [1.0 - handleH / 3, 1.0 + handleH / 3]) {
+          const bracket = new THREE.Mesh(boxGeom, resources.materials.metalSilver);
+          bracket.scale.set(handleOffset * 2, 0.015, 0.015);
+          bracket.position.set(0, by, handleZ);
+          doorGroup.add(bracket);
+        }
+
+        group.add(doorGroup);
       }
     } else {
       if (glassWalls) {

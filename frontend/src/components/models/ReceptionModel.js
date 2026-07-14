@@ -162,28 +162,7 @@ export function createReception(cx, cz, wM, hM, resources) {
 
   group.add(loungeGroup);
 
-  // 5. Planter Box / Plant in the opposite corner
-  const planter = new THREE.Group();
-  planter.position.set(cx + wM / 3.2, 0, cz + hM / 4);
 
-  const pot = new THREE.Mesh(boxGeom, materials.plantPot);
-  pot.scale.set(0.5, 0.5, 0.5);
-  pot.position.y = 0.25;
-  planter.add(pot);
-
-  // Green bushes
-  for (const p of [
-    { x: 0, y: 0.6, z: 0, s: 0.45 },
-    { x: 0.15, y: 0.75, z: 0.05, s: 0.35 },
-    { x: -0.15, y: 0.78, z: -0.05, s: 0.32 },
-    { x: -0.05, y: 0.9, z: 0.15, s: 0.28 }
-  ]) {
-    const foliage = new THREE.Mesh(geometries.sphere, materials.plantLeaves);
-    foliage.scale.set(p.s, p.s * 1.2, p.s);
-    foliage.position.set(p.x, p.y, p.z);
-    planter.add(foliage);
-  }
-  group.add(planter);
 
   return group;
 }
