@@ -243,7 +243,7 @@ export function findCorridorSegmentIndex(polygon, grid) {
 
     let score = 0;
     if (cellX >= 0 && cellX < cols && gridY >= 0 && gridY < rows) {
-      if (grid[gridY][cellX] === 0) {
+      if (grid[gridY][cellX] === 1) {
         score = 15; // Directly walkable corridor cell
       }
     }
@@ -255,7 +255,7 @@ export function findCorridorSegmentIndex(polygon, grid) {
         const cy = cellY + oy;
         const gy = rows - 1 - cy;
         if (cx >= 0 && cx < cols && gy >= 0 && gy < rows) {
-          if (grid[gy][cx] === 0) score++;
+          if (grid[gy][cx] === 1) score++;
         }
       }
     }
