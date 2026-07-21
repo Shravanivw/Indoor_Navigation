@@ -119,6 +119,43 @@ function getRoomTemplateType(room, isFloor6Or7 = false) {
   return "OTHER";
 }
 
+function isTargetGlassDoorRoom(room) {
+  if (!room) return false;
+  const name = (room.name ?? "").toLowerCase().trim();
+  const id = (room.id ?? "").toLowerCase().trim();
+  
+  const targets = [
+    "i-dk-t head cabin",
+    "i-dk-q head cabin",
+    "algorithm",
+    "power bi",
+    "artifact",
+    "concept",
+    "i-dk head cabin",
+    "zero distance",
+    "i-da-d head cabin"
+  ];
+
+  const matched = targets.some(target => name.includes(target) || id.includes(target));
+  if (matched) {
+    console.log(`[Glass Door Match] Room matches targets: name="${room.name}", id="${room.id}"`);
+  }
+  return matched;
+}
+
+function getWallParams(room, standardParams) {
+  if (isTargetGlassDoorRoom(room)) {
+    console.log(`[Glass Door Params] Applying full-height glass door to room: ${room.name || room.id}`);
+    return {
+      ...standardParams,
+      glassDoor: true,
+      addVisualDoor: true,
+      doorHeight: 3.0,
+      doorWidth: 0.95
+    };
+  }
+  return standardParams;
+}
 
 export default function Walk3D({ floorMap, pathGridCells = [], destination, userRoom, livePosition = null }) {
   const mountRef = useRef(null);
@@ -162,6 +199,8 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height);
     renderer.setClearColor(0xeef1f4);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mount.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
@@ -175,8 +214,19 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     // ── LIGHTING ────────────────────────────────────────────────────────────
     scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+    const sun = new THREE.DirectionalLight(0xffffff, 0.75);
     sun.position.set(25, 40, 15);
+    sun.castShadow = true;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
+    sun.shadow.camera.near = 0.5;
+    sun.shadow.camera.far = 100;
+    const d = 40;
+    sun.shadow.camera.left = -d;
+    sun.shadow.camera.right = d;
+    sun.shadow.camera.top = d;
+    sun.shadow.camera.bottom = -d;
+    sun.shadow.bias = -0.0005;
     scene.add(sun);
     const fill = new THREE.DirectionalLight(0xffffff, 0.3);
     fill.position.set(-20, 25, -15);
@@ -303,7 +353,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             
             // 1. Walls: glass front wall, solid side/rear walls
             const doorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
-            roomModel.add(createPolygonWalls({
+            roomModel.add(createPolygonWalls(getWallParams(r, {
               polygon: roomPolygon,
               wallHeight: 3.0,
               wallThickness: 0.12,
@@ -313,7 +363,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
               glassWalls: false,
               resources,
               toWorld
-            }));
+            })));
             
             // 2. Floor: Carpet
             const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
@@ -335,16 +385,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         }
         case "MEETING_ROOM": {
           const nameLower = r.name?.toLowerCase() ?? "";
-          const isBoardRoom = nameLower.includes("board");
+          const isCabin = isCabinRoom(r);
           
-          if (isFloor6Or7) {
-            // Render Floor 6/7 Meeting Rooms (with glass front corridor walls)
+          if (isFloor6Or7 && isCabin) {
+            // Render Floor 6 Cabin / Head Cabin / CISO Office (Executive Office template)
             roomModel = new THREE.Group();
             
-            // 1. Walls: glass front wall facing corridor, solid side/rear walls
+            // 1. Walls: glass front wall facing corridor, solid concrete walls elsewhere
             const doorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
-            const hasGlassWalls = nameLower.includes("opensource") || nameLower.includes("adaptive");
-            roomModel.add(createPolygonWalls({
+            const hasGlassWalls = nameLower.includes("large cabin 2") || nameLower.includes("ciso");
+            roomModel.add(createPolygonWalls(getWallParams(r, {
               polygon: roomPolygon,
               wallHeight: 3.0,
               wallThickness: 0.12,
@@ -354,7 +404,35 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
               glassWalls: hasGlassWalls,
               resources,
               toWorld
-            }));
+            })));
+            
+            // 2. Floor: Carpet
+            const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
+            oFloor.rotation.x = -Math.PI / 2;
+            oFloor.position.set(cx, 0.012, cz);
+            roomModel.add(oFloor);
+            
+            // 3. Furniture: Executive Desk, Executive Chair, Visitor Chairs, Plant
+            const execFurniture = layoutExecutiveDesk(cx, cz, wM, hM, resources);
+            roomModel.add(execFurniture);
+          } else if (isFloor6Or7) {
+            // Render Floor 6 Meeting Rooms (with glass front corridor walls)
+            roomModel = new THREE.Group();
+            
+            // 1. Walls: glass front wall facing corridor, solid side/rear walls
+            const doorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
+            const hasGlassWalls = nameLower.includes("opensource") || nameLower.includes("adaptive");
+            roomModel.add(createPolygonWalls(getWallParams(r, {
+              polygon: roomPolygon,
+              wallHeight: 3.0,
+              wallThickness: 0.12,
+              material: isDest ? materials.wallDest : materials.wallNormal,
+              doorSegmentIndex: doorIndex,
+              glassDoor: true,
+              glassWalls: hasGlassWalls,
+              resources,
+              toWorld
+            })));
             
             // 2. Floor: Carpet Rug + carpet floor
             const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
@@ -466,7 +544,12 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
               nameLower.includes("3") ||
               nameLower.includes("ctio")
             );
-            roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid, isBoardRoom || isGlassCabin, isCabinRoom(r));
+            // Target cabins get a full-height frameless glass entrance replacing
+            // the solid (destination-green) front wall blocking the doorway.
+            const glassEntrance = isTargetGlassDoorRoom(r)
+              ? { glassDoor: true, addVisualDoor: true, doorHeight: 3.0, doorWidth: 0.95 }
+              : {};
+            roomModel = createMeetingRoom(roomPolygon, cx, cz, wM, hM, isDest, isUser, resources, toWorld, floorMap.grid, isBoardRoom || isGlassCabin, isCabinRoom(r), glassEntrance);
           }
           break;
         }
@@ -501,7 +584,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         case "TOILET":
           roomModel = new THREE.Group();
           const tDoorIndex = findCorridorSegmentIndex(roomPolygon, floorMap.grid);
-          roomModel.add(createPolygonWalls({ polygon: roomPolygon, wallHeight: 3.0, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSegmentIndex: tDoorIndex, doorWidth: 0.8, resources, toWorld }));
+          roomModel.add(createPolygonWalls(getWallParams(r, { polygon: roomPolygon, wallHeight: 3.0, wallThickness: 0.12, material: isDest ? materials.wallDest : materials.wallNormal, doorSegmentIndex: tDoorIndex, doorWidth: 0.8, resources, toWorld })));
           // Toilet floor
           const tFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorTile);
           tFloor.rotation.x = -Math.PI / 2;
@@ -523,7 +606,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           const isPKIRoom = nameLower.includes("pki");
           const isGlassRoom = nameLower.includes("informal") || nameLower.includes("ml room") || nameLower.includes("aws room") || isPKIRoom || nameLower.includes("vr lab") || nameLower.includes("medical room") || (isFloor6Or7 && (nameLower.includes("thinking") || nameLower.includes("huddle") || nameLower.includes("breakout") || nameLower.includes("lounge")));
           const isCabin = isCabinRoom(r);
-          roomModel.add(createPolygonWalls({
+          roomModel.add(createPolygonWalls(getWallParams(r, {
             polygon: roomPolygon,
             wallHeight: 3.0,
             wallThickness: 0.12,
@@ -534,7 +617,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             toWorld,
             glassDoor: isGlassRoom || isCabin,
             glassWalls: isGlassRoom
-          }));
+          })));
           
           // Office floor plate
           const oFloor = new THREE.Mesh(new THREE.PlaneGeometry(wM - 0.05, hM - 0.05), materials.floorCarpet);
@@ -1022,6 +1105,22 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       renderer.render(scene, camera);
       s.raf = requestAnimationFrame(tick);
     }
+    scene.traverse(node => {
+      if (node.isMesh) {
+        const isPath = node.material === materials.pathArrows || (node.name && node.name.includes("path"));
+        if (!isPath) {
+          node.castShadow = true;
+          node.receiveShadow = true;
+        } else {
+          node.castShadow = false;
+          node.receiveShadow = false;
+        }
+        if (node.geometry && (node.geometry.type === "PlaneGeometry" || node.geometry.type === "RingGeometry")) {
+          node.castShadow = false;
+        }
+      }
+    });
+
     stateRef.current.raf = requestAnimationFrame(tick);
 
     function handleResize() {
