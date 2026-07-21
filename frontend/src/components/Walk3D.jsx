@@ -263,7 +263,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     // ── Rooms & Models ───────────────────────────────────────────────────────
     const rooms = floorMap.rooms ?? [];
-    const isFloor6Or7 = String(floorMap?.level) === "6" || String(floorMap?.level) === "7";
+    const isFloor6Or7 = String(floorMap?.level) === "6" || String(floorMap?.level) === "7" || String(floorMap?.level) === "9";
     let destinationPin = null;
     const labelSprites = [];
 

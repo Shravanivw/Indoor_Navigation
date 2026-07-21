@@ -49,7 +49,6 @@ type NavFloorData = {
 // Maps floorId → the JSON basename in src/data for that floor's geometry/grid.
 // Add new floors here as they are seeded.
 const FLOOR_DATA_MAP: Record<string, { clean: string; nav?: string }> = {
-  'floor-gf':         { clean: 'floor_ganges_clean.json', nav: 'nav_ganges_g.json' },
   'floor-ganges-f9':  { clean: 'floor_ganges_9th_clean.json', nav: 'nav_ganges_f9.json' },
   'floor-hudson-f5':  { clean: 'floor_hudson_clean.json', nav: 'nav_hudson_f5.json' },
   'floor-hudson-f6':  { clean: 'floor_hudson_6th_clean.json', nav: 'nav_hudson_f6.json' },

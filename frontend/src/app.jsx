@@ -66,7 +66,11 @@ export default function App() {
 
         if (floorsJson.success && Array.isArray(floorsJson.data)) {
           setFloors(floorsJson.data);
-          setSelectedFloorId(null); // resets floor selection
+          if (floorsJson.data.length > 0) {
+            setSelectedFloorId(floorsJson.data[0].id);
+          } else {
+            setSelectedFloorId(null);
+          }
         } else {
           setFloors([]);
           setSelectedFloorId(null);

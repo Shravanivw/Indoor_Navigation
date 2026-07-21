@@ -5,7 +5,7 @@ import Walk3D from "../components/Walk3D";
 import "../css/MapView.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
-const DEFAULT_FLOOR_ID = "floor-gf";
+const DEFAULT_FLOOR_ID = "floor-hudson-f5";
 
 function formatDist(metres) {
   if (!metres) return "—";
