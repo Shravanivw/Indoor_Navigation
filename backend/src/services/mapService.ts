@@ -59,7 +59,8 @@ const FLOOR_DATA_MAP: Record<string, { clean: string; nav?: string }> = {
 export const HUDSON_LAYOUT_FLOORS = [
   'floor-hudson-f5',
   'floor-hudson-f6',
-  'floor-hudson-f7'
+  'floor-hudson-f7',
+  'floor-ganges-f9'
 ];
 
 export function requiresHudsonProjection(floorId: string): boolean {
@@ -275,26 +276,7 @@ export async function getFloorMap(
     floor: floorInfo,
   }));
 
-  if (floor.id === 'floor-ganges-f9') {
-    const layoutRooms: LayoutRoom[] = loadHudsonLayoutRooms('Ganges_9th.json');
-    const roomByName = new Map<string, LayoutRoom>(layoutRooms.map(r => [r.id.trim().toLowerCase().replace(/[^a-z0-9]+/g, ''), r]));
-    rooms = rooms.map(room => {
-      const layout = roomByName.get(room.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ''));
-      if (layout) {
-        return {
-          ...room,
-          polygon: layout.polygon,
-          doors: (layout.doors ?? []).map(d => ({
-            id: d.id,
-            width: d.width,
-            x: d.x,
-            y: d.y,
-          })),
-        };
-      }
-      return room;
-    });
-  }
+
 
   const parsedGrid = parseGridData(floor.gridData);
   const navFloorData = loadNavFloorData(floor.id);

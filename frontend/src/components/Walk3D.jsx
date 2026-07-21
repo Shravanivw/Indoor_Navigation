@@ -538,6 +538,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
             }
           } else {
             // Original logic for Floor 5
+            const isBoardRoom = nameLower.includes("board") || nameLower.includes("training") || nameLower.includes("presentation");
             const isGlassCabin = nameLower.includes("cabin") && (
               nameLower.includes("1") ||
               nameLower.includes("2") ||
