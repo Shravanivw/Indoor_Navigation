@@ -6,3 +6,10 @@ build/
 .vite/
 *.log
 .DS_Store
+
+# CAD/DXF data
+backend/data_source/VWITS-GANGES PUNE_9TH FLOOR.dxf
+backend/data_source/Ganges_9th_Floor_Clean.dxf
+backend/src/data/Ganges_9th_Floor_Clean.json
+backend/src/data/Ganges_9th_Floor_Clean_Cleaned.json
+

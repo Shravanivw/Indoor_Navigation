@@ -17,9 +17,9 @@ async function main() {
 
   // ── Building: Ganges ──────────────────────────────────────────────────────
   const building = await prisma.building.upsert({
-    where: { id: 'building-main' },
+    where: { id: 'building-ganges' },
     create: {
-      id:      'building-main',
+      id:      'building-ganges',
       name:    'Ganges',
       address: 'Update with your address',
     },

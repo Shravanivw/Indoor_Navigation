@@ -50,6 +50,7 @@ type NavFloorData = {
 // Add new floors here as they are seeded.
 const FLOOR_DATA_MAP: Record<string, { clean: string; nav?: string }> = {
   'floor-gf':         { clean: 'floor_ganges_clean.json', nav: 'nav_ganges_g.json' },
+  'floor-ganges-f9':  { clean: 'floor_ganges_9th_clean.json', nav: 'nav_ganges_f9.json' },
   'floor-hudson-f5':  { clean: 'floor_hudson_clean.json', nav: 'nav_hudson_f5.json' },
   'floor-hudson-f6':  { clean: 'floor_hudson_6th_clean.json', nav: 'nav_hudson_f6.json' },
   'floor-hudson-f7':  { clean: 'floor_hudson_7th_clean.json', nav: 'nav_hudson_f7.json' },
@@ -273,6 +274,27 @@ export async function getFloorMap(
     isAccessible: r.isAccessible,
     floor: floorInfo,
   }));
+
+  if (floor.id === 'floor-ganges-f9') {
+    const layoutRooms: LayoutRoom[] = loadHudsonLayoutRooms('Ganges_9th.json');
+    const roomByName = new Map<string, LayoutRoom>(layoutRooms.map(r => [r.id.trim().toLowerCase().replace(/[^a-z0-9]+/g, ''), r]));
+    rooms = rooms.map(room => {
+      const layout = roomByName.get(room.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ''));
+      if (layout) {
+        return {
+          ...room,
+          polygon: layout.polygon,
+          doors: (layout.doors ?? []).map(d => ({
+            id: d.id,
+            width: d.width,
+            x: d.x,
+            y: d.y,
+          })),
+        };
+      }
+      return room;
+    });
+  }
 
   const parsedGrid = parseGridData(floor.gridData);
   const navFloorData = loadNavFloorData(floor.id);
