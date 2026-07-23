@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import "../css/Walk3D.css";
 
 // Import modular room models and shared assets
@@ -195,12 +196,14 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     const width  = mount.clientWidth;
     const height = mount.clientHeight;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    const isGangesF9 = String(floorMap?.level) === "9";
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(width, height);
     renderer.setClearColor(0xeef1f4);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = !isGangesF9;
+    renderer.shadowMap.type = THREE.BasicShadowMap;
     mount.appendChild(renderer.domElement);
 
     const realWidthM  = floorMap.realWidthM  ?? 73.579;
@@ -218,12 +221,12 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     const { geometries, materials } = resources;
 
     // ── LIGHTING ────────────────────────────────────────────────────────────
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    const sun = new THREE.DirectionalLight(0xffffff, 0.75);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.7);
     sun.position.set(25, 40, 15);
     sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
+    sun.shadow.mapSize.width = 1024;
+    sun.shadow.mapSize.height = 1024;
     sun.shadow.camera.near = 0.5;
     sun.shadow.camera.far = 100;
     const d = 40;
@@ -846,8 +849,8 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         }
       }
 
-      // Add local point spotlight for warm interior lighting in key landmarks
-      if (template === "RECEPTION" || template === "MEETING_ROOM" || template === "PANTRY") {
+      // Add local point spotlight for warm interior lighting in key target landmark
+      if ((isDest || isUser) && (template === "RECEPTION" || template === "MEETING_ROOM" || template === "PANTRY")) {
         const localSpot = new THREE.PointLight(0xffecc4, 0.6, 6.0);
         localSpot.position.set(cx, 2.3, cz);
         scene.add(localSpot);
@@ -862,13 +865,21 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         label.scale.set(Math.min(4.0, Math.max(1.8, wM * 0.45)), 0.85, 1.0);
         scene.add(label);
 
+        const nameL = (r.name ?? "").toLowerCase();
+        const isImportant = isDest || isUser || 
+          template === "RECEPTION" || 
+          template === "LIFT_LOBBY" || 
+          template === "PANTRY" || 
+          template === "STAIRCASE" || 
+          template === "LIFT" || 
+          nameL.includes("board") || 
+          nameL.includes("conference") ||
+          nameL.includes("innovation") ||
+          nameL.includes("meeting");
+
         labelSprites.push({
           sprite: label,
-          cx, cz,
-          template,
-          isDest,
-          isUser,
-          name: r.name
+          isImportant
         });
       }
       // Add ceiling infrastructure for this room
@@ -884,6 +895,55 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     // Finalize all accumulated instanced ceiling items
     finalizeCeilingInfrastructure(ceilingInfra, scene);
+
+    // ── Ganges Floor 9 Static Geometry Merger ─────────────────────────────
+    if (isGangesF9) {
+      scene.updateMatrixWorld(true);
+
+      const materialGroups = new Map();
+      const objectsToRemove = [];
+
+      scene.traverse(node => {
+        if (node.isMesh && !node.isInstancedMesh && node.geometry && node.material) {
+          const isDynamic = node.material === materials.pathArrows || 
+                            (node.name && (node.name.includes("path") || node.name.includes("pin") || node.name.includes("label"))) ||
+                            node.isSprite;
+          if (!isDynamic) {
+            const mat = node.material;
+            if (!Array.isArray(mat)) {
+              let list = materialGroups.get(mat);
+              if (!list) {
+                list = [];
+                materialGroups.set(mat, list);
+              }
+              const clonedGeom = node.geometry.clone();
+              clonedGeom.applyMatrix4(node.matrixWorld);
+              list.push(clonedGeom);
+              objectsToRemove.push(node);
+            }
+          }
+        }
+      });
+
+      objectsToRemove.forEach(obj => {
+        if (obj.parent) obj.parent.remove(obj);
+      });
+
+      for (const [mat, geoms] of materialGroups.entries()) {
+        if (geoms && geoms.length > 0) {
+          const mergedGeom = BufferGeometryUtils.mergeGeometries(geoms, false);
+          if (mergedGeom) {
+            const mergedMesh = new THREE.Mesh(mergedGeom, mat);
+            mergedMesh.matrixAutoUpdate = false;
+            if (mat === materials.wallNormal || mat === materials.wallDest) {
+              mergedMesh.castShadow = true;
+              mergedMesh.receiveShadow = true;
+            }
+            scene.add(mergedMesh);
+          }
+        }
+      }
+    }
 
     // ── Destination Landmark Floating Pin ──────────────────────────────────
     if (destination && rooms.length > 0) {
@@ -1094,24 +1154,11 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
       // 2.5 LOD Label Fading Animation
       labelSprites.forEach(item => {
-        const dist = camera.position.distanceTo(item.sprite.position);
-        const nameL = (item.name ?? "").toLowerCase();
-        const isImportant = item.isDest || item.isUser || 
-          item.template === "RECEPTION" || 
-          item.template === "LIFT_LOBBY" || 
-          item.template === "PANTRY" || 
-          item.template === "STAIRCASE" || 
-          item.template === "LIFT" || 
-          nameL.includes("board") || 
-          nameL.includes("conference") ||
-          nameL.includes("innovation") ||
-          nameL.includes("meeting");
-
-        if (!isImportant) {
+        if (!item.isImportant) {
           item.sprite.visible = false;
         } else {
           item.sprite.visible = true;
-          // Fade close labels to prevent camera obstruction
+          const dist = camera.position.distanceTo(item.sprite.position);
           if (dist < 2.0) {
             item.sprite.material.opacity = 0.0;
           } else if (dist <= 5.0) {
@@ -1131,7 +1178,11 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           } else if (s.progress < 1) {
             s.progress = Math.min(1, s.progress + (WALK_SPEED * speedMulRef.current * dt) / pathLengthM);
           }
-          setProgressPct(Math.round(s.progress * 100));
+          const nextPct = Math.round(s.progress * 100);
+          if (s.lastPct !== nextPct) {
+            s.lastPct = nextPct;
+            setProgressPct(nextPct);
+          }
         }
 
         const lookAheadM   = 1.5;
@@ -1158,18 +1209,25 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       renderer.render(scene, camera);
       s.raf = requestAnimationFrame(tick);
     }
+
+    // Configure shadow properties and freeze static matrices ONCE during scene setup
     scene.traverse(node => {
       if (node.isMesh) {
+        const isWall = node.name && node.name.toLowerCase().includes("wall");
         const isPath = node.material === materials.pathArrows || (node.name && node.name.includes("path"));
-        if (!isPath) {
+
+        if (isWall && !isPath) {
           node.castShadow = true;
           node.receiveShadow = true;
         } else {
           node.castShadow = false;
           node.receiveShadow = false;
         }
-        if (node.geometry && (node.geometry.type === "PlaneGeometry" || node.geometry.type === "RingGeometry")) {
-          node.castShadow = false;
+
+        // Freeze static matrix evaluations across frames for 3D walkthrough performance
+        if (!isPath) {
+          node.matrixAutoUpdate = false;
+          node.updateMatrix();
         }
       }
     });

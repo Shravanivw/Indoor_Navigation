@@ -38,26 +38,13 @@ export function buildGraph(
     }
   }
 
-  // Build adjacency list from edges
-  for (const edge of edges) {
-    const fromList = adjacency.get(edge.fromNodeId) ?? [];
-    fromList.push({
-      nodeId: edge.toNodeId,
-      weight: edge.weight,
-      isAccessible: edge.isAccessible,
-    });
-    adjacency.set(edge.fromNodeId, fromList);
+  // Automatically split edges that skip intermediate inline nodes along corridors
+  const refinedEdges = splitInlineEdges(nodesById, edges);
 
-    // Bidirectional: also add reverse
-    if (true) { // all edges are bidirectional in our schema
-      const toList = adjacency.get(edge.toNodeId) ?? [];
-      toList.push({
-        nodeId: edge.fromNodeId,
-        weight: edge.weight,
-        isAccessible: edge.isAccessible,
-      });
-      adjacency.set(edge.toNodeId, toList);
-    }
+  // Build adjacency list from refined edges
+  for (const edge of refinedEdges) {
+    addAdjacencyEdge(adjacency, edge.fromNodeId, edge.toNodeId, edge.weight, edge.isAccessible);
+    addAdjacencyEdge(adjacency, edge.toNodeId, edge.fromNodeId, edge.weight, edge.isAccessible);
   }
 
   // Compute connected components to find the largest connected component (LCC)
@@ -138,4 +125,85 @@ export function validateGraph(graph: NavigationGraph): {
     isolatedNodes,
     totalEdges: totalEdges / 2, // bidirectional counted twice
   };
+}
+
+function addAdjacencyEdge(
+  adjacency: AdjacencyList,
+  fromId: string,
+  toId: string,
+  weight: number,
+  isAccessible: boolean
+) {
+  const list = adjacency.get(fromId) ?? [];
+  if (!list.some(e => e.nodeId === toId)) {
+    list.push({ nodeId: toId, weight, isAccessible });
+  }
+  adjacency.set(fromId, list);
+}
+
+function splitInlineEdges(
+  nodesById: Map<string, GraphNode>,
+  edges: GraphEdge[]
+): GraphEdge[] {
+  const nodeArray = Array.from(nodesById.values());
+  const newEdges: GraphEdge[] = [];
+
+  for (const edge of edges) {
+    const nA = nodesById.get(edge.fromNodeId);
+    const nB = nodesById.get(edge.toNodeId);
+    if (!nA || !nB || nA.floorId !== nB.floorId) {
+      newEdges.push(edge);
+      continue;
+    }
+
+    const inlineNodes: { node: GraphNode; t: number }[] = [];
+    const dx = nB.gridX - nA.gridX;
+    const dy = nB.gridY - nA.gridY;
+    const lenSq = dx * dx + dy * dy;
+
+    if (lenSq > 100) { // Only check edges longer than 10 grid units
+      for (const nN of nodeArray) {
+        if (nN.floorId !== nA.floorId || nN.id === nA.id || nN.id === nB.id) continue;
+
+        const t = ((nN.gridX - nA.gridX) * dx + (nN.gridY - nA.gridY) * dy) / lenSq;
+        if (t > 0.04 && t < 0.96) {
+          const projX = nA.gridX + t * dx;
+          const projY = nA.gridY + t * dy;
+          const dist = Math.hypot(nN.gridX - projX, nN.gridY - projY);
+
+          if (dist < 35) { // Node lies within 35 grid units of segment AB
+            inlineNodes.push({ node: nN, t });
+          }
+        }
+      }
+    }
+
+    if (inlineNodes.length === 0) {
+      newEdges.push(edge);
+    } else {
+      // Sort inline nodes along segment AB
+      inlineNodes.sort((a, b) => a.t - b.t);
+
+      let prevNode = nA;
+      for (const item of inlineNodes) {
+        const segDist = Math.hypot(item.node.gridX - prevNode.gridX, item.node.gridY - prevNode.gridY);
+        newEdges.push({
+          fromNodeId: prevNode.id,
+          toNodeId: item.node.id,
+          weight: Math.max(1, segDist),
+          isAccessible: edge.isAccessible,
+        });
+        prevNode = item.node;
+      }
+      const lastDist = Math.hypot(nB.gridX - prevNode.gridX, nB.gridY - prevNode.gridY);
+      newEdges.push({
+        fromNodeId: prevNode.id,
+        toNodeId: nB.id,
+        weight: Math.max(1, lastDist),
+        isAccessible: edge.isAccessible,
+      });
+    }
+  }
+
+  return newEdges;
 }

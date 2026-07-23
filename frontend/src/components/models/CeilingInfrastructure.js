@@ -208,17 +208,7 @@ export function addRoomCeiling(infra, room, template, cx, cz, wM, hM, roomPolygo
 
   // 2. Render Ceiling Plane (flush with wall tops)
   const ceilingGeom = new THREE.PlaneGeometry(wM - 0.02, hM - 0.02);
-  const baseMat = isExposed ? materials.exposedCeilingDeck : materials.ceilingGrid;
-  
-  let activeMat = baseMat;
-  if (!isExposed && baseMat.map) {
-    // Clone texture to scale tile patterns to exact 0.6m repeating increments per room
-    const clonedTex = baseMat.map.clone();
-    clonedTex.repeat.set(wM / 0.6, hM / 0.6);
-    clonedTex.needsUpdate = true;
-    activeMat = baseMat.clone();
-    activeMat.map = clonedTex;
-  }
+  const activeMat = isExposed ? materials.exposedCeilingDeck : materials.ceilingGrid;
 
   const roomCeiling = new THREE.Mesh(ceilingGeom, activeMat);
   roomCeiling.rotation.x = Math.PI / 2;
@@ -557,11 +547,13 @@ export function finalizeCeilingInfrastructure(infra, scene) {
     const instMesh = new THREE.InstancedMesh(geometry, material, list.length);
     instMesh.castShadow = false;
     instMesh.receiveShadow = false;
+    instMesh.matrixAutoUpdate = false;
 
     for (let i = 0; i < list.length; i++) {
       instMesh.setMatrixAt(i, list[i]);
     }
     instMesh.instanceMatrix.needsUpdate = true;
+    instMesh.updateMatrix();
     scene.add(instMesh);
   };
 

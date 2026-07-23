@@ -42,7 +42,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
   const totalDist     = route ? formatDist(route.totalDistanceM)   : "—";
   const floorChanges  = route ? route.floorChanges                 : 0;
   const steps         = route?.steps        ?? [];
-  const pathGridCells = route?.pathGridCells ?? [];
+  const pathGridCells = useMemo(() => route?.pathGridCells ?? [], [route?.pathGridCells]);
 
   return (
     <div className="map-page">

@@ -289,13 +289,24 @@ export function findRoute(
 }
 
 function reconstructPath(cameFrom: Map<string, string>, endId: string): string[] {
-  const path = [endId];
+  const rawPath = [endId];
   let current = endId;
   while (cameFrom.has(current)) {
     current = cameFrom.get(current)!;
-    path.unshift(current);
+    rawPath.unshift(current);
   }
-  return path;
+
+  // Remove any immediate backtrack loops (A -> B -> A)
+  const cleanPath: string[] = [];
+  for (const id of rawPath) {
+    if (cleanPath.length >= 2 && cleanPath[cleanPath.length - 2] === id) {
+      cleanPath.pop(); // Collapses A -> B -> A into A
+    } else if (cleanPath.length === 0 || cleanPath[cleanPath.length - 1] !== id) {
+      cleanPath.push(id);
+    }
+  }
+
+  return cleanPath;
 }
 
 // ─── DIRECTION GENERATOR ─────────────────────────────────────────────────────
@@ -367,11 +378,11 @@ export function buildRouteSteps(
     while (diff < -180) diff += 360;
     const absDiff = Math.abs(diff);
 
-    // Merge if collinear (<= 20) or if the segment is shorter than 2.0 meters
-    if (absDiff <= 20 || seg.length < 2.0) {
+    // Merge if collinear (<= 25°) or if very short non-turning segment (< 1.5m and absDiff < 90°)
+    if (absDiff <= 25 || (seg.length < 1.5 && absDiff < 90)) {
       currentEnd = seg.endCell;
       currentLength += seg.length;
-      if (absDiff <= 20) {
+      if (absDiff <= 25) {
         currentAngle = seg.angle; // Keep tracking angle if collinear
       }
     } else {
