@@ -203,10 +203,15 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mount.appendChild(renderer.domElement);
 
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0xeef1f4, 16, 50);
+    const realWidthM  = floorMap.realWidthM  ?? 73.579;
+    const realHeightM = floorMap.realHeightM ?? 47.611;
 
-    const camera = new THREE.PerspectiveCamera(72, width / height, 0.05, 200);
+    const scene = new THREE.Scene();
+    const fogFar = Math.max(50, Math.max(realWidthM, realHeightM) * 1.5);
+    scene.fog = new THREE.Fog(0xeef1f4, 16, fogFar);
+
+    const cameraFar = Math.max(200, Math.max(realWidthM, realHeightM) * 1.8);
+    const camera = new THREE.PerspectiveCamera(72, width / height, 0.05, cameraFar);
 
     // Initialize shared geometries/materials
     const resources = initSharedResources();
@@ -236,8 +241,6 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     // ── Coordinate helpers ──────────────────────────────────────────────────
     const gridCols = floorMap.gridCols ?? 80;
     const gridRows = floorMap.gridRows ?? 80;
-    const realWidthM  = floorMap.realWidthM  ?? 73.579;
-    const realHeightM = floorMap.realHeightM ?? 47.611;
     const cellSizeX = realWidthM / gridCols;
     const cellSizeZ = realHeightM / gridRows;
 
@@ -266,6 +269,15 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     const isFloor6Or7 = String(floorMap?.level) === "6" || String(floorMap?.level) === "7" || String(floorMap?.level) === "9";
     let destinationPin = null;
     const labelSprites = [];
+
+    console.log("[Walk3D Debug] === START ROOM GENERATION ===");
+    console.log(`[Walk3D Debug] Rooms loaded: ${rooms.length}`);
+    console.log(`[Walk3D Debug] Scene children before room generation: ${scene.children.length}`);
+
+    const templateCounts = {};
+    let roomsRenderedCount = 0;
+    let totalWallMeshes = 0;
+    let totalFurnitureMeshes = 0;
 
     for (const r of rooms) {
       const isDest  = destination?.id === r.id;
@@ -805,6 +817,33 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
       if (roomModel) {
         scene.add(roomModel);
+        roomsRenderedCount++;
+        
+        let roomWalls = 0;
+        let roomFurniture = 0;
+        roomModel.traverse(node => {
+          if (node.isMesh) {
+            const isWall = node.material === materials.wallNormal || 
+                           node.material === materials.wallDest || 
+                           node.material === materials.glass ||
+                           (node.name && node.name.toLowerCase().includes("wall"));
+            if (isWall) {
+              roomWalls++;
+            } else {
+              roomFurniture++;
+            }
+          }
+        });
+        totalWallMeshes += roomWalls;
+        totalFurnitureMeshes += roomFurniture;
+
+        if (r.name === "CEO Cabin" || r.id.includes("ceo-cabin")) {
+          console.log(`[Walk3D Debug] CEO Cabin details: template=${template}, cx=${cx.toFixed(2)}, cz=${cz.toFixed(2)}, wM=${wM.toFixed(2)}, hM=${hM.toFixed(2)}, walls=${roomWalls}, furniture=${roomFurniture}`);
+        }
+      } else {
+        if (r.name === "CEO Cabin" || r.id.includes("ceo-cabin")) {
+          console.log(`[Walk3D Debug] CEO Cabin details: template=${template}, roomModel is NULL!`);
+        }
       }
 
       // Add local point spotlight for warm interior lighting in key landmarks
@@ -832,10 +871,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
           name: r.name
         });
       }
-
       // Add ceiling infrastructure for this room
       addRoomCeiling(ceilingInfra, r, template, cx, cz, wM, hM, roomPolygon, toWorld);
     }
+
+    console.log("[Walk3D Debug] Templates assigned:", JSON.stringify(templateCounts));
+    console.log(`[Walk3D Debug] Rooms rendered: ${roomsRenderedCount}`);
+    console.log(`[Walk3D Debug] Wall meshes created: ${totalWallMeshes}`);
+    console.log(`[Walk3D Debug] Furniture meshes created: ${totalFurnitureMeshes}`);
+    console.log(`[Walk3D Debug] Scene children after room generation: ${scene.children.length}`);
+    console.log("[Walk3D Debug] === END ROOM GENERATION ===");
 
     // Finalize all accumulated instanced ceiling items
     finalizeCeilingInfrastructure(ceilingInfra, scene);
@@ -1101,6 +1146,13 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         camera.lookAt(pos.x + Math.sin(s.yaw), EYE_HEIGHT, pos.z + Math.cos(s.yaw));
         const here = s.progress >= 0.995;
         setArrived(prev => (prev === here ? prev : here));
+      } else if (pathPoints.length === 1) {
+        const p = pathPoints[0];
+        camera.position.set(p.x, EYE_HEIGHT, p.z);
+        camera.lookAt(p.x, EYE_HEIGHT, p.z - 1);
+      } else {
+        camera.position.set(0, EYE_HEIGHT, 0);
+        camera.lookAt(0, EYE_HEIGHT, -1);
       }
 
       renderer.render(scene, camera);

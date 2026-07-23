@@ -29,12 +29,27 @@ export const HUDSON_LAYOUT_FILES: Record<string, string> = {
 
 const boundsCache = new Map<string, ProjectionBounds>();
 
+function resolveDataFilePath(relFile: string): string {
+  const candidates = [
+    path.join(process.cwd(), 'src', 'data', relFile),
+    path.join(process.cwd(), 'backend', 'src', 'data', relFile),
+    path.join(__dirname, '..', 'data', relFile),
+    path.join(__dirname, '..', '..', 'src', 'data', relFile),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return candidates[0];
+}
+
 /**
  * Loads the layout rooms definition from JSON file.
  */
 export function loadHudsonLayoutRooms(layoutFile: string): LayoutRoom[] {
   try {
-    const filePath = path.join(process.cwd(), 'src', 'data', layoutFile);
+    const filePath = resolveDataFilePath(layoutFile);
     if (!fs.existsSync(filePath)) {
       return [];
     }

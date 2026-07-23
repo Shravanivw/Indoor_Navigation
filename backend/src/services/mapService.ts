@@ -67,7 +67,17 @@ export function requiresHudsonProjection(floorId: string): boolean {
 }
 
 function dataPath(name: string): string {
-  return path.join(process.cwd(), 'src', 'data', name);
+  const relName = path.basename(name);
+  const candidates = [
+    path.join(process.cwd(), 'src', 'data', relName),
+    path.join(process.cwd(), 'backend', 'src', 'data', relName),
+    path.join(__dirname, '..', 'data', relName),
+    path.join(__dirname, '..', '..', 'src', 'data', relName),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
 }
 
 function parseGridData(raw: unknown): number[][] {
@@ -111,7 +121,7 @@ function loadNavFloorData(floorId: string): NavFloorData | null {
 
 function loadJsonCandidates<T>(relativePaths: string[]): T | null {
   for (const rel of relativePaths) {
-    const filePath = path.join(process.cwd(), rel);
+    const filePath = dataPath(rel);
     if (!fs.existsSync(filePath)) continue;
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
