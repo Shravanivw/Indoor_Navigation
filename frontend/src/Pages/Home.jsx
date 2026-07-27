@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import LocationPicker, { getBuildingLocation } from "../components/LocationPicker";
 import "../css/Home.css";
 
 const QUICK_FIND_TYPES = [
@@ -34,10 +35,14 @@ const QUICK_FIND_TYPES = [
 
 export default function Home({
   userLocation,
+  selectedLocation,
+  onSelectLocation,
   buildings = [],
   selectedBuildingId,
+  onSelectBuilding,
   floors = [],
   selectedFloorId,
+  onSelectFloor,
   rooms = [],
   onSelectQuick,
   onSelectRecent,
@@ -64,6 +69,7 @@ export default function Home({
 
   const activeBuilding = buildings.find((b) => b.id === selectedBuildingId);
   const activeBuildingName = activeBuilding ? activeBuilding.name : "Hudson";
+  const activeLocation = selectedLocation || (activeBuilding ? getBuildingLocation(activeBuilding) : "Pune");
   const activeFloor = floors.find((f) => f.id === selectedFloorId);
   const activeFloorLevel = activeFloor ? activeFloor.name : "5th Floor";
   const locationName = userLocation ? userLocation.name : "Reception";
@@ -74,9 +80,18 @@ export default function Home({
         <div className="home-location-card">
           <span className="home-location-subtitle">You are at</span>
           <span className="home-location-title">{locationName}</span>
-          <span className="home-location-meta">
-            {activeBuildingName} · {activeFloorLevel}
-          </span>
+          <div className="home-location-meta-selectors" style={{ marginTop: 6 }}>
+            <LocationPicker
+              selectedLocation={activeLocation}
+              onSelectLocation={onSelectLocation}
+              buildings={buildings}
+              buildingId={selectedBuildingId}
+              onSelectBuilding={onSelectBuilding}
+              floors={floors}
+              floorId={selectedFloorId}
+              onSelectFloor={onSelectFloor}
+            />
+          </div>
         </div>
 
         <div className="home-search-bar" onClick={() => goTo("search")}>

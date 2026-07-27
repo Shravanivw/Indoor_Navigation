@@ -3,10 +3,12 @@ import Home from "./Pages/Home";
 import Search from "./Pages/Search";
 import MapView from "./Pages/MapView";
 import BottomNav from "./components/BottomNav";
+import LocationPicker, { getBuildingLocation } from "./components/LocationPicker";
 import "./app.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
 
+const LOCATION_STORAGE_KEY = "indoorNav.location";
 const BUILDING_STORAGE_KEY = "indoorNav.buildingId";
 const RECENTS_KEY          = "indoorNav.recentDestinations";
 const MAX_RECENTS          = 5;
@@ -28,8 +30,9 @@ export default function App() {
   const [routeLoading, setRouteLoading]   = useState(false);
   const [userLocation, setUserLocation]   = useState(null);
 
-  // Multi-building state
+  // Multi-location & Multi-building state
   const [buildings, setBuildings]                   = useState([]);
+  const [selectedLocation, setSelectedLocation]     = useState(() => localStorage.getItem(LOCATION_STORAGE_KEY) || null);
   const [selectedBuildingId, setSelectedBuildingId] = useState(() => localStorage.getItem(BUILDING_STORAGE_KEY) || null);
   const [floors, setFloors]                         = useState([]);
   const [selectedFloorId, setSelectedFloorId]       = useState(null);
@@ -43,15 +46,45 @@ export default function App() {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length) {
           setBuildings(json.data);
-          if (!selectedBuildingId || !json.data.some(b => b.id === selectedBuildingId)) {
-            setSelectedBuildingId(json.data[0].id);
+          let activeB = json.data.find(b => b.id === selectedBuildingId);
+          if (!activeB) {
+            activeB = json.data[0];
+            setSelectedBuildingId(activeB.id);
           }
+          const loc = getBuildingLocation(activeB);
+          setSelectedLocation(loc);
+          localStorage.setItem(LOCATION_STORAGE_KEY, loc);
         }
       } catch (err) {
         console.error("Failed to load buildings:", err);
       }
     })();
   }, []);
+
+  // Location selection handler — automatically selects first building of new location
+  function handleSelectLocation(newLoc) {
+    setSelectedLocation(newLoc);
+    localStorage.setItem(LOCATION_STORAGE_KEY, newLoc);
+    const locBuildings = buildings.filter(b => getBuildingLocation(b) === newLoc);
+    if (locBuildings.length > 0) {
+      if (locBuildings[0].id !== selectedBuildingId) {
+        setSelectedBuildingId(locBuildings[0].id);
+      }
+    }
+  }
+
+  // Building selection handler — automatically syncs active location
+  function handleSelectBuilding(newBuildingId) {
+    setSelectedBuildingId(newBuildingId);
+    const targetBuilding = buildings.find(b => b.id === newBuildingId);
+    if (targetBuilding) {
+      const loc = getBuildingLocation(targetBuilding);
+      if (loc !== selectedLocation) {
+        setSelectedLocation(loc);
+        localStorage.setItem(LOCATION_STORAGE_KEY, loc);
+      }
+    }
+  }
 
   // When building changes: persist, fetch its floors, and reset floor & routing states
   useEffect(() => {
@@ -243,9 +276,11 @@ export default function App() {
             onChangeDestination={setDestination}
             route={route}
             onSelectRoute={setRoute}
+            selectedLocation={selectedLocation}
+            onSelectLocation={handleSelectLocation}
             buildings={buildings}
             selectedBuildingId={selectedBuildingId}
-            onSelectBuilding={setSelectedBuildingId}
+            onSelectBuilding={handleSelectBuilding}
             floors={floors}
             selectedFloorId={selectedFloorId}
             onSelectFloor={setSelectedFloorId}
@@ -261,9 +296,11 @@ export default function App() {
           <Search
             userLocation={userLocation}
             onChangeUserLocation={setUserLocation}
+            selectedLocation={selectedLocation}
+            onSelectLocation={handleSelectLocation}
             buildings={buildings}
             buildingId={selectedBuildingId}
-            onSelectBuilding={setSelectedBuildingId}
+            onSelectBuilding={handleSelectBuilding}
             floors={floors}
             floorId={selectedFloorId}
             onSelectFloor={setSelectedFloorId}
@@ -287,10 +324,12 @@ export default function App() {
             userLocation={userLocation}
             route={route}
             routeLoading={routeLoading}
+            selectedLocation={selectedLocation}
+            onSelectLocation={handleSelectLocation}
             buildings={buildings}
             buildingId={selectedBuildingId}
             selectedFloorId={selectedFloorId}
-            onSelectBuilding={setSelectedBuildingId}
+            onSelectBuilding={handleSelectBuilding}
             onBack={() => goBack("home")}
           />
         )}

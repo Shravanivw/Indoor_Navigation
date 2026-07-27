@@ -25,6 +25,7 @@ export const HUDSON_LAYOUT_FILES: Record<string, string> = {
   'floor-hudson-f6': 'Hudson_6th_Floor.json',
   'floor-hudson-f7': 'Hudson_7th.json',
   'floor-ganges-f9': 'Ganges_9th.json',
+  'floor-jupiter-f1': 'Jupiter.json',
 };
 
 const boundsCache = new Map<string, ProjectionBounds>();

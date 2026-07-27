@@ -19,9 +19,10 @@ async function main() {
     create: {
       id:      'building-ganges',
       name:    'Ganges',
+      location:'Pune',
       address: 'Update with your address',
     },
-    update: { name: 'Ganges' },
+    update: { name: 'Ganges', location: 'Pune' },
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -31,8 +32,8 @@ async function main() {
 
   const hudsonBuilding = await prisma.building.upsert({
     where: { id: 'building-hudson' },
-    create: { id: 'building-hudson', name: 'Hudson', address: 'VWITS Pune' },
-    update: { name: 'Hudson' },
+    create: { id: 'building-hudson', name: 'Hudson', location: 'Pune', address: 'VWITS Pune' },
+    update: { name: 'Hudson', location: 'Pune' },
   });
 
   // Load Hudson geometry and nav data
@@ -151,9 +152,17 @@ async function main() {
   // Seed the manual graph with room nodes connected to corridors
   await seedHudsonManualGraph(prisma);
 
+  // ── Building: Jupiter (Bangalore) ─────────────────────────────────────────
+  const jupiterBuilding = await prisma.building.upsert({
+    where: { id: 'building-jupiter' },
+    create: { id: 'building-jupiter', name: 'Jupiter', location: 'Bangalore', address: 'Bangalore Office - Prestige Tech Park' },
+    update: { name: 'Jupiter', location: 'Bangalore' },
+  });
+
   console.log('\n✓ Database seeded successfully');
   console.log(`  Ganges (${building.name}): Onboarded`);
   console.log(`  Hudson (${hudsonBuilding.name}): ${hudsonRooms.length} rooms; route graph from manualGraph.json with room connections`);
+  console.log(`  Jupiter (${jupiterBuilding.name}): Onboarded from Jupiter.json`);
 }
 
 main()

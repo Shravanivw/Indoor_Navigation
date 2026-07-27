@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import LocationPicker from "../components/LocationPicker";
 import "../css/Search.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
@@ -14,6 +15,8 @@ const CATEGORIES = [
 export default function Search({
   userLocation,
   onChangeUserLocation,
+  selectedLocation,
+  onSelectLocation,
   buildings,
   buildingId,
   onSelectBuilding,
@@ -149,42 +152,16 @@ export default function Search({
         <div className="search-location-card">
           <span className="search-location-subtitle">Searching in</span>
           <div className="search-location-selectors">
-            <div className="search-select-wrapper">
-              <select
-                className="search-inline-select"
-                value={buildingId || ""}
-                onChange={(e) => onSelectBuilding(e.target.value)}
-              >
-                {buildings.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              <svg className="search-select-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 1l4 4 4-4" />
-              </svg>
-            </div>
-
-            <span className="search-location-separator">·</span>
-
-            <div className="search-select-wrapper">
-              <select
-                className="search-inline-select"
-                value={floorId || ""}
-                onChange={(e) => onSelectFloor(e.target.value)}
-              >
-                <option value="">Select Floor</option>
-                {floors.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-              <svg className="search-select-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 1l4 4 4-4" />
-              </svg>
-            </div>
+            <LocationPicker
+              selectedLocation={selectedLocation}
+              onSelectLocation={onSelectLocation}
+              buildings={buildings}
+              buildingId={buildingId}
+              onSelectBuilding={onSelectBuilding}
+              floors={floors}
+              floorId={floorId}
+              onSelectFloor={onSelectFloor}
+            />
           </div>
         </div>
 

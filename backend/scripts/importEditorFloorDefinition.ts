@@ -261,9 +261,11 @@ async function main() {
     create: {
       id: options.buildingId,
       name: options.buildingName,
+      location: getArg('--location', options.buildingId.includes('jupiter') ? 'Bangalore' : 'Pune')!,
     },
     update: {
       name: options.buildingName,
+      location: getArg('--location', options.buildingId.includes('jupiter') ? 'Bangalore' : 'Pune')!,
     },
   });
 

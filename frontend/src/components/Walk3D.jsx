@@ -196,13 +196,19 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     const width  = mount.clientWidth;
     const height = mount.clientHeight;
 
-    const isGangesF9 = String(floorMap?.level) === "9";
+    const isEditorLayoutFloor = 
+      String(floorMap?.level) === "9" || 
+      String(floorMap?.level) === "1" || 
+      String(floorMap?.id)?.includes("jupiter") || 
+      String(floorMap?.id)?.includes("ganges") ||
+      String(floorMap?.buildingId)?.includes("jupiter") ||
+      String(floorMap?.buildingId)?.includes("ganges");
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(width, height);
     renderer.setClearColor(0xeef1f4);
-    renderer.shadowMap.enabled = !isGangesF9;
+    renderer.shadowMap.enabled = !isEditorLayoutFloor;
     renderer.shadowMap.type = THREE.BasicShadowMap;
     mount.appendChild(renderer.domElement);
 
@@ -269,7 +275,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     // ── Rooms & Models ───────────────────────────────────────────────────────
     const rooms = floorMap.rooms ?? [];
-    const isFloor6Or7 = String(floorMap?.level) === "6" || String(floorMap?.level) === "7" || String(floorMap?.level) === "9";
+    const isFloor6Or7 = String(floorMap?.level) === "6" || String(floorMap?.level) === "7" || String(floorMap?.level) === "9" || isEditorLayoutFloor;
     let destinationPin = null;
     const labelSprites = [];
 
@@ -896,8 +902,8 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     // Finalize all accumulated instanced ceiling items
     finalizeCeilingInfrastructure(ceilingInfra, scene);
 
-    // ── Ganges Floor 9 Static Geometry Merger ─────────────────────────────
-    if (isGangesF9) {
+    // ── Editor Floor Static Geometry Merger (Ganges, Jupiter, etc.) ─────────
+    if (isEditorLayoutFloor) {
       scene.updateMatrixWorld(true);
 
       const materialGroups = new Map();
@@ -1202,8 +1208,23 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         camera.position.set(p.x, EYE_HEIGHT, p.z);
         camera.lookAt(p.x, EYE_HEIGHT, p.z - 1);
       } else {
-        camera.position.set(0, EYE_HEIGHT, 0);
-        camera.lookAt(0, EYE_HEIGHT, -1);
+        let spawnX = 0, spawnZ = 0;
+        const initialRoom = userRoom || rooms.find(r => r.type === "RECEPTION" || (r.name ?? "").toLowerCase().includes("reception")) || rooms[0];
+        if (initialRoom) {
+          if (Array.isArray(initialRoom.polygon) && initialRoom.polygon.length >= 3) {
+            const pxs = initialRoom.polygon.map(p => p.x);
+            const pys = initialRoom.polygon.map(p => p.y);
+            const cx = (Math.min(...pxs) + Math.max(...pxs)) / 2;
+            const cy = (Math.min(...pys) + Math.max(...pys)) / 2;
+            const w = toWorld(cx, cy);
+            spawnX = w.x; spawnZ = w.z;
+          } else if (typeof initialRoom.gridX === "number") {
+            const w = toWorld(initialRoom.gridX + (initialRoom.gridW ?? 4)/2, initialRoom.gridY - (initialRoom.gridH ?? 4)/2);
+            spawnX = w.x; spawnZ = w.z;
+          }
+        }
+        camera.position.set(spawnX, EYE_HEIGHT, spawnZ);
+        camera.lookAt(spawnX, EYE_HEIGHT, spawnZ - 1);
       }
 
       renderer.render(scene, camera);
