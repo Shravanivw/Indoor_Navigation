@@ -55,10 +55,6 @@ export async function buildGraphCache(prisma: PrismaClient): Promise<void> {
 
   const nodes = await prisma.node.findMany();
   const edges = await prisma.edge.findMany();
-  console.log(
-    "ALL NODE IDS:",
-    nodes.map(n => n.id)
-  );
 
   const graphNodes: GraphNode[] = nodes.map(n => ({
     id: n.id,

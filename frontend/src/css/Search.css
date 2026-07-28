@@ -64,35 +64,41 @@
 .search-location-selectors {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .location-picker-container {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  flex-wrap: nowrap;
 }
 
 .search-select-wrapper {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  flex: 1 1 0%;
+  min-width: 0;
 }
 
 .search-inline-select {
   appearance: none;
   -webkit-appearance: none;
+  width: 100%;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 8px;
-  padding: 6px 28px 6px 12px;
-  font-size: 14px;
+  padding: 6px 22px 6px 10px;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
   cursor: pointer;
   outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background 150ms, border-color 150ms;
 }
 
@@ -113,15 +119,29 @@
 
 .search-select-arrow {
   position: absolute;
-  right: 10px;
+  right: 8px;
   pointer-events: none;
+  flex-shrink: 0;
 }
 
 .search-location-separator {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 18px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
   font-weight: 500;
   user-select: none;
+  flex-shrink: 0;
+}
+
+@media (max-width: 360px) {
+  .location-picker-container {
+    flex-wrap: wrap;
+  }
+  .search-select-wrapper {
+    flex: 1 1 100%;
+  }
+  .search-location-separator {
+    display: none;
+  }
 }
 
 /* Integrated Search Bar inside teal card */
