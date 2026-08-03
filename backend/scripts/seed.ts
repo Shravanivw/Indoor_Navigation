@@ -10,7 +10,7 @@ const RoomType = { STORAGE:'STORAGE', SERVER_ROOM:'SERVER_ROOM', MEETING_ROOM:'M
 
 const prisma = new PrismaClient();
 
-async function main() {
+export async function main() {
   console.log('Seeding database...');
 
   // ── Building: Ganges ──────────────────────────────────────────────────────

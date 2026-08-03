@@ -56,17 +56,18 @@ type EditorFloorDefinition = {
   };
 };
 
-type ImportOptions = {
+export type ImportOptions = {
   file: string;
   buildingId: string;
   buildingName: string;
+  location?: string;
   floorId: string;
   level: string;
   floorName: string;
-  qrPrefix: string;
-  replaceGraph: boolean;
-  realWidthM: number | null;
-  realHeightM: number | null;
+  qrPrefix?: string;
+  replaceGraph?: boolean;
+  realWidthM?: number | null;
+  realHeightM?: number | null;
 };
 
 const prisma = new PrismaClient();
@@ -240,8 +241,7 @@ function nodeType(node: EditorGraphNode): string {
   return 'WAYPOINT';
 }
 
-async function main() {
-  const options = readOptions();
+export async function runImport(options: ImportOptions) {
   const absoluteFile = path.resolve(options.file);
   const parsed = JSON.parse(fs.readFileSync(absoluteFile, 'utf-8'));
   validateDefinition(parsed);
@@ -256,16 +256,18 @@ async function main() {
   console.log(`Importing ${absoluteFile}`);
   console.log(`  Floor bounds: ${floorBounds.width} x ${floorBounds.height} px`);
 
+  const buildingLoc = options.location ?? getArg('--location', options.buildingId.includes('jupiter') ? 'Bangalore' : 'Pune')!;
+
   const building = await prisma.building.upsert({
     where: { id: options.buildingId },
     create: {
       id: options.buildingId,
       name: options.buildingName,
-      location: getArg('--location', options.buildingId.includes('jupiter') ? 'Bangalore' : 'Pune')!,
+      location: buildingLoc,
     },
     update: {
       name: options.buildingName,
-      location: getArg('--location', options.buildingId.includes('jupiter') ? 'Bangalore' : 'Pune')!,
+      location: buildingLoc,
     },
   });
 
@@ -306,7 +308,7 @@ async function main() {
     },
   });
 
-  if (options.replaceGraph) {
+  if (options.replaceGraph !== false) {
     console.log('  Clearing existing floor graph...');
     await prisma.edge.deleteMany({
       where: {
@@ -337,6 +339,8 @@ async function main() {
     const id = roomDbId(floor.id, room.id);
     const code = `${codeify(options.buildingName)}_${codeify(options.level)}_${codeify(room.id)}`;
 
+    const qrPrefix = options.qrPrefix ?? `LOC-F${codeify(options.level)}`;
+
     await prisma.room.upsert({
       where: { id },
       create: {
@@ -351,7 +355,7 @@ async function main() {
         gridH: Math.round(roomBounds.height),
         centreX: Math.round(centre.x * 100) / 100,
         centreY: Math.round(centre.y * 100) / 100,
-        qrCode: `${options.qrPrefix}-${codeify(room.id)}`,
+        qrCode: `${qrPrefix}-${codeify(room.id)}`,
         isAccessible: true,
       },
       update: {
@@ -559,9 +563,11 @@ async function main() {
   console.log(`  Edges:    ${parsed.graph.edges.length} graph + ${syntheticDoorCount} synthetic door connectors`);
 }
 
-main()
-  .catch(error => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+if (require.main === module) {
+  runImport(readOptions())
+    .catch(error => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node scripts/seed.ts",
+    "db:setup": "npx prisma db push --skip-generate && ts-node scripts/seed_all.ts",
     "import:editor": "ts-node scripts/importEditorFloorDefinition.ts",
     "parse:dwg": "ts-node scripts/parseDxf.ts",
     "lint": "eslint src --ext .ts"
