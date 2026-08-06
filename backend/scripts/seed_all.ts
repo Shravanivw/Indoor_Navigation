@@ -62,6 +62,16 @@ async function seedAll() {
       floorName: '1st Floor',
       qrPrefix: 'LOC-F1',
     },
+    {
+      file: path.join(dataDir, 'Gravity.json'),
+      buildingId: 'building-gravity',
+      buildingName: 'Gravity',
+      location: 'Bangalore',
+      floorId: 'floor-gravity-f1',
+      level: '1',
+      floorName: '1st Floor',
+      qrPrefix: 'LOC-GRAV-F1',
+    },
   ];
 
   console.log('Importing All Floor Definitions across Pune & Bangalore...\n');

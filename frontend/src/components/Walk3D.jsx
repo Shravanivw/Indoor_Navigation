@@ -181,7 +181,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
   const speedMulRef = useRef(1);
   const pausedRef   = useRef(false);
-  
+
   useEffect(() => { speedMulRef.current = speedMul; }, [speedMul]);
   useEffect(() => { pausedRef.current   = paused;   }, [paused]);
 
@@ -201,8 +201,10 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       String(floorMap?.level) === "1" || 
       String(floorMap?.id)?.includes("jupiter") || 
       String(floorMap?.id)?.includes("ganges") ||
+      String(floorMap?.id)?.includes("gravity") ||
       String(floorMap?.buildingId)?.includes("jupiter") ||
-      String(floorMap?.buildingId)?.includes("ganges");
+      String(floorMap?.buildingId)?.includes("ganges") ||
+      String(floorMap?.buildingId)?.includes("gravity");
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -1200,7 +1202,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         else { const k = 1 - Math.exp(-6*dt); s.yaw = lerpAngle(s.yaw, targetYaw, k); }
 
         camera.position.set(pos.x, EYE_HEIGHT, pos.z);
-        camera.lookAt(pos.x + Math.sin(s.yaw), EYE_HEIGHT, pos.z + Math.cos(s.yaw));
+        camera.lookAt(pos.x + Math.sin(s.yaw) * 3, EYE_HEIGHT, pos.z + Math.cos(s.yaw) * 3);
         const here = s.progress >= 0.995;
         setArrived(prev => (prev === here ? prev : here));
       } else if (pathPoints.length === 1) {
@@ -1291,31 +1293,53 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
   const hasPath = pathGridCells.length >= 2;
 
   return (
-    <div className="walk3d-wrap" onClick={togglePaused}>
+    <div className="walk3d-wrap" onClick={togglePaused} style={{ cursor: "pointer" }}>
       <div ref={mountRef} className="walk3d-mount" />
+
+      {/* Speed Control Button Overlay */}
+      {hasPath && (
+        <div style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          zIndex: 10,
+          pointerEvents: "auto"
+        }}>
+          <button
+            type="button"
+            style={{
+              padding: "6px 14px",
+              borderRadius: 20,
+              border: "none",
+              background: "rgba(15, 23, 42, 0.82)",
+              backdropFilter: "blur(8px)",
+              color: "#ffffff",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer"
+            }}
+            onClick={e => { e.stopPropagation(); cycleSpeed(); }}
+          >
+            {speedMul}× Speed
+          </button>
+        </div>
+      )}
+
+
 
       {!hasPath && (
         <div className="walk3d-hint">Pick a destination to walk through it in 3D.</div>
       )}
+
       {arrived && (
-        <div className="walk3d-arrived">You've arrived at {destination?.name || "your destination"} </div>
+        <div className="walk3d-arrived">You've arrived at {destination?.name || "your destination"} 🎯</div>
       )}
+
       {hasPath && (
         <div className="walk3d-progress" aria-label="Progress along route">
           <div className="walk3d-progress-fill" style={{ width: `${progressPct}%` }} />
           <div className="walk3d-progress-label">{progressPct}%</div>
         </div>
-      )}
-      {hasPath && (
-        <button
-          type="button"
-          className="walk3d-speed"
-          onClick={e => { e.stopPropagation(); cycleSpeed(); }}
-          aria-label={`Walk speed ${speedMul}x. Click to change.`}
-          title="Change walk speed"
-        >
-          {speedMul}× Speed
-        </button>
       )}
     </div>
   );

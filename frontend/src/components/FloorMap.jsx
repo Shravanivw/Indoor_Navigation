@@ -116,6 +116,7 @@ export default function FloorMap({
   graphEdges = [],
   gridCols = 80,
   gridRows = 80,
+  onSelectRoom,
 }) {
   console.log("GRAPH NODES:", graphNodes.length);
   console.log("GRAPH EDGES:", graphEdges.length);
@@ -246,6 +247,121 @@ export default function FloorMap({
   const zoomOut   = () => { const c = containerRef.current?.getBoundingClientRect(); zoomAt(0.8,  (c?.width ?? 0) / 2, (c?.height ?? 0) / 2); };
   const zoomReset = () => commit(0, 0, 1);
 
+  /* ─── Canvas ────────────────────────────────────────────────────────────── */
+  const PAD    = 16;
+  const innerW = SVG_W - PAD * 2;
+  const innerH = SVG_H - PAD * 2;
+
+  /* Room coordinates come from the database grid (0–gridCols, 0–gridRows).
+     Use gx/gy for rooms. */
+  const sx = innerW / gridCols;
+  const sy = innerH / gridRows;
+  // Flip Y axis so the map reads bottom-to-top (user's position appears at
+  // the bottom, destination ahead — matches how navigation apps feel on phone)
+  const gx = (g) => PAD + g * sx;
+  const gy = (g) => PAD + (gridRows - g) * sy;
+
+  const px = (v) => PAD + v * sx;
+  const py = (v) => PAD + (gridRows - v) * sy;
+
+  /* ─── Path geometry ────────────────────────────────────────────────────── */
+  const hasPath = pathGridCells.length > 1;
+  const polylinePoints = hasPath
+    ? pathGridCells.map(p => `${px(p.x)},${py(p.y)}`).join(" ")
+    : null;
+  const startPoint = pathGridCells[0];
+  const endPoint   = pathGridCells[pathGridCells.length - 1];
+
+  const startPointCoords = useMemo(() => {
+    if (startPoint) return { x: px(startPoint.x), y: py(startPoint.y) };
+    if (userLocation) {
+      if (hasPolygonGeometry(userLocation)) {
+        const pts = userLocation.polygon.map(p => ({ x: gx(p.x), y: gy(p.y) }));
+        return getPolygonLabelAnchor(pts);
+      }
+      return {
+        x: gx((userLocation.gridX ?? 0) + (userLocation.gridW ?? 4) / 2),
+        y: gy((userLocation.gridY ?? 0) + (userLocation.gridH ?? 4) / 2),
+      };
+    }
+    return null;
+  }, [startPoint, userLocation, gridCols, gridRows]);
+
+  const endPointCoords = useMemo(() => {
+    if (endPoint) return { x: px(endPoint.x), y: py(endPoint.y) };
+    if (destination) {
+      if (hasPolygonGeometry(destination)) {
+        const pts = destination.polygon.map(p => ({ x: gx(p.x), y: gy(p.y) }));
+        return getPolygonLabelAnchor(pts);
+      }
+      return {
+        x: gx((destination.gridX ?? 0) + (destination.gridW ?? 4) / 2),
+        y: gy((destination.gridY ?? 0) + (destination.gridH ?? 4) / 2),
+      };
+    }
+    return null;
+  }, [endPoint, destination, gridCols, gridRows]);
+
+  // Auto-fit camera viewBox to route or selected destination on change (unlocked manual pan/zoom preserved)
+  const lastFittedRouteRef = useRef(null);
+
+  useEffect(() => {
+    const routeKey = hasPath && pathGridCells.length > 0
+      ? `path-${pathGridCells.length}-${pathGridCells[0].x}-${pathGridCells[0].y}-${pathGridCells[pathGridCells.length - 1].x}-${pathGridCells[pathGridCells.length - 1].y}`
+      : destination
+      ? `dest-${destination.id}`
+      : "overview";
+
+    if (lastFittedRouteRef.current === routeKey) return;
+    lastFittedRouteRef.current = routeKey;
+
+    if (hasPath && pathGridCells.length > 0) {
+      const xs = pathGridCells.map(p => px(p.x));
+      const ys = pathGridCells.map(p => py(p.y));
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+
+      const routeW = Math.max(50, maxX - minX);
+      const routeH = Math.max(50, maxY - minY);
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+
+      const padding = 55;
+      const zX = SVG_W / (routeW + padding * 2);
+      const zY = SVG_H / (routeH + padding * 2);
+      const fitZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.min(zX, zY)));
+
+      const vx = cx - (SVG_W / fitZoom) / 2;
+      const vy = cy - (SVG_H / fitZoom) / 2;
+
+      commit(vx, vy, fitZoom);
+    } else if (destination || userLocation) {
+      const focusTarget = destination || userLocation;
+      let targetX = SVG_W / 2;
+      let targetY = SVG_H / 2;
+
+      if (hasPolygonGeometry(focusTarget)) {
+        const pts = focusTarget.polygon.map(p => ({ x: gx(p.x), y: gy(p.y) }));
+        const anchor = getPolygonLabelAnchor(pts);
+        targetX = anchor.x;
+        targetY = anchor.y;
+      } else if (typeof focusTarget.gridX === "number") {
+        targetX = gx((focusTarget.gridX ?? 0) + (focusTarget.gridW ?? 4) / 2);
+        targetY = gy((focusTarget.gridY ?? 0) + (focusTarget.gridH ?? 4) / 2);
+      }
+
+      const focusZoom = 1.8;
+      const vx = targetX - (SVG_W / focusZoom) / 2;
+      const vy = targetY - (SVG_H / focusZoom) / 2;
+
+      commit(vx, vy, focusZoom);
+    } else {
+      commit(0, 0, 1);
+    }
+  }, [pathGridCells, destination, userLocation, gridCols, gridRows]);
+
   /* Non-passive wheel: ctrlKey = trackpad pinch → zoom; else → pan */
   useEffect(() => {
     const el = containerRef.current;
@@ -302,31 +418,6 @@ export default function FloorMap({
     if (pointersRef.current.size < 2) lastPinchRef.current = null;
     try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* ignore */ }
   };
-
-  /* ─── Canvas ────────────────────────────────────────────────────────────── */
-  const PAD    = 16;
-  const innerW = SVG_W - PAD * 2;
-  const innerH = SVG_H - PAD * 2;
-
-  /* Room coordinates come from the database grid (0–gridCols, 0–gridRows).
-     Use gx/gy for rooms. */
-  const sx = innerW / gridCols;
-  const sy = innerH / gridRows;
-  // Flip Y axis so the map reads bottom-to-top (user's position appears at
-  // the bottom, destination ahead — matches how navigation apps feel on phone)
-  const gx = (g) => PAD + g * sx;
-  const gy = (g) => PAD + (gridRows - g) * sy;
-
-  const px = (v) => PAD + v * sx;
-  const py = (v) => PAD + (gridRows - v) * sy;
-
-  /* ─── Path geometry ────────────────────────────────────────────────────── */
-  const hasPath = pathGridCells.length > 1;
-  const polylinePoints = hasPath
-    ? pathGridCells.map(p => `${px(p.x)},${py(p.y)}`).join(" ")
-    : null;
-  const startPoint = pathGridCells[0];
-  const endPoint   = pathGridCells[pathGridCells.length - 1];
 
   /* ─── Render ─────────────────────────────────────────────────────── */
   return (
@@ -711,14 +802,14 @@ export default function FloorMap({
         )}
 
         {/* Source marker — "You" with pulse */}
-        {startPoint && (
+        {startPointCoords && (
           <g>
-            <circle cx={px(startPoint.x)} cy={py(startPoint.y)} r="16" fill="url(#pulse-grad)">
+            <circle cx={startPointCoords.x} cy={startPointCoords.y} r="16" fill="url(#pulse-grad)">
               <animate attributeName="r" values="10;20;10" dur="2s" repeatCount="indefinite"/>
               <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite"/>
             </circle>
             <circle
-              cx={px(startPoint.x)} cy={py(startPoint.y)}
+              cx={startPointCoords.x} cy={startPointCoords.y}
               r="8"
               fill="#FFFFFF"
               stroke="#1E5FB8"
@@ -726,14 +817,14 @@ export default function FloorMap({
               filter="url(#card-shadow)"
             />
             <circle
-              cx={px(startPoint.x)} cy={py(startPoint.y)}
+              cx={startPointCoords.x} cy={startPointCoords.y}
               r="3.5"
               fill="#1E5FB8"
             />
             {userLocation?.name && (
               <NameLabel
-                x={px(startPoint.x)}
-                y={py(startPoint.y) - 12}
+                x={startPointCoords.x}
+                y={startPointCoords.y - 12}
                 text={userLocation.name}
                 bg="#1E5FB8"
                 fg="#FFFFFF"
@@ -744,10 +835,10 @@ export default function FloorMap({
         )}
 
         {/* Destination marker — pin */}
-        {endPoint && endPoint !== startPoint && (
+        {endPointCoords && (
           <g>
             <g
-              transform={`translate(${px(endPoint.x)}, ${py(endPoint.y)})`}
+              transform={`translate(${endPointCoords.x}, ${endPointCoords.y})`}
               filter="url(#card-shadow)"
             >
               <path
@@ -760,8 +851,8 @@ export default function FloorMap({
             </g>
             {destination?.name && (
               <NameLabel
-                x={px(endPoint.x)}
-                y={py(endPoint.y) - 20}
+                x={endPointCoords.x}
+                y={endPointCoords.y - 20}
                 text={destination.name}
                 bg="#2E7D32"
                 fg="#FFFFFF"

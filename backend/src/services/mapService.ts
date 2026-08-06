@@ -54,6 +54,7 @@ const FLOOR_DATA_MAP: Record<string, { clean: string; nav?: string }> = {
   'floor-hudson-f6':  { clean: 'floor_hudson_6th_clean.json', nav: 'nav_hudson_f6.json' },
   'floor-hudson-f7':  { clean: 'floor_hudson_7th_clean.json', nav: 'nav_hudson_f7.json' },
   'floor-jupiter-f1': { clean: 'floor_jupiter_clean.json', nav: 'nav_jupiter_f1.json' },
+  'floor-gravity-f1': { clean: 'Gravity.json' },
 };
 
 export const HUDSON_LAYOUT_FLOORS = [
@@ -61,7 +62,8 @@ export const HUDSON_LAYOUT_FLOORS = [
   'floor-hudson-f6',
   'floor-hudson-f7',
   'floor-ganges-f9',
-  'floor-jupiter-f1'
+  'floor-jupiter-f1',
+  'floor-gravity-f1'
 ];
 
 export function requiresHudsonProjection(floorId: string): boolean {
@@ -294,8 +296,9 @@ export async function getFloorMap(
   const grid = parsedGrid.length > 0
     ? parsedGrid
     : navFloorData?.grid ?? loadFallbackGrid(floor.id);
-  const gridRows = navFloorData?.gridRows ?? floor.gridRows ?? grid.length ?? 50;
-  const gridCols = navFloorData?.gridCols ?? floor.gridCols ?? grid[0]?.length ?? 50;
+  const isHudson = requiresHudsonProjection(floor.id);
+  const gridRows = isHudson ? 80 : (navFloorData?.gridRows ?? floor.gridRows ?? grid.length ?? 50);
+  const gridCols = isHudson ? 80 : (navFloorData?.gridCols ?? floor.gridCols ?? grid[0]?.length ?? 50);
 
   if (requiresHudsonProjection(floor.id)) {
     rooms = projectHudsonLayoutRooms(

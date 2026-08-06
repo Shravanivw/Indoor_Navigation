@@ -12,7 +12,7 @@ function formatDist(metres) {
   return `${Math.round(metres)} m`;
 }
 
-export default function MapView({ destination, userLocation, route, routeLoading, buildings, buildingId, selectedFloorId, onSelectBuilding, onBack }) {
+export default function MapView({ destination, userLocation, route, routeLoading, buildings, buildingId, selectedFloorId, onSelectBuilding, onSelectRoom, onBack }) {
   const [mapData, setMapData]   = useState(null);
   const [view3D, setView3D]     = useState(false);
 
@@ -74,6 +74,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
             gridRows={mapData?.gridRows ?? 80}
             graphNodes={mapData?.nodes ?? []}
             graphEdges={mapData?.edges ?? []}
+            onSelectRoom={onSelectRoom}
           />
         )}
 

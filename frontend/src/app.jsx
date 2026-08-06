@@ -330,6 +330,7 @@ export default function App() {
             buildingId={selectedBuildingId}
             selectedFloorId={selectedFloorId}
             onSelectBuilding={handleSelectBuilding}
+            onSelectRoom={selectDestinationWithRoute}
             onBack={() => goBack("home")}
           />
         )}

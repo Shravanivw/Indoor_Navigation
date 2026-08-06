@@ -9,7 +9,7 @@ export function getBuildingLocation(building) {
   if (!building) return "Pune";
   if (building.location) return building.location;
   const lower = (building.name || building.id || "").toLowerCase();
-  if (lower.includes("jupiter") || lower.includes("bangalore")) return "Bangalore";
+  if (lower.includes("jupiter") || lower.includes("gravity") || lower.includes("bangalore")) return "Bangalore";
   return "Pune";
 }
 
