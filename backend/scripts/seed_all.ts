@@ -89,10 +89,13 @@ async function seedAll() {
     });
   }
 
-  // Calibrate physical dimensions for Jupiter 1st Floor
-  console.log('\nCalibrating physical dimensions for Jupiter 1st Floor...');
+  // Calibrate physical dimensions for Jupiter 1st Floor & Gravity 1st Floor
+  console.log('\nCalibrating physical dimensions for Jupiter 1st Floor & Gravity 1st Floor...');
   await prisma.$executeRawUnsafe(
     "UPDATE floors SET realWidthM = 72.025, realHeightM = 36.200, widthM = 72.025, heightM = 36.200, scaleX = 0.9003, scaleY = 0.4525 WHERE id = 'floor-jupiter-f1'"
+  );
+  await prisma.$executeRawUnsafe(
+    "UPDATE floors SET realWidthM = 60.030, realHeightM = 32.870, widthM = 60.030, heightM = 32.870, scaleX = 0.7504, scaleY = 0.4109 WHERE id = 'floor-gravity-f1'"
   );
 
   console.log('\n====================================================');
