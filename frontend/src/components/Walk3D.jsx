@@ -158,7 +158,7 @@ function getWallParams(room, standardParams) {
   return standardParams;
 }
 
-export default function Walk3D({ floorMap, pathGridCells = [], destination, userRoom, livePosition = null }) {
+export default function Walk3D({ floorMap, pathGridCells = [], destination, userRoom, livePosition = null, onCameraHeadingChange }) {
   const mountRef = useRef(null);
   const livePosRef = useRef(livePosition);
   useEffect(() => { livePosRef.current = livePosition; }, [livePosition]);
@@ -1227,6 +1227,14 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
         }
         camera.position.set(spawnX, EYE_HEIGHT, spawnZ);
         camera.lookAt(spawnX, EYE_HEIGHT, spawnZ - 1);
+      }
+
+      if (typeof onCameraHeadingChange === "function") {
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        let camDeg = (Math.atan2(dir.x, -dir.z) * 180) / Math.PI;
+        if (camDeg < 0) camDeg += 360;
+        onCameraHeadingChange(Math.round(camDeg));
       }
 
       renderer.render(scene, camera);

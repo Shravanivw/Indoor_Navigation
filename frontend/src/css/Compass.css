@@ -1,0 +1,165 @@
+/* ==========================================================================
+   Compass.css — Google Maps / Apple Maps Floating Orientation Indicator
+   ========================================================================== */
+
+.nav-indicator-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+  z-index: 95;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+}
+
+/* Floating Circular Button Container */
+.nav-indicator-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 50%;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+}
+
+.nav-indicator-btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.nav-indicator-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsive Desktop Sizing (36px - 44px) */
+.nav-size-sm .nav-indicator-btn {
+  width: 36px;
+  height: 36px;
+}
+
+.nav-size-md .nav-indicator-btn {
+  width: 40px;
+  height: 40px;
+}
+
+.nav-size-lg .nav-indicator-btn {
+  width: 44px;
+  height: 44px;
+}
+
+/* Subtle Red North Tick Mark at Top Edge (0° North Position) */
+.nav-north-tick {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 5px;
+  background: #ef4444;
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+  z-index: 2;
+}
+
+.nav-size-sm .nav-north-tick {
+  top: 2px;
+  width: 2.5px;
+  height: 4px;
+}
+
+/* Rotating Navigation Arrow Dial */
+.nav-arrow-dial {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.nav-size-sm .nav-arrow-dial {
+  width: 17px;
+  height: 17px;
+}
+
+.nav-size-lg .nav-arrow-dial {
+  width: 22px;
+  height: 22px;
+}
+
+.nav-arrow-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+/* Live Sensor Active Indicator Dot */
+.nav-sensor-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  background: #0284c7;
+  border: 1px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
+}
+
+.sensor-active .nav-indicator-btn {
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+/* iOS Permission Prompt Badge */
+.nav-perm-badge {
+  margin-top: 4px;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #0284c7;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(2, 132, 199, 0.3);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease;
+}
+
+.nav-perm-badge:hover {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.nav-mode-label {
+  margin-top: 2px;
+  font-size: 8px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Responsive Adaptations (Mobile 44px - 48px)
+   ========================================================================== */
+@media (max-width: 640px) {
+  .nav-size-md .nav-indicator-btn {
+    width: 46px;
+    height: 46px;
+  }
+}

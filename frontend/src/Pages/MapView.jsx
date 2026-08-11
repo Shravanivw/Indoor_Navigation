@@ -1,7 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import TopBar from "../components/TopBar";
 import FloorMap from "../components/FloorMap";
 import Walk3D from "../components/Walk3D";
+import Compass from "../components/Compass";
+import useDeviceOrientation from "../hooks/useDeviceOrientation";
+import { enrichStepsWithOrientation } from "../utils/orientationUtils";
 import "../css/MapView.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001/api/v1";
@@ -13,10 +16,26 @@ function formatDist(metres) {
 }
 
 export default function MapView({ destination, userLocation, route, routeLoading, buildings, buildingId, selectedFloorId, onSelectBuilding, onSelectRoom, onBack }) {
-  const [mapData, setMapData]   = useState(null);
-  const [view3D, setView3D]     = useState(false);
+  const [mapData, setMapData]             = useState(null);
+  const [view3D, setView3D]               = useState(false);
+  const [cameraHeading, setCameraHeading] = useState(0);
 
   const floorId = selectedFloorId ?? destination?.floor?.id ?? userLocation?.floor?.id ?? DEFAULT_FLOOR_ID;
+
+  // Track mobile device physical orientation sensors with desktop fallback
+  const {
+    heading: sensorHeading,
+    isSensorActive,
+    isPermissionRequired,
+    permissionGranted,
+    requestPermission,
+  } = useDeviceOrientation({
+    enabled: true,
+    fallbackHeading: view3D ? cameraHeading : 0,
+  });
+
+  // Effective compass heading: uses physical phone sensor when active, or falls back to desktop map/camera heading
+  const activeHeading = isSensorActive ? sensorHeading : (view3D ? cameraHeading : 0);
 
   // Fetch real floor map from backend
   useEffect(() => {
@@ -41,8 +60,20 @@ export default function MapView({ destination, userLocation, route, routeLoading
 
   const totalDist     = route ? formatDist(route.totalDistanceM)   : "—";
   const floorChanges  = route ? route.floorChanges                 : 0;
-  const steps         = route?.steps        ?? [];
+  const rawSteps      = route?.steps ?? [];
+
+  // Enrich steps with cardinal orientation headings (North, East, South, West)
+  const steps = useMemo(() => {
+    return enrichStepsWithOrientation(rawSteps, {
+      userHeading: isSensorActive ? sensorHeading : null,
+    });
+  }, [rawSteps, isSensorActive, sensorHeading]);
+
   const pathGridCells = useMemo(() => route?.pathGridCells ?? [], [route?.pathGridCells]);
+
+  const handleCameraHeading = useCallback((deg) => {
+    setCameraHeading(deg);
+  }, []);
 
   return (
     <div className="map-page">
@@ -52,6 +83,19 @@ export default function MapView({ destination, userLocation, route, routeLoading
         onBack={onBack}
       />
       <div className="map-canvas">
+        {/* Top-Right Google Maps Style Orientation Indicator Overlay (positioned below Zoom controls in 2D & Speed button in 3D) */}
+        <div style={{ position: "absolute", top: view3D ? 50 : 108, right: 12, zIndex: 30, transition: "top 0.2s ease" }}>
+          <Compass
+            heading={activeHeading}
+            isSensorActive={isSensorActive}
+            isPermissionRequired={isPermissionRequired}
+            permissionGranted={permissionGranted}
+            onRequestPermission={requestPermission}
+            onResetOrientation={() => setCameraHeading(0)}
+            size="md"
+          />
+        </div>
+
         {/* Bird's eye / 3D walkthrough render branch */}
         {view3D ? (
           <Walk3D
@@ -60,6 +104,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
             pathGridCells={pathGridCells}
             userRoom={userLocation}
             livePosition={null}
+            onCameraHeadingChange={handleCameraHeading}
           />
         ) : (
           <FloorMap
@@ -68,7 +113,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
             pathGridCells={pathGridCells}
             pathNodeIds={route?.pathNodeIds ?? []}
             livePosition={null}
-            heading={null}
+            heading={activeHeading}
             rooms={mapData?.rooms ?? []}
             gridCols={mapData?.gridCols ?? 80}
             gridRows={mapData?.gridRows ?? 80}
@@ -88,8 +133,6 @@ export default function MapView({ destination, userLocation, route, routeLoading
         >
           {view3D ? "Bird's eye" : "3D walk"}
         </button>
-
-        {/* Live tracking toggle (dead-reckoning via phone sensors) */}
       </div>
 
       <div className="route-sheet">
@@ -139,7 +182,7 @@ export default function MapView({ destination, userLocation, route, routeLoading
                   <div key={i} className="route-step">
                     <div className="step-num">{i + 1}</div>
                     <div>
-                      <div className="step-text">{s.instruction}</div>
+                      <div className="step-text">{s.orientationInstruction || s.instruction}</div>
                       {s.distanceM > 0 && (
                         <div className="step-dist">{formatDist(s.distanceM)}</div>
                       )}

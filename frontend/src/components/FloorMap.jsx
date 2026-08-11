@@ -886,14 +886,7 @@ export default function FloorMap({
         <div className="map-floor-pill active">G</div>
       </div>
 
-      {/* Debug toggle */}
-      <button
-        type="button"
-        className={`map-debug-toggle ${debugMode ? 'active' : ''}`}
-        onClick={toggleDebugMode}
-      >
-        {debugMode ? "Disable Debug" : "Enable Debug"}
-      </button>
+
 
       <div className="map-zoom">
         <button
