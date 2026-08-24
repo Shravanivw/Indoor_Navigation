@@ -199,12 +199,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     const isEditorLayoutFloor = 
       String(floorMap?.level) === "9" || 
       String(floorMap?.level) === "1" || 
-      String(floorMap?.id)?.includes("jupiter") || 
-      String(floorMap?.id)?.includes("ganges") ||
-      String(floorMap?.id)?.includes("gravity") ||
-      String(floorMap?.buildingId)?.includes("jupiter") ||
-      String(floorMap?.buildingId)?.includes("ganges") ||
-      String(floorMap?.buildingId)?.includes("gravity");
+      String(floorMap?.level) === "3" || 
+      String(floorMap?.id)?.toLowerCase().includes("jupiter") || 
+      String(floorMap?.id)?.toLowerCase().includes("ganges") ||
+      String(floorMap?.id)?.toLowerCase().includes("gravity") ||
+      String(floorMap?.id)?.toLowerCase().includes("gurugram") ||
+      String(floorMap?.buildingId)?.toLowerCase().includes("jupiter") ||
+      String(floorMap?.buildingId)?.toLowerCase().includes("ganges") ||
+      String(floorMap?.buildingId)?.toLowerCase().includes("gravity") ||
+      String(floorMap?.buildingId)?.toLowerCase().includes("gurugram") ||
+      Boolean(floorMap?.rooms?.some(r => Array.isArray(r.polygon) && r.polygon.length >= 3));
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -214,8 +218,15 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     renderer.shadowMap.type = THREE.BasicShadowMap;
     mount.appendChild(renderer.domElement);
 
-    const realWidthM  = floorMap.realWidthM  ?? 73.579;
-    const realHeightM = floorMap.realHeightM ?? 47.611;
+    let realWidthM  = Number(floorMap.realWidthM ?? floorMap.widthM)  || 73.579;
+    let realHeightM = Number(floorMap.realHeightM ?? floorMap.heightM) || 47.611;
+    // Safeguard against uncalibrated/raw pixel bounds or NaN
+    if (!isFinite(realWidthM) || realWidthM <= 0 || realWidthM > 150) {
+      realWidthM = 75.0;
+    }
+    if (!isFinite(realHeightM) || realHeightM <= 0 || realHeightM > 150) {
+      realHeightM = 48.0;
+    }
 
     const scene = new THREE.Scene();
     const fogFar = Math.max(50, Math.max(realWidthM, realHeightM) * 1.5);
@@ -250,19 +261,34 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     scene.add(new THREE.HemisphereLight(0xffffff, 0xb8ccd1, 0.5));
 
     // ── Coordinate helpers ──────────────────────────────────────────────────
-    const gridCols = floorMap.gridCols ?? 80;
-    const gridRows = floorMap.gridRows ?? 80;
+    const gridCols = Number(floorMap.gridCols) || 80;
+    const gridRows = Number(floorMap.gridRows) || 80;
     const cellSizeX = realWidthM / gridCols;
     const cellSizeZ = realHeightM / gridRows;
 
-    const toWorld = (gx, gy) => ({
-      x: (gx - gridCols / 2) * cellSizeX,
-      z: (gridRows / 2 - gy) * cellSizeZ,
-    });
+    const toWorld = (gx, gy) => {
+      const validGx = isFinite(gx) ? gx : gridCols / 2;
+      const validGy = isFinite(gy) ? gy : gridRows / 2;
+      return {
+        x: (validGx - gridCols / 2) * cellSizeX,
+        z: (gridRows / 2 - validGy) * cellSizeZ,
+      };
+    };
 
     const widthM3d  = realWidthM;
     const heightM3d = realHeightM;
-    const normPath = pathGridCells;
+
+    // Validate path cells and filter out non-finite/duplicate points
+    const validCells = (Array.isArray(pathGridCells) ? pathGridCells : []).filter(
+      c => c && typeof c.x === "number" && typeof c.y === "number" && isFinite(c.x) && isFinite(c.y)
+    );
+    const normPath = [];
+    for (let i = 0; i < validCells.length; i++) {
+      const c = validCells[i];
+      if (normPath.length === 0 || normPath[normPath.length - 1].x !== c.x || normPath[normPath.length - 1].y !== c.y) {
+        normPath.push(c);
+      }
+    }
 
     // Floor (corridor texture as the backing default)
     const floorMesh = new THREE.Mesh(
@@ -1047,15 +1073,16 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
 
     const cumDist = [0];
     for (let i = 1; i < pathPoints.length; i++) {
-      cumDist.push(cumDist[i-1] + pathPoints[i].distanceTo(pathPoints[i-1]));
+      const d = pathPoints[i].distanceTo(pathPoints[i-1]);
+      cumDist.push(cumDist[i-1] + (isFinite(d) ? d : 0));
     }
-    const pathLengthM = cumDist[cumDist.length-1] || 1;
+    const pathLengthM = Math.max(0.1, cumDist[cumDist.length-1] || 1);
     stateRef.current.cumDist     = cumDist;
     stateRef.current.pathLengthM = pathLengthM;
 
     if (pathPoints.length >= 1) {
       // Configure chevrons repeat count relative to length
-      const arrowTex = resources.textures.arrowTex;
+      const arrowTex = resources.textures?.arrowTex;
       if (arrowTex) {
         arrowTex.repeat.set(pathLengthM * 1.5, 1);
       }
@@ -1064,13 +1091,17 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       if (pathPoints.length >= 2) {
         const curve = new THREE.CurvePath();
         for (let i = 1; i < pathPoints.length; i++) {
-          curve.add(new THREE.LineCurve3(pathPoints[i-1], pathPoints[i]));
+          if (pathPoints[i].distanceTo(pathPoints[i-1]) > 0.001) {
+            curve.add(new THREE.LineCurve3(pathPoints[i-1], pathPoints[i]));
+          }
         }
-        const tube = new THREE.Mesh(
-          new THREE.TubeGeometry(curve, Math.max(10, pathPoints.length * 2), 0.16, 8, false),
-          materials.pathArrows
-        );
-        scene.add(tube);
+        if (curve.curves.length > 0) {
+          const tube = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, Math.max(10, pathPoints.length * 2), 0.16, 8, false),
+            materials.pathArrows
+          );
+          scene.add(tube);
+        }
       }
 
       // User starting position dot (blue)
@@ -1096,11 +1127,13 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     }
 
     function sampleAt(progress) {
-      const target = Math.max(0, Math.min(1, progress)) * pathLengthM;
+      if (pathPoints.length === 0) return { pos: new THREE.Vector3(), yaw: 0 };
+      if (pathPoints.length === 1) return { pos: pathPoints[0], yaw: 0 };
+      const target = Math.max(0, Math.min(1, isFinite(progress) ? progress : 0)) * pathLengthM;
       for (let i = 1; i < cumDist.length; i++) {
         if (cumDist[i] >= target) {
           const segLen = cumDist[i] - cumDist[i-1] || 1;
-          const t = (target - cumDist[i-1]) / segLen;
+          const t = Math.max(0, Math.min(1, (target - cumDist[i-1]) / segLen));
           const p = pathPoints[i-1].clone().lerp(pathPoints[i], t);
           const dir = pathPoints[i].clone().sub(pathPoints[i-1]);
           return { pos: p, yaw: Math.atan2(dir.x, dir.z) };
@@ -1139,105 +1172,117 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
     };
 
     function tick(t) {
-      const s = stateRef.current;
-      const dt = Math.min(0.05, (t - (s.lastT || t)) / 1000);
-      s.lastT = t;
+      try {
+        const s = stateRef.current;
+        const dt = Math.min(0.05, (t - (s.lastT || t)) / 1000);
+        s.lastT = t;
 
-      // 1. Flowing navigation arrows animation
-      if (materials.pathArrows?.map) {
-        materials.pathArrows.map.offset.x -= 0.4 * dt * speedMulRef.current;
-      }
-
-      // 2. Bobbing & spinning destination pin animation
-      if (destinationPin) {
-        destinationPin.position.y = 1.35 + Math.sin(t * 0.003) * 0.12;
-        destinationPin.rotation.y += 0.015 * speedMulRef.current;
-        const floorRing = destinationPin.children[2];
-        if (floorRing) {
-          const sVal = 1.0 + Math.sin(t * 0.006) * 0.25;
-          floorRing.scale.set(sVal, sVal, 1);
-          floorRing.material.opacity = 0.8 - (sVal - 0.75) * 0.8;
+        // 1. Flowing navigation arrows animation
+        if (materials.pathArrows?.map) {
+          materials.pathArrows.map.offset.x -= 0.4 * dt * speedMulRef.current;
         }
-      }
 
-      // 2.5 LOD Label Fading Animation
-      labelSprites.forEach(item => {
-        if (!item.isImportant) {
-          item.sprite.visible = false;
-        } else {
-          item.sprite.visible = true;
-          const dist = camera.position.distanceTo(item.sprite.position);
-          if (dist < 2.0) {
-            item.sprite.material.opacity = 0.0;
-          } else if (dist <= 5.0) {
-            item.sprite.material.opacity = (dist - 2.0) / 3.0;
+        // 2. Bobbing & spinning destination pin animation
+        if (destinationPin) {
+          destinationPin.position.y = 1.35 + Math.sin(t * 0.003) * 0.12;
+          destinationPin.rotation.y += 0.015 * speedMulRef.current;
+          const floorRing = destinationPin.children[2];
+          if (floorRing) {
+            const sVal = 1.0 + Math.sin(t * 0.006) * 0.25;
+            floorRing.scale.set(sVal, sVal, 1);
+            floorRing.material.opacity = 0.8 - (sVal - 0.75) * 0.8;
+          }
+        }
+
+        // 2.5 LOD Label Fading Animation
+        labelSprites.forEach(item => {
+          if (!item.isImportant) {
+            item.sprite.visible = false;
           } else {
-            item.sprite.material.opacity = 1.0;
+            item.sprite.visible = true;
+            const dist = camera.position.distanceTo(item.sprite.position);
+            if (dist < 2.0) {
+              item.sprite.material.opacity = 0.0;
+            } else if (dist <= 5.0) {
+              item.sprite.material.opacity = (dist - 2.0) / 3.0;
+            } else {
+              item.sprite.material.opacity = 1.0;
+            }
+          }
+        });
+
+        // 3. Movement and camera logic
+        if (pathPoints.length >= 2 && pathLengthM > 0) {
+          if (!pausedRef.current) {
+            const live = livePosRef.current;
+            if (live && typeof live.gx === "number" && typeof live.gy === "number" && isFinite(live.gx) && isFinite(live.gy)) {
+              s.progress = progressFromLive(live.gx, live.gy);
+            } else if (s.progress < 1) {
+              s.progress = Math.min(1, s.progress + (WALK_SPEED * speedMulRef.current * dt) / pathLengthM);
+            }
+            const nextPct = Math.round(s.progress * 100);
+            if (s.lastPct !== nextPct) {
+              s.lastPct = nextPct;
+              setProgressPct(nextPct);
+            }
+          }
+
+          const lookAheadM   = 1.5;
+          const aheadProgress = Math.min(1, s.progress + lookAheadM / pathLengthM);
+          const { pos }       = sampleAt(s.progress);
+          const { yaw: targetYaw } = sampleAt(aheadProgress);
+
+          if (s.yaw === null || !isFinite(s.yaw)) s.yaw = targetYaw;
+          else { const k = 1 - Math.exp(-6*dt); s.yaw = lerpAngle(s.yaw, targetYaw, k); }
+
+          if (isFinite(pos.x) && isFinite(pos.z) && isFinite(s.yaw)) {
+            camera.position.set(pos.x, EYE_HEIGHT, pos.z);
+            camera.lookAt(pos.x + Math.sin(s.yaw) * 3, EYE_HEIGHT, pos.z + Math.cos(s.yaw) * 3);
+          }
+          const here = s.progress >= 0.995;
+          setArrived(prev => (prev === here ? prev : here));
+        } else if (pathPoints.length === 1 && isFinite(pathPoints[0].x) && isFinite(pathPoints[0].z)) {
+          const p = pathPoints[0];
+          camera.position.set(p.x, EYE_HEIGHT, p.z);
+          camera.lookAt(p.x, EYE_HEIGHT, p.z - 1);
+        } else {
+          let spawnX = 0, spawnZ = 0;
+          const initialRoom = userRoom || rooms.find(r => r.type === "RECEPTION" || (r.name ?? "").toLowerCase().includes("reception")) || rooms[0];
+          if (initialRoom) {
+            if (Array.isArray(initialRoom.polygon) && initialRoom.polygon.length >= 3) {
+              const pxs = initialRoom.polygon.map(p => p.x).filter(isFinite);
+              const pys = initialRoom.polygon.map(p => p.y).filter(isFinite);
+              if (pxs.length > 0 && pys.length > 0) {
+                const cx = (Math.min(...pxs) + Math.max(...pxs)) / 2;
+                const cy = (Math.min(...pys) + Math.max(...pys)) / 2;
+                const w = toWorld(cx, cy);
+                spawnX = w.x; spawnZ = w.z;
+              }
+            } else if (typeof initialRoom.gridX === "number") {
+              const w = toWorld(initialRoom.gridX + (initialRoom.gridW ?? 4)/2, initialRoom.gridY - (initialRoom.gridH ?? 4)/2);
+              spawnX = w.x; spawnZ = w.z;
+            }
+          }
+          if (isFinite(spawnX) && isFinite(spawnZ)) {
+            camera.position.set(spawnX, EYE_HEIGHT, spawnZ);
+            camera.lookAt(spawnX, EYE_HEIGHT, spawnZ - 1);
           }
         }
-      });
 
-      // 3. Movement and camera logic
-      if (pathPoints.length >= 2 && pathLengthM > 0) {
-        if (!pausedRef.current) {
-          const live = livePosRef.current;
-          if (live && typeof live.gx === "number" && typeof live.gy === "number") {
-            s.progress = progressFromLive(live.gx, live.gy);
-          } else if (s.progress < 1) {
-            s.progress = Math.min(1, s.progress + (WALK_SPEED * speedMulRef.current * dt) / pathLengthM);
-          }
-          const nextPct = Math.round(s.progress * 100);
-          if (s.lastPct !== nextPct) {
-            s.lastPct = nextPct;
-            setProgressPct(nextPct);
+        if (typeof onCameraHeadingChange === "function") {
+          const dir = new THREE.Vector3();
+          camera.getWorldDirection(dir);
+          let camDeg = (Math.atan2(dir.x, -dir.z) * 180) / Math.PI;
+          if (isFinite(camDeg)) {
+            if (camDeg < 0) camDeg += 360;
+            onCameraHeadingChange(Math.round(camDeg));
           }
         }
 
-        const lookAheadM   = 1.5;
-        const aheadProgress = Math.min(1, s.progress + lookAheadM / pathLengthM);
-        const { pos }       = sampleAt(s.progress);
-        const { yaw: targetYaw } = sampleAt(aheadProgress);
-
-        if (s.yaw === null) s.yaw = targetYaw;
-        else { const k = 1 - Math.exp(-6*dt); s.yaw = lerpAngle(s.yaw, targetYaw, k); }
-
-        camera.position.set(pos.x, EYE_HEIGHT, pos.z);
-        camera.lookAt(pos.x + Math.sin(s.yaw) * 3, EYE_HEIGHT, pos.z + Math.cos(s.yaw) * 3);
-        const here = s.progress >= 0.995;
-        setArrived(prev => (prev === here ? prev : here));
-      } else if (pathPoints.length === 1) {
-        const p = pathPoints[0];
-        camera.position.set(p.x, EYE_HEIGHT, p.z);
-        camera.lookAt(p.x, EYE_HEIGHT, p.z - 1);
-      } else {
-        let spawnX = 0, spawnZ = 0;
-        const initialRoom = userRoom || rooms.find(r => r.type === "RECEPTION" || (r.name ?? "").toLowerCase().includes("reception")) || rooms[0];
-        if (initialRoom) {
-          if (Array.isArray(initialRoom.polygon) && initialRoom.polygon.length >= 3) {
-            const pxs = initialRoom.polygon.map(p => p.x);
-            const pys = initialRoom.polygon.map(p => p.y);
-            const cx = (Math.min(...pxs) + Math.max(...pxs)) / 2;
-            const cy = (Math.min(...pys) + Math.max(...pys)) / 2;
-            const w = toWorld(cx, cy);
-            spawnX = w.x; spawnZ = w.z;
-          } else if (typeof initialRoom.gridX === "number") {
-            const w = toWorld(initialRoom.gridX + (initialRoom.gridW ?? 4)/2, initialRoom.gridY - (initialRoom.gridH ?? 4)/2);
-            spawnX = w.x; spawnZ = w.z;
-          }
-        }
-        camera.position.set(spawnX, EYE_HEIGHT, spawnZ);
-        camera.lookAt(spawnX, EYE_HEIGHT, spawnZ - 1);
+        renderer.render(scene, camera);
+      } catch (err) {
+        console.error("[Walk3D] Render loop error:", err);
       }
-
-      if (typeof onCameraHeadingChange === "function") {
-        const dir = new THREE.Vector3();
-        camera.getWorldDirection(dir);
-        let camDeg = (Math.atan2(dir.x, -dir.z) * 180) / Math.PI;
-        if (camDeg < 0) camDeg += 360;
-        onCameraHeadingChange(Math.round(camDeg));
-      }
-
-      renderer.render(scene, camera);
       s.raf = requestAnimationFrame(tick);
     }
 

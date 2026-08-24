@@ -7,7 +7,8 @@ const prisma = new PrismaClient();
 function getBuildingLocation(building: { id: string; name: string; location?: string | null }) {
   if (building.location) return building.location;
   const lower = (building.name || building.id || '').toLowerCase();
-  if (lower.includes('jupiter') || lower.includes('bangalore')) return 'Bangalore';
+  if (lower.includes('jupiter') || lower.includes('gravity') || lower.includes('bangalore')) return 'Bangalore';
+  if (lower.includes('gurugram')) return 'Gurugram';
   return 'Pune';
 }
 
@@ -64,15 +65,22 @@ async function validateLocationHierarchy() {
   const jupiterLevels = jupiterFloors.map(f => f.level);
   console.log(`✓ Bangalore → Jupiter → Floors [${jupiterLevels.join(', ')}]: ${jupiterLevels.includes('1') ? 'PASS' : 'FAIL'}`);
 
-  // 3. Validate Map Data loading across all 3 buildings
+  // Path 4: Gurugram → Gurugram → Floor 3
+  const ggBuildings = locationMap.get('Gurugram') ?? [];
+  const ggBuilding = ggBuildings.find(b => b.id === 'building-gurugram' || b.name.toLowerCase().includes('gurugram'));
+  const ggFloors = ggBuilding ? await getAllFloors(prisma, ggBuilding.id) : [];
+  const ggLevels = ggFloors.map(f => f.level);
+  console.log(`✓ Gurugram → Gurugram → Floors [${ggLevels.join(', ')}]: ${ggLevels.includes('3') ? 'PASS' : 'FAIL'}`);
+
+  // 3. Validate Map Data loading across buildings
   console.log('\n3. 2D/3D MAP LOADING VERIFICATION:');
-  const testFloors = ['floor-hudson-f5', 'floor-ganges-f9', 'floor-jupiter-f1'];
+  const testFloors = ['floor-hudson-f5', 'floor-ganges-f9', 'floor-jupiter-f1', 'floor-gurugram-f3'];
   for (const fid of testFloors) {
     const mapData = await getFloorMap(prisma, fid);
     console.log(`✓ Map loaded for ${fid}: ${mapData ? `PASS (${mapData.rooms.length} rooms, ${mapData.nodes.length} nodes, ${mapData.edges.length} edges)` : 'FAIL'}`);
   }
 
-  // 4. Validate Routing across all 3 buildings
+  // 4. Validate Routing across buildings
   console.log('\n4. ROUTE COMPUTATION VERIFICATION ACROSS LOCATIONS:');
 
   // Hudson route
@@ -94,6 +102,13 @@ async function validateLocationHierarchy() {
   if (jupiterRooms.length >= 2) {
     const routeJ = await getRoute(prisma, { fromRoomId: jupiterRooms[0].id, toRoomId: jupiterRooms[1].id });
     console.log(`✓ Route Jupiter (${jupiterRooms[0].name} → ${jupiterRooms[1].name}): ${routeJ.found ? `PASS (${routeJ.totalDistanceM}m)` : 'FAIL'}`);
+  }
+
+  // Gurugram route
+  const ggRooms = await prisma.room.findMany({ where: { floorId: 'floor-gurugram-f3' } });
+  if (ggRooms.length >= 2) {
+    const routeGG = await getRoute(prisma, { fromRoomId: ggRooms[0].id, toRoomId: ggRooms[5].id });
+    console.log(`✓ Route Gurugram (${ggRooms[0].name} → ${ggRooms[5].name}): ${routeGG.found ? `PASS (${routeGG.totalDistanceM}m)` : 'FAIL'}`);
   }
 
   console.log('\n====================================================');

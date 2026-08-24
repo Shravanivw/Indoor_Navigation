@@ -55,9 +55,14 @@ function isPointInWorldPolygon(x, z, worldPolygon, margin = 0.3) {
 function getValidLineInterval(startVal, step, lengthLimit, constantVal, isAxisX, worldPolygon, margin = 0.3) {
   let minVal = startVal;
   let maxVal = startVal;
+  if (!isFinite(startVal) || !isFinite(step) || step <= 0 || !isFinite(lengthLimit) || lengthLimit <= 0) {
+    return { minVal, maxVal };
+  }
   
+  const maxSteps = 100;
+  let stepsNeg = 0;
   // Scan negative direction
-  for (let d = 0; d <= lengthLimit; d += step) {
+  for (let d = 0; d <= lengthLimit && stepsNeg < maxSteps; d += step, stepsNeg++) {
     const val = startVal - d;
     const testX = isAxisX ? val : constantVal;
     const testZ = isAxisX ? constantVal : val;
@@ -67,8 +72,9 @@ function getValidLineInterval(startVal, step, lengthLimit, constantVal, isAxisX,
       break;
     }
   }
+  let stepsPos = 0;
   // Scan positive direction
-  for (let d = 0; d <= lengthLimit; d += step) {
+  for (let d = 0; d <= lengthLimit && stepsPos < maxSteps; d += step, stepsPos++) {
     const val = startVal + d;
     const testX = isAxisX ? val : constantVal;
     const testZ = isAxisX ? constantVal : val;
@@ -364,8 +370,8 @@ export function addRoomCeiling(infra, room, template, cx, cz, wM, hM, roomPolygo
     // EXPOSED CEILINGS: ducts, sprinkler systems, and hanging pendant lights
     const spacingX = 2.0;
     const spacingZ = 2.0;
-    const cols = Math.max(1, Math.floor(wM / spacingX));
-    const rows = Math.max(1, Math.floor(hM / spacingZ));
+    const cols = Math.min(12, Math.max(1, Math.floor(wM / spacingX)));
+    const rows = Math.min(12, Math.max(1, Math.floor(hM / spacingZ)));
     const startX = cx - ((cols - 1) * spacingX) / 2;
     const startZ = cz - ((rows - 1) * spacingZ) / 2;
 
@@ -490,8 +496,8 @@ export function addRoomCeiling(infra, room, template, cx, cz, wM, hM, roomPolygo
     // STANDARD OFFICE AREAS: Recessed LED lights and HVAC vents
     const spacingX = 2.4;
     const spacingZ = 2.4;
-    const cols = Math.max(1, Math.floor(wM / spacingX));
-    const rows = Math.max(1, Math.floor(hM / spacingZ));
+    const cols = Math.min(12, Math.max(1, Math.floor(wM / spacingX)));
+    const rows = Math.min(12, Math.max(1, Math.floor(hM / spacingZ)));
     const startX = cx - ((cols - 1) * spacingX) / 2;
     const startZ = cz - ((rows - 1) * spacingZ) / 2;
 

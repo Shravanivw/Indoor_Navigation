@@ -72,9 +72,19 @@ async function seedAll() {
       floorName: '1st Floor',
       qrPrefix: 'LOC-GRAV-F1',
     },
+    {
+      file: path.join(dataDir, 'Gurugram_3rd.json'),
+      buildingId: 'building-gurugram',
+      buildingName: 'Gurugram',
+      location: 'Gurugram',
+      floorId: 'floor-gurugram-f3',
+      level: '3',
+      floorName: '3rd Floor',
+      qrPrefix: 'LOC-GG-F3',
+    },
   ];
 
-  console.log('Importing All Floor Definitions across Pune & Bangalore...\n');
+  console.log('Importing All Floor Definitions across Pune, Bangalore & Gurugram...\n');
   for (const item of editorImports) {
     console.log(`\nImporting ${item.buildingName} - ${item.floorName} (${path.basename(item.file)})...`);
     await runImport({
@@ -89,13 +99,16 @@ async function seedAll() {
     });
   }
 
-  // Calibrate physical dimensions for Jupiter 1st Floor & Gravity 1st Floor
-  console.log('\nCalibrating physical dimensions for Jupiter 1st Floor & Gravity 1st Floor...');
+  // Calibrate physical dimensions for Jupiter 1st Floor, Gravity 1st Floor & Gurugram 3rd Floor
+  console.log('\nCalibrating physical dimensions for Jupiter 1st Floor, Gravity 1st Floor & Gurugram 3rd Floor...');
   await prisma.$executeRawUnsafe(
     "UPDATE floors SET realWidthM = 72.025, realHeightM = 36.200, widthM = 72.025, heightM = 36.200, scaleX = 0.9003, scaleY = 0.4525 WHERE id = 'floor-jupiter-f1'"
   );
   await prisma.$executeRawUnsafe(
     "UPDATE floors SET realWidthM = 60.030, realHeightM = 32.870, widthM = 60.030, heightM = 32.870, scaleX = 0.7504, scaleY = 0.4109 WHERE id = 'floor-gravity-f1'"
+  );
+  await prisma.$executeRawUnsafe(
+    "UPDATE floors SET realWidthM = 72.576, realHeightM = 43.758, widthM = 72.576, heightM = 43.758, scaleX = 0.9072, scaleY = 0.5470 WHERE id = 'floor-gurugram-f3'"
   );
 
   console.log('\n====================================================');

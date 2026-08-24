@@ -1,0 +1,4619 @@
+{
+  "rooms": [
+    {
+      "id": "HUB Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 2459,
+          "y": 292
+        },
+        {
+          "x": 2550,
+          "y": 292
+        },
+        {
+          "x": 2550,
+          "y": 409
+        },
+        {
+          "x": 2458,
+          "y": 409
+        },
+        {
+          "x": 2459,
+          "y": 292
+        }
+      ],
+      "doors": [
+        {
+          "id": "30",
+          "x": 1763,
+          "y": 421,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "HUB Room",
+          "roomName": "HUB Room"
+        },
+        {
+          "id": "37",
+          "x": 2477,
+          "y": 407,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "HUB Room",
+          "roomName": "HUB Room"
+        }
+      ]
+    },
+    {
+      "id": "UPS Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 348,
+          "y": 514
+        },
+        {
+          "x": 413,
+          "y": 514
+        },
+        {
+          "x": 413,
+          "y": 607
+        },
+        {
+          "x": 348,
+          "y": 608
+        },
+        {
+          "x": 348,
+          "y": 514
+        }
+      ],
+      "doors": [
+        {
+          "id": "14",
+          "x": 400,
+          "y": 602,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "UPS Room",
+          "roomName": "UPS Room"
+        }
+      ]
+    },
+    {
+      "id": "Server Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 423,
+          "y": 514
+        },
+        {
+          "x": 511,
+          "y": 515
+        },
+        {
+          "x": 511,
+          "y": 607
+        },
+        {
+          "x": 423,
+          "y": 606
+        },
+        {
+          "x": 423,
+          "y": 514
+        }
+      ],
+      "doors": [
+        {
+          "id": "15",
+          "x": 442,
+          "y": 603,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Server Room",
+          "roomName": "Server Room"
+        }
+      ]
+    },
+    {
+      "id": "Female Restroom",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 267,
+          "y": 643
+        },
+        {
+          "x": 263,
+          "y": 589
+        },
+        {
+          "x": 248,
+          "y": 570
+        },
+        {
+          "x": 199,
+          "y": 569
+        },
+        {
+          "x": 199,
+          "y": 481
+        },
+        {
+          "x": 340,
+          "y": 482
+        },
+        {
+          "x": 343,
+          "y": 641
+        },
+        {
+          "x": 267,
+          "y": 643
+        }
+      ],
+      "doors": [
+        {
+          "id": "13",
+          "x": 268,
+          "y": 619,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Female Restroom",
+          "roomName": "Female Restroom"
+        }
+      ]
+    },
+    {
+      "id": "Male Restroom",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 196,
+          "y": 482
+        },
+        {
+          "x": 197,
+          "y": 571
+        },
+        {
+          "x": 227,
+          "y": 572
+        },
+        {
+          "x": 227,
+          "y": 637
+        },
+        {
+          "x": 71,
+          "y": 637
+        },
+        {
+          "x": 72,
+          "y": 502
+        },
+        {
+          "x": 94,
+          "y": 504
+        },
+        {
+          "x": 95,
+          "y": 482
+        },
+        {
+          "x": 196,
+          "y": 482
+        }
+      ],
+      "doors": [
+        {
+          "id": "12",
+          "x": 220,
+          "y": 586,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Male Restroom",
+          "roomName": "Male Restroom"
+        }
+      ]
+    },
+    {
+      "id": "Reception 1",
+      "type": "Lobby",
+      "polygon": [
+        {
+          "x": 638,
+          "y": 761
+        },
+        {
+          "x": 637,
+          "y": 890
+        },
+        {
+          "x": 499,
+          "y": 891
+        },
+        {
+          "x": 498,
+          "y": 761
+        },
+        {
+          "x": 638,
+          "y": 761
+        }
+      ],
+      "doors": [
+        {
+          "id": "1",
+          "x": 513,
+          "y": 863,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Reception 1",
+          "roomName": "Reception 1"
+        }
+      ]
+    },
+    {
+      "id": "PKI Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 639,
+          "y": 1103
+        },
+        {
+          "x": 639,
+          "y": 1170
+        },
+        {
+          "x": 492,
+          "y": 1170
+        },
+        {
+          "x": 492,
+          "y": 1103
+        },
+        {
+          "x": 639,
+          "y": 1103
+        }
+      ],
+      "doors": [
+        {
+          "id": "4",
+          "x": 497,
+          "y": 1120,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "PKI Room",
+          "roomName": "PKI Room"
+        }
+      ]
+    },
+    {
+      "id": "Store Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 226,
+          "y": 1086
+        },
+        {
+          "x": 226,
+          "y": 1191
+        },
+        {
+          "x": 71,
+          "y": 1191
+        },
+        {
+          "x": 72,
+          "y": 1083
+        },
+        {
+          "x": 226,
+          "y": 1086
+        }
+      ],
+      "doors": [
+        {
+          "id": "9",
+          "x": 219,
+          "y": 1102,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Store Room",
+          "roomName": "Store Room"
+        }
+      ]
+    },
+    {
+      "id": "Cafeteria",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 640,
+          "y": 1596
+        },
+        {
+          "x": 71,
+          "y": 1598
+        },
+        {
+          "x": 71,
+          "y": 2290
+        },
+        {
+          "x": 422,
+          "y": 2293
+        },
+        {
+          "x": 422,
+          "y": 2514
+        },
+        {
+          "x": 643,
+          "y": 2514
+        },
+        {
+          "x": 640,
+          "y": 1596
+        }
+      ],
+      "doors": [
+        {
+          "id": "7",
+          "x": 266,
+          "y": 1607,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Cafeteria",
+          "roomName": "Cafeteria"
+        }
+      ]
+    },
+    {
+      "id": "Phone Booth 1",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1063,
+          "y": 326
+        },
+        {
+          "x": 1064,
+          "y": 425
+        },
+        {
+          "x": 1001,
+          "y": 426
+        },
+        {
+          "x": 1003,
+          "y": 325
+        },
+        {
+          "x": 1063,
+          "y": 326
+        }
+      ],
+      "doors": [
+        {
+          "id": "233",
+          "x": 1046,
+          "y": 419,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Phone Booth 1",
+          "roomName": "Phone Booth 1"
+        }
+      ]
+    },
+    {
+      "id": "Workspace 1",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 259,
+          "y": 675
+        },
+        {
+          "x": 444,
+          "y": 675
+        },
+        {
+          "x": 442,
+          "y": 1341
+        },
+        {
+          "x": 263,
+          "y": 1347
+        },
+        {
+          "x": 259,
+          "y": 675
+        }
+      ],
+      "doors": [
+        {
+          "id": "17",
+          "x": 285,
+          "y": 1130,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Workspace 1",
+          "roomName": "Workspace 1"
+        }
+      ]
+    },
+    {
+      "id": "Workspace 2",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 272,
+          "y": 1366
+        },
+        {
+          "x": 582,
+          "y": 1365
+        },
+        {
+          "x": 583,
+          "y": 1461
+        },
+        {
+          "x": 620,
+          "y": 1461
+        },
+        {
+          "x": 620,
+          "y": 1575
+        },
+        {
+          "x": 279,
+          "y": 1574
+        },
+        {
+          "x": 279,
+          "y": 1366
+        }
+      ],
+      "doors": [
+        {
+          "id": "18",
+          "x": 294,
+          "y": 1469,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Workspace 2",
+          "roomName": "Workspace 2"
+        }
+      ]
+    },
+    {
+      "id": "Conference Room 1",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 66,
+          "y": 820
+        },
+        {
+          "x": 227,
+          "y": 821
+        },
+        {
+          "x": 227,
+          "y": 1084
+        },
+        {
+          "x": 66,
+          "y": 1083
+        },
+        {
+          "x": 66,
+          "y": 820
+        }
+      ],
+      "doors": [
+        {
+          "id": "10",
+          "x": 223,
+          "y": 1062,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Conference Room 1",
+          "roomName": "Conference Room 1"
+        }
+      ]
+    },
+    {
+      "id": "AHU Room 1",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 67,
+          "y": 639
+        },
+        {
+          "x": 228,
+          "y": 639
+        },
+        {
+          "x": 228,
+          "y": 819
+        },
+        {
+          "x": 67,
+          "y": 818
+        },
+        {
+          "x": 67,
+          "y": 639
+        }
+      ],
+      "doors": [
+        {
+          "id": "11",
+          "x": 222,
+          "y": 803,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "AHU Room 1",
+          "roomName": "AHU Room 1"
+        }
+      ]
+    },
+    {
+      "id": "PD Cubicle 2",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 71,
+          "y": 1192
+        },
+        {
+          "x": 227,
+          "y": 1192
+        },
+        {
+          "x": 227,
+          "y": 1596
+        },
+        {
+          "x": 71,
+          "y": 1596
+        },
+        {
+          "x": 71,
+          "y": 1192
+        }
+      ],
+      "doors": [
+        {
+          "id": "8",
+          "x": 220,
+          "y": 1209,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Conference Room 2",
+          "roomName": "Conference Room 2"
+        },
+        {
+          "id": "6",
+          "x": 526,
+          "y": 1320,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "PD Cubicle 2",
+          "roomName": "PD Cubicle 2"
+        }
+      ]
+    },
+    {
+      "id": "Visitor Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 491,
+          "y": 650
+        },
+        {
+          "x": 641,
+          "y": 650
+        },
+        {
+          "x": 641,
+          "y": 759
+        },
+        {
+          "x": 490,
+          "y": 759
+        },
+        {
+          "x": 491,
+          "y": 650
+        }
+      ],
+      "doors": [
+        {
+          "id": "2",
+          "x": 611,
+          "y": 751,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Visitor Room",
+          "roomName": "Visitor Room"
+        }
+      ]
+    },
+    {
+      "id": "Meeting Room 1",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 513,
+          "y": 486
+        },
+        {
+          "x": 641,
+          "y": 487
+        },
+        {
+          "x": 641,
+          "y": 647
+        },
+        {
+          "x": 490,
+          "y": 649
+        },
+        {
+          "x": 490,
+          "y": 608
+        },
+        {
+          "x": 513,
+          "y": 608
+        },
+        {
+          "x": 513,
+          "y": 486
+        }
+      ],
+      "doors": [
+        {
+          "id": "16",
+          "x": 494,
+          "y": 629,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Meeting Room 1",
+          "roomName": "Meeting Room 1"
+        }
+      ]
+    },
+    {
+      "id": "Reception 2",
+      "type": "Lobby",
+      "polygon": [
+        {
+          "x": 748,
+          "y": 577
+        },
+        {
+          "x": 899,
+          "y": 576
+        },
+        {
+          "x": 899,
+          "y": 672
+        },
+        {
+          "x": 749,
+          "y": 670
+        },
+        {
+          "x": 748,
+          "y": 577
+        }
+      ],
+      "doors": [
+        {
+          "id": "19",
+          "x": 882,
+          "y": 603,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Reception 2",
+          "roomName": "Reception 2"
+        }
+      ]
+    },
+    {
+      "id": "Meeting Room 2",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 750,
+          "y": 473
+        },
+        {
+          "x": 898,
+          "y": 473
+        },
+        {
+          "x": 898,
+          "y": 574
+        },
+        {
+          "x": 749,
+          "y": 574
+        },
+        {
+          "x": 750,
+          "y": 473
+        }
+      ],
+      "doors": [
+        {
+          "id": "20",
+          "x": 890,
+          "y": 557,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Meeting Room 2",
+          "roomName": "Meeting Room 2"
+        }
+      ]
+    },
+    {
+      "id": "Conference Room 3",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 762,
+          "y": 285
+        },
+        {
+          "x": 762,
+          "y": 471
+        },
+        {
+          "x": 897,
+          "y": 471
+        },
+        {
+          "x": 897,
+          "y": 287
+        },
+        {
+          "x": 762,
+          "y": 285
+        }
+      ],
+      "doors": [
+        {
+          "id": "21",
+          "x": 889,
+          "y": 452,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Conference Room 3",
+          "roomName": "Conference Room 3"
+        }
+      ]
+    },
+    {
+      "id": "Meeting Room 3",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 898,
+          "y": 287
+        },
+        {
+          "x": 898,
+          "y": 426
+        },
+        {
+          "x": 999,
+          "y": 426
+        },
+        {
+          "x": 999,
+          "y": 325
+        },
+        {
+          "x": 984,
+          "y": 324
+        },
+        {
+          "x": 983,
+          "y": 292
+        },
+        {
+          "x": 968,
+          "y": 293
+        },
+        {
+          "x": 967,
+          "y": 287
+        },
+        {
+          "x": 898,
+          "y": 287
+        }
+      ],
+      "doors": [
+        {
+          "id": "22",
+          "x": 975,
+          "y": 417,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Meeting Room 3",
+          "roomName": "Meeting Room 3"
+        }
+      ]
+    },
+    {
+      "id": "Workspace 3",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 977,
+          "y": 477
+        },
+        {
+          "x": 1865,
+          "y": 477
+        },
+        {
+          "x": 1865,
+          "y": 671
+        },
+        {
+          "x": 978,
+          "y": 671
+        },
+        {
+          "x": 977,
+          "y": 477
+        }
+      ],
+      "doors": [
+        {
+          "id": "32",
+          "x": 1257,
+          "y": 487,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Workspace 3",
+          "roomName": "Workspace 3"
+        }
+      ]
+    },
+    {
+      "id": "Workspace 4",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 1946,
+          "y": 484
+        },
+        {
+          "x": 2062,
+          "y": 484
+        },
+        {
+          "x": 2061,
+          "y": 670
+        },
+        {
+          "x": 1946,
+          "y": 670
+        },
+        {
+          "x": 1946,
+          "y": 484
+        }
+      ],
+      "doors": [
+        {
+          "id": "33",
+          "x": 1965,
+          "y": 519,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Workspace 4",
+          "roomName": "Workspace 4"
+        }
+      ]
+    },
+    {
+      "id": "Male Washroom",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1970,
+          "y": 383
+        },
+        {
+          "x": 1970,
+          "y": 293
+        },
+        {
+          "x": 2130,
+          "y": 293
+        },
+        {
+          "x": 2131,
+          "y": 382
+        },
+        {
+          "x": 1970,
+          "y": 383
+        }
+      ],
+      "doors": [
+        {
+          "id": "34",
+          "x": 2028,
+          "y": 375,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Male Washroom",
+          "roomName": "Male Washroom"
+        }
+      ]
+    },
+    {
+      "id": "Female Washroom",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 2009,
+          "y": 432
+        },
+        {
+          "x": 2044,
+          "y": 432
+        },
+        {
+          "x": 2044,
+          "y": 384
+        },
+        {
+          "x": 2131,
+          "y": 384
+        },
+        {
+          "x": 2131,
+          "y": 524
+        },
+        {
+          "x": 2065,
+          "y": 524
+        },
+        {
+          "x": 2064,
+          "y": 478
+        },
+        {
+          "x": 2010,
+          "y": 477
+        },
+        {
+          "x": 2009,
+          "y": 432
+        }
+      ],
+      "doors": [
+        {
+          "id": "35",
+          "x": 2027,
+          "y": 439,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Female Washroom",
+          "roomName": "Female Washroom"
+        }
+      ]
+    },
+    {
+      "id": "AHU Room 2",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1823,
+          "y": 425
+        },
+        {
+          "x": 1967,
+          "y": 425
+        },
+        {
+          "x": 1967,
+          "y": 291
+        },
+        {
+          "x": 1822,
+          "y": 292
+        },
+        {
+          "x": 1823,
+          "y": 425
+        }
+      ],
+      "doors": [
+        {
+          "id": "31",
+          "x": 1839,
+          "y": 419,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "AHU Room 2",
+          "roomName": "AHU Room 2"
+        }
+      ]
+    },
+    {
+      "id": "HUB Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1742,
+          "y": 292
+        },
+        {
+          "x": 1821,
+          "y": 292
+        },
+        {
+          "x": 1821,
+          "y": 425
+        },
+        {
+          "x": 1743,
+          "y": 425
+        },
+        {
+          "x": 1742,
+          "y": 292
+        }
+      ],
+      "doors": []
+    },
+    {
+      "id": "UPS Room 2",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1673,
+          "y": 287
+        },
+        {
+          "x": 1675,
+          "y": 425
+        },
+        {
+          "x": 1741,
+          "y": 426
+        },
+        {
+          "x": 1741,
+          "y": 287
+        },
+        {
+          "x": 1673,
+          "y": 287
+        }
+      ],
+      "doors": [
+        {
+          "id": "29",
+          "x": 1720,
+          "y": 419,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "UPS Room 2",
+          "roomName": "UPS Room 2"
+        }
+      ]
+    },
+    {
+      "id": "Store Room 2",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1589,
+          "y": 287
+        },
+        {
+          "x": 1589,
+          "y": 425
+        },
+        {
+          "x": 1674,
+          "y": 425
+        },
+        {
+          "x": 1672,
+          "y": 287
+        },
+        {
+          "x": 1589,
+          "y": 287
+        }
+      ],
+      "doors": [
+        {
+          "id": "28",
+          "x": 1652,
+          "y": 419,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Store Room 2",
+          "roomName": "Store Room 2"
+        }
+      ]
+    },
+    {
+      "id": "Meeting Room 4",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1480,
+          "y": 289
+        },
+        {
+          "x": 1587,
+          "y": 289
+        },
+        {
+          "x": 1588,
+          "y": 425
+        },
+        {
+          "x": 1481,
+          "y": 426
+        },
+        {
+          "x": 1480,
+          "y": 289
+        }
+      ],
+      "doors": [
+        {
+          "id": "27",
+          "x": 1501,
+          "y": 419,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Meeting Room 4",
+          "roomName": "Meeting Room 4"
+        }
+      ]
+    },
+    {
+      "id": "Director Cabin",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1288,
+          "y": 288
+        },
+        {
+          "x": 1479,
+          "y": 288
+        },
+        {
+          "x": 1480,
+          "y": 426
+        },
+        {
+          "x": 1288,
+          "y": 426
+        },
+        {
+          "x": 1288,
+          "y": 288
+        }
+      ],
+      "doors": [
+        {
+          "id": "26",
+          "x": 1397,
+          "y": 418,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Director Cabin",
+          "roomName": "Director Cabin"
+        }
+      ]
+    },
+    {
+      "id": "PD Head Cabin 1",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 1065,
+          "y": 291
+        },
+        {
+          "x": 1174,
+          "y": 291
+        },
+        {
+          "x": 1174,
+          "y": 425
+        },
+        {
+          "x": 1065,
+          "y": 426
+        },
+        {
+          "x": 1065,
+          "y": 291
+        }
+      ],
+      "doors": [
+        {
+          "id": "24",
+          "x": 1153,
+          "y": 420,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "PD Head Cabin",
+          "roomName": "PD Head Cabin"
+        }
+      ]
+    },
+    {
+      "id": "Workspace 5",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 1176,
+          "y": 291
+        },
+        {
+          "x": 1287,
+          "y": 291
+        },
+        {
+          "x": 1287,
+          "y": 426
+        },
+        {
+          "x": 1175,
+          "y": 426
+        },
+        {
+          "x": 1176,
+          "y": 291
+        }
+      ],
+      "doors": [
+        {
+          "id": "25",
+          "x": 1252,
+          "y": 418,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Workspace 5",
+          "roomName": "Workspace 5"
+        },
+        {
+          "id": "42",
+          "x": 2778,
+          "y": 482,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Workspace 5",
+          "roomName": "Workspace 5"
+        }
+      ]
+    },
+    {
+      "id": "Balcony",
+      "type": "Lobby",
+      "polygon": [
+        {
+          "x": 3555,
+          "y": 668
+        },
+        {
+          "x": 3688,
+          "y": 638
+        },
+        {
+          "x": 3830,
+          "y": 579
+        },
+        {
+          "x": 3925,
+          "y": 513
+        },
+        {
+          "x": 4036,
+          "y": 408
+        },
+        {
+          "x": 4039,
+          "y": 290
+        },
+        {
+          "x": 4098,
+          "y": 288
+        },
+        {
+          "x": 4098,
+          "y": 1259
+        },
+        {
+          "x": 3556,
+          "y": 1258
+        },
+        {
+          "x": 3556,
+          "y": 668
+        }
+      ],
+      "doors": []
+    },
+    {
+      "id": "PD Cubicle 1",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 519,
+          "y": 1175
+        },
+        {
+          "x": 641,
+          "y": 1172
+        },
+        {
+          "x": 640,
+          "y": 1259
+        },
+        {
+          "x": 519,
+          "y": 1258
+        },
+        {
+          "x": 519,
+          "y": 1174
+        }
+      ],
+      "doors": [
+        {
+          "id": "5",
+          "x": 525,
+          "y": 1235,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "PD Cubicle 1",
+          "roomName": "PD Cubicle 1"
+        }
+      ]
+    },
+    {
+      "id": "PD Cubicle 2",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 519,
+          "y": 1260
+        },
+        {
+          "x": 519,
+          "y": 1345
+        },
+        {
+          "x": 640,
+          "y": 1347
+        },
+        {
+          "x": 641,
+          "y": 1261
+        },
+        {
+          "x": 519,
+          "y": 1260
+        }
+      ],
+      "doors": []
+    },
+    {
+      "id": "Cabin 1",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 2305,
+          "y": 329
+        },
+        {
+          "x": 2305,
+          "y": 421
+        },
+        {
+          "x": 2457,
+          "y": 420
+        },
+        {
+          "x": 2457,
+          "y": 293
+        },
+        {
+          "x": 2368,
+          "y": 292
+        },
+        {
+          "x": 2368,
+          "y": 329
+        },
+        {
+          "x": 2305,
+          "y": 329
+        }
+      ],
+      "doors": [
+        {
+          "id": "36",
+          "x": 2378,
+          "y": 412,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Cabin 1",
+          "roomName": "Cabin 1"
+        }
+      ]
+    },
+    {
+      "id": "PD Head Cabin 2",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 2550,
+          "y": 419
+        },
+        {
+          "x": 2551,
+          "y": 288
+        },
+        {
+          "x": 2657,
+          "y": 288
+        },
+        {
+          "x": 2657,
+          "y": 419
+        },
+        {
+          "x": 2550,
+          "y": 419
+        }
+      ],
+      "doors": [
+        {
+          "id": "38",
+          "x": 2570,
+          "y": 416,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "PD Head Cabin 2",
+          "roomName": "PD Head Cabin 2"
+        }
+      ]
+    },
+    {
+      "id": "Meeting Room 5",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 2659,
+          "y": 288
+        },
+        {
+          "x": 2804,
+          "y": 289
+        },
+        {
+          "x": 2804,
+          "y": 420
+        },
+        {
+          "x": 2658,
+          "y": 420
+        },
+        {
+          "x": 2659,
+          "y": 288
+        }
+      ],
+      "doors": [
+        {
+          "id": "39",
+          "x": 2678,
+          "y": 417,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Meeting Room 5",
+          "roomName": "Meeting Room 5"
+        }
+      ]
+    },
+    {
+      "id": "Workspace 5",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 2369,
+          "y": 472
+        },
+        {
+          "x": 2372,
+          "y": 673
+        },
+        {
+          "x": 3350,
+          "y": 672
+        },
+        {
+          "x": 3347,
+          "y": 511
+        },
+        {
+          "x": 3136,
+          "y": 511
+        },
+        {
+          "x": 3135,
+          "y": 477
+        },
+        {
+          "x": 2369,
+          "y": 472
+        }
+      ],
+      "doors": []
+    },
+    {
+      "id": "Meeting Room 6",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 2808,
+          "y": 419
+        },
+        {
+          "x": 2806,
+          "y": 291
+        },
+        {
+          "x": 2996,
+          "y": 293
+        },
+        {
+          "x": 2995,
+          "y": 419
+        },
+        {
+          "x": 2808,
+          "y": 419
+        }
+      ],
+      "doors": [
+        {
+          "id": "40",
+          "x": 2825,
+          "y": 415,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Meeting Room 6",
+          "roomName": "Meeting Room 6"
+        }
+      ]
+    },
+    {
+      "id": "Workspace 6",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 3006,
+          "y": 295
+        },
+        {
+          "x": 3005,
+          "y": 446
+        },
+        {
+          "x": 3197,
+          "y": 447
+        },
+        {
+          "x": 3193,
+          "y": 295
+        },
+        {
+          "x": 3006,
+          "y": 295
+        }
+      ],
+      "doors": [
+        {
+          "id": "41",
+          "x": 3094,
+          "y": 436,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Workspace 6",
+          "roomName": "Workspace 6"
+        }
+      ]
+    },
+    {
+      "id": "Design Thinking Room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 3829,
+          "y": 293
+        },
+        {
+          "x": 4033,
+          "y": 295
+        },
+        {
+          "x": 4033,
+          "y": 406
+        },
+        {
+          "x": 3957,
+          "y": 485
+        },
+        {
+          "x": 3829,
+          "y": 574
+        },
+        {
+          "x": 3829,
+          "y": 293
+        }
+      ],
+      "doors": [
+        {
+          "id": "45",
+          "x": 3838,
+          "y": 455,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Design Thinking Room",
+          "roomName": "Design Thinking Room"
+        }
+      ]
+    },
+    {
+      "id": "Seating Area 2",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 3829,
+          "y": 500
+        },
+        {
+          "x": 3829,
+          "y": 574
+        },
+        {
+          "x": 3722,
+          "y": 625
+        },
+        {
+          "x": 3557,
+          "y": 666
+        },
+        {
+          "x": 3558,
+          "y": 507
+        },
+        {
+          "x": 3829,
+          "y": 500
+        }
+      ],
+      "doors": [
+        {
+          "id": "44",
+          "x": 3704,
+          "y": 508,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Seating Area 2",
+          "roomName": "Seating Area 2"
+        }
+      ]
+    },
+    {
+      "id": "Seating Area 1",
+      "type": "Open Space",
+      "polygon": [
+        {
+          "x": 3827,
+          "y": 409
+        },
+        {
+          "x": 3588,
+          "y": 414
+        },
+        {
+          "x": 3588,
+          "y": 376
+        },
+        {
+          "x": 3559,
+          "y": 376
+        },
+        {
+          "x": 3559,
+          "y": 293
+        },
+        {
+          "x": 3828,
+          "y": 291
+        },
+        {
+          "x": 3827,
+          "y": 409
+        }
+      ],
+      "doors": [
+        {
+          "id": "43",
+          "x": 3694,
+          "y": 403,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Seating Area 1",
+          "roomName": "Seating Area 1"
+        }
+      ]
+    },
+    {
+      "id": "Lift 1",
+      "type": "Lobby",
+      "polygon": [
+        {
+          "x": 534,
+          "y": 2621
+        },
+        {
+          "x": 761,
+          "y": 2621
+        },
+        {
+          "x": 762,
+          "y": 2713
+        },
+        {
+          "x": 535,
+          "y": 2716
+        },
+        {
+          "x": 534,
+          "y": 2621
+        }
+      ],
+      "doors": []
+    },
+    {
+      "id": "Lift 2",
+      "type": "Lobby",
+      "polygon": [
+        {
+          "x": 534,
+          "y": 293
+        },
+        {
+          "x": 752,
+          "y": 294
+        },
+        {
+          "x": 752,
+          "y": 378
+        },
+        {
+          "x": 534,
+          "y": 377
+        },
+        {
+          "x": 534,
+          "y": 293
+        }
+      ],
+      "doors": []
+    },
+    {
+      "id": "Training room",
+      "type": "Closed Room",
+      "polygon": [
+        {
+          "x": 491,
+          "y": 889
+        },
+        {
+          "x": 636,
+          "y": 890
+        },
+        {
+          "x": 636,
+          "y": 1096
+        },
+        {
+          "x": 487,
+          "y": 1097
+        },
+        {
+          "x": 491,
+          "y": 889
+        }
+      ],
+      "doors": [
+        {
+          "id": "45",
+          "x": 493,
+          "y": 1077,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Training room",
+          "roomName": "Training room"
+        }
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "path_1",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 688,
+          "y": 2619
+        },
+        {
+          "x": 693,
+          "y": 727
+        },
+        {
+          "x": 3504,
+          "y": 726
+        },
+        {
+          "x": 3499,
+          "y": 469
+        },
+        {
+          "x": 3828,
+          "y": 454
+        }
+      ]
+    },
+    {
+      "id": "path_2",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 693,
+          "y": 727
+        },
+        {
+          "x": 687,
+          "y": 481
+        },
+        {
+          "x": 687,
+          "y": 378
+        }
+      ]
+    },
+    {
+      "id": "path_3",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 693,
+          "y": 799
+        },
+        {
+          "x": 548,
+          "y": 800
+        },
+        {
+          "x": 547,
+          "y": 870
+        },
+        {
+          "x": 464,
+          "y": 872
+        },
+        {
+          "x": 462,
+          "y": 1354
+        },
+        {
+          "x": 258,
+          "y": 1357
+        },
+        {
+          "x": 260,
+          "y": 1597
+        }
+      ]
+    },
+    {
+      "id": "path_4",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 463,
+          "y": 1237
+        },
+        {
+          "x": 500,
+          "y": 1237
+        },
+        {
+          "x": 519,
+          "y": 1237
+        }
+      ]
+    },
+    {
+      "id": "path_5",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 462,
+          "y": 1322
+        },
+        {
+          "x": 497,
+          "y": 1322
+        },
+        {
+          "x": 519,
+          "y": 1322
+        }
+      ]
+    },
+    {
+      "id": "path_6",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 464,
+          "y": 872
+        },
+        {
+          "x": 465,
+          "y": 656
+        },
+        {
+          "x": 245,
+          "y": 658
+        },
+        {
+          "x": 245,
+          "y": 580
+        }
+      ]
+    },
+    {
+      "id": "path_7",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 245,
+          "y": 658
+        },
+        {
+          "x": 247,
+          "y": 1065
+        },
+        {
+          "x": 258,
+          "y": 1357
+        }
+      ]
+    },
+    {
+      "id": "path_8",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 939,
+          "y": 727
+        },
+        {
+          "x": 939,
+          "y": 460
+        },
+        {
+          "x": 1987,
+          "y": 458
+        },
+        {
+          "x": 1987,
+          "y": 404
+        },
+        {
+          "x": 2043,
+          "y": 405
+        }
+      ]
+    },
+    {
+      "id": "path_9",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 1905,
+          "y": 458
+        },
+        {
+          "x": 1905,
+          "y": 575
+        },
+        {
+          "x": 1905,
+          "y": 727
+        }
+      ]
+    },
+    {
+      "id": "path_10",
+      "width": 18,
+      "pathWidth": 18,
+      "points": [
+        {
+          "x": 2352,
+          "y": 727
+        },
+        {
+          "x": 2353,
+          "y": 459
+        },
+        {
+          "x": 3168,
+          "y": 465
+        },
+        {
+          "x": 3168,
+          "y": 500
+        },
+        {
+          "x": 3374,
+          "y": 503
+        },
+        {
+          "x": 3375,
+          "y": 726
+        }
+      ]
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "N1",
+        "x": 688,
+        "y": 2619
+      },
+      {
+        "id": "N2",
+        "x": 693,
+        "y": 727
+      },
+      {
+        "id": "N3",
+        "x": 3504,
+        "y": 726
+      },
+      {
+        "id": "N4",
+        "x": 3499,
+        "y": 469
+      },
+      {
+        "id": "N5",
+        "x": 3828,
+        "y": 454
+      },
+      {
+        "id": "N6",
+        "x": 687,
+        "y": 481
+      },
+      {
+        "id": "N7",
+        "x": 687,
+        "y": 378
+      },
+      {
+        "id": "N8",
+        "x": 693,
+        "y": 799
+      },
+      {
+        "id": "N9",
+        "x": 548,
+        "y": 800
+      },
+      {
+        "id": "N10",
+        "x": 547,
+        "y": 870
+      },
+      {
+        "id": "N11",
+        "x": 464,
+        "y": 872
+      },
+      {
+        "id": "N12",
+        "x": 462,
+        "y": 1354
+      },
+      {
+        "id": "N13",
+        "x": 258,
+        "y": 1357
+      },
+      {
+        "id": "N14",
+        "x": 260,
+        "y": 1597
+      },
+      {
+        "id": "N15",
+        "x": 463,
+        "y": 1237
+      },
+      {
+        "id": "N16",
+        "x": 500,
+        "y": 1237
+      },
+      {
+        "id": "N17",
+        "x": 519,
+        "y": 1237
+      },
+      {
+        "id": "N18",
+        "x": 462,
+        "y": 1322
+      },
+      {
+        "id": "N19",
+        "x": 497,
+        "y": 1322
+      },
+      {
+        "id": "N20",
+        "x": 519,
+        "y": 1322
+      },
+      {
+        "id": "N21",
+        "x": 465,
+        "y": 656
+      },
+      {
+        "id": "N22",
+        "x": 245,
+        "y": 658
+      },
+      {
+        "id": "N23",
+        "x": 245,
+        "y": 580
+      },
+      {
+        "id": "N24",
+        "x": 247,
+        "y": 1065
+      },
+      {
+        "id": "N25",
+        "x": 939,
+        "y": 727
+      },
+      {
+        "id": "N26",
+        "x": 939,
+        "y": 460
+      },
+      {
+        "id": "N27",
+        "x": 1987,
+        "y": 458
+      },
+      {
+        "id": "N28",
+        "x": 1987,
+        "y": 404
+      },
+      {
+        "id": "N29",
+        "x": 2043,
+        "y": 405
+      },
+      {
+        "id": "N30",
+        "x": 1905,
+        "y": 458
+      },
+      {
+        "id": "N31",
+        "x": 1905,
+        "y": 575
+      },
+      {
+        "id": "N32",
+        "x": 1905,
+        "y": 727
+      },
+      {
+        "id": "N33",
+        "x": 2352,
+        "y": 727
+      },
+      {
+        "id": "N34",
+        "x": 2353,
+        "y": 459
+      },
+      {
+        "id": "N35",
+        "x": 3168,
+        "y": 465
+      },
+      {
+        "id": "N36",
+        "x": 3168,
+        "y": 500
+      },
+      {
+        "id": "N37",
+        "x": 3374,
+        "y": 503
+      },
+      {
+        "id": "N38",
+        "x": 3375,
+        "y": 726
+      },
+      {
+        "id": "J39",
+        "x": 1763.071426230165,
+        "y": 458.427344606431,
+        "type": "junction"
+      },
+      {
+        "id": "D40",
+        "x": 1763,
+        "y": 421,
+        "roomId": "HUB Room",
+        "doorId": "30",
+        "type": "door"
+      },
+      {
+        "id": "J41",
+        "x": 2476.6104784113472,
+        "y": 459.91001579198536,
+        "type": "junction"
+      },
+      {
+        "id": "D42",
+        "x": 2477,
+        "y": 407,
+        "roomId": "HUB Room",
+        "doorId": "37",
+        "type": "door"
+      },
+      {
+        "id": "J43",
+        "x": 400.49623998016693,
+        "y": 656.5863978183621,
+        "type": "junction"
+      },
+      {
+        "id": "D44",
+        "x": 400,
+        "y": 602,
+        "roomId": "UPS Room",
+        "doorId": "14",
+        "type": "door"
+      },
+      {
+        "id": "J45",
+        "x": 442.4836790347905,
+        "y": 656.2046938269565,
+        "type": "junction"
+      },
+      {
+        "id": "D46",
+        "x": 442,
+        "y": 603,
+        "roomId": "Server Room",
+        "doorId": "15",
+        "type": "door"
+      },
+      {
+        "id": "J47",
+        "x": 245,
+        "y": 619,
+        "type": "junction"
+      },
+      {
+        "id": "D48",
+        "x": 268,
+        "y": 619,
+        "roomId": "Female Restroom",
+        "doorId": "13",
+        "type": "door"
+      },
+      {
+        "id": "J49",
+        "x": 245,
+        "y": 586,
+        "type": "junction"
+      },
+      {
+        "id": "D50",
+        "x": 220,
+        "y": 586,
+        "roomId": "Male Restroom",
+        "doorId": "12",
+        "type": "door"
+      },
+      {
+        "id": "J51",
+        "x": 513.1883069780937,
+        "y": 870.8147395908893,
+        "type": "junction"
+      },
+      {
+        "id": "D52",
+        "x": 513,
+        "y": 863,
+        "roomId": "Reception 1",
+        "doorId": "1",
+        "type": "door"
+      },
+      {
+        "id": "J53",
+        "x": 462.9715402362178,
+        "y": 1119.8588030715196,
+        "type": "junction"
+      },
+      {
+        "id": "D54",
+        "x": 497,
+        "y": 1120,
+        "roomId": "PKI Room",
+        "doorId": "4",
+        "type": "door"
+      },
+      {
+        "id": "J55",
+        "x": 248.35218129648064,
+        "y": 1100.8942671429409,
+        "type": "junction"
+      },
+      {
+        "id": "D56",
+        "x": 219,
+        "y": 1102,
+        "roomId": "Store Room",
+        "doorId": "9",
+        "type": "door"
+      },
+      {
+        "id": "J57",
+        "x": 260,
+        "y": 1597,
+        "type": "junction"
+      },
+      {
+        "id": "D58",
+        "x": 266,
+        "y": 1607,
+        "roomId": "Cafeteria",
+        "doorId": "7",
+        "type": "door"
+      },
+      {
+        "id": "J59",
+        "x": 1046.0778542995226,
+        "y": 459.79565294981006,
+        "type": "junction"
+      },
+      {
+        "id": "D60",
+        "x": 1046,
+        "y": 419,
+        "roomId": "Phone Booth 1",
+        "doorId": "233",
+        "type": "door"
+      },
+      {
+        "id": "J61",
+        "x": 249.4990103648182,
+        "y": 1131.3373660479008,
+        "type": "junction"
+      },
+      {
+        "id": "D62",
+        "x": 285,
+        "y": 1130,
+        "roomId": "Workspace 1",
+        "doorId": "17",
+        "type": "door"
+      },
+      {
+        "id": "J63",
+        "x": 258.9357683494202,
+        "y": 1469.2922019304215,
+        "type": "junction"
+      },
+      {
+        "id": "D64",
+        "x": 294,
+        "y": 1469,
+        "roomId": "Workspace 2",
+        "doorId": "18",
+        "type": "door"
+      },
+      {
+        "id": "J65",
+        "x": 246.98467881656234,
+        "y": 1061.8821391704346,
+        "type": "junction"
+      },
+      {
+        "id": "D66",
+        "x": 223,
+        "y": 1062,
+        "roomId": "Conference Room 1",
+        "doorId": "10",
+        "type": "door"
+      },
+      {
+        "id": "J67",
+        "x": 245.71195812934266,
+        "y": 802.8834793212318,
+        "type": "junction"
+      },
+      {
+        "id": "D68",
+        "x": 222,
+        "y": 803,
+        "roomId": "AHU Room 1",
+        "doorId": "11",
+        "type": "door"
+      },
+      {
+        "id": "J69",
+        "x": 252.3787082040171,
+        "y": 1207.7802541429994,
+        "type": "junction"
+      },
+      {
+        "id": "D70",
+        "x": 220,
+        "y": 1209,
+        "roomId": "PD Cubicle 2",
+        "doorId": "8",
+        "type": "door"
+      },
+      {
+        "id": "J71",
+        "x": 519,
+        "y": 1322,
+        "type": "junction"
+      },
+      {
+        "id": "D72",
+        "x": 526,
+        "y": 1320,
+        "roomId": "PD Cubicle 2",
+        "doorId": "6",
+        "type": "door"
+      },
+      {
+        "id": "J73",
+        "x": 611.3349186721202,
+        "y": 799.5632074574337,
+        "type": "junction"
+      },
+      {
+        "id": "D74",
+        "x": 611,
+        "y": 751,
+        "roomId": "Visitor Room",
+        "doorId": "2",
+        "type": "door"
+      },
+      {
+        "id": "J75",
+        "x": 465,
+        "y": 656,
+        "type": "junction"
+      },
+      {
+        "id": "D76",
+        "x": 494,
+        "y": 629,
+        "roomId": "Meeting Room 1",
+        "doorId": "16",
+        "type": "door"
+      },
+      {
+        "id": "J77",
+        "x": 939,
+        "y": 603,
+        "type": "junction"
+      },
+      {
+        "id": "D78",
+        "x": 882,
+        "y": 603,
+        "roomId": "Reception 2",
+        "doorId": "19",
+        "type": "door"
+      },
+      {
+        "id": "J79",
+        "x": 939,
+        "y": 557,
+        "type": "junction"
+      },
+      {
+        "id": "D80",
+        "x": 890,
+        "y": 557,
+        "roomId": "Meeting Room 2",
+        "doorId": "20",
+        "type": "door"
+      },
+      {
+        "id": "J81",
+        "x": 939,
+        "y": 460,
+        "type": "junction"
+      },
+      {
+        "id": "D82",
+        "x": 889,
+        "y": 452,
+        "roomId": "Conference Room 3",
+        "doorId": "21",
+        "type": "door"
+      },
+      {
+        "id": "J83",
+        "x": 975.0819296590756,
+        "y": 459.93114135561245,
+        "type": "junction"
+      },
+      {
+        "id": "D84",
+        "x": 975,
+        "y": 417,
+        "roomId": "Meeting Room 3",
+        "doorId": "22",
+        "type": "door"
+      },
+      {
+        "id": "J85",
+        "x": 1256.9473153250271,
+        "y": 459.3932303142652,
+        "type": "junction"
+      },
+      {
+        "id": "D86",
+        "x": 1257,
+        "y": 487,
+        "roomId": "Workspace 3",
+        "doorId": "32",
+        "type": "door"
+      },
+      {
+        "id": "J87",
+        "x": 1905,
+        "y": 519,
+        "type": "junction"
+      },
+      {
+        "id": "D88",
+        "x": 1965,
+        "y": 519,
+        "roomId": "Workspace 4",
+        "doorId": "33",
+        "type": "door"
+      },
+      {
+        "id": "J89",
+        "x": 2027.4692381255977,
+        "y": 404.72266496652855,
+        "type": "junction"
+      },
+      {
+        "id": "D90",
+        "x": 2028,
+        "y": 375,
+        "roomId": "Male Washroom",
+        "doorId": "34",
+        "type": "door"
+      },
+      {
+        "id": "J91",
+        "x": 2027.6120497290406,
+        "y": 404.72521517373286,
+        "type": "junction"
+      },
+      {
+        "id": "D92",
+        "x": 2027,
+        "y": 439,
+        "roomId": "Female Washroom",
+        "doorId": "35",
+        "type": "door"
+      },
+      {
+        "id": "J93",
+        "x": 1839.0749662207686,
+        "y": 458.2822996827848,
+        "type": "junction"
+      },
+      {
+        "id": "D94",
+        "x": 1839,
+        "y": 419,
+        "roomId": "AHU Room 2",
+        "doorId": "31",
+        "type": "door"
+      },
+      {
+        "id": "J95",
+        "x": 1720.07539961468,
+        "y": 458.5093980923384,
+        "type": "junction"
+      },
+      {
+        "id": "D96",
+        "x": 1720,
+        "y": 419,
+        "roomId": "UPS Room 2",
+        "doorId": "29",
+        "type": "door"
+      },
+      {
+        "id": "J97",
+        "x": 1652.0756472683438,
+        "y": 458.6391686120833,
+        "type": "junction"
+      },
+      {
+        "id": "D98",
+        "x": 1652,
+        "y": 419,
+        "roomId": "Store Room 2",
+        "doorId": "28",
+        "type": "door"
+      },
+      {
+        "id": "J99",
+        "x": 1501.0761972051555,
+        "y": 458.9273355015169,
+        "type": "junction"
+      },
+      {
+        "id": "D100",
+        "x": 1501,
+        "y": 419,
+        "roomId": "Meeting Room 4",
+        "doorId": "27",
+        "type": "door"
+      },
+      {
+        "id": "J101",
+        "x": 1397.0784843595786,
+        "y": 459.1258044191611,
+        "type": "junction"
+      },
+      {
+        "id": "D102",
+        "x": 1397,
+        "y": 418,
+        "roomId": "Director Cabin",
+        "doorId": "26",
+        "type": "door"
+      },
+      {
+        "id": "J103",
+        "x": 1153.0755562192026,
+        "y": 459.5914588621771,
+        "type": "junction"
+      },
+      {
+        "id": "D104",
+        "x": 1153,
+        "y": 420,
+        "roomId": "PD Head Cabin 1",
+        "doorId": "24",
+        "type": "door"
+      },
+      {
+        "id": "J105",
+        "x": 1252.0790124445966,
+        "y": 459.4025209686172,
+        "type": "junction"
+      },
+      {
+        "id": "D106",
+        "x": 1252,
+        "y": 418,
+        "roomId": "Workspace 5",
+        "doorId": "25",
+        "type": "door"
+      },
+      {
+        "id": "J107",
+        "x": 2778.1462828617064,
+        "y": 462.12991128487147,
+        "type": "junction"
+      },
+      {
+        "id": "D108",
+        "x": 2778,
+        "y": 482,
+        "roomId": "Workspace 5",
+        "doorId": "42",
+        "type": "door"
+      },
+      {
+        "id": "J109",
+        "x": 519,
+        "y": 1237,
+        "type": "junction"
+      },
+      {
+        "id": "D110",
+        "x": 525,
+        "y": 1235,
+        "roomId": "PD Cubicle 1",
+        "doorId": "5",
+        "type": "door"
+      },
+      {
+        "id": "J111",
+        "x": 2377.652651593274,
+        "y": 459.18149191357014,
+        "type": "junction"
+      },
+      {
+        "id": "D112",
+        "x": 2378,
+        "y": 412,
+        "roomId": "Cabin 1",
+        "doorId": "36",
+        "type": "door"
+      },
+      {
+        "id": "J113",
+        "x": 2569.6716923016706,
+        "y": 460.5951290230798,
+        "type": "junction"
+      },
+      {
+        "id": "D114",
+        "x": 2570,
+        "y": 416,
+        "roomId": "PD Head Cabin 2",
+        "doorId": "38",
+        "type": "door"
+      },
+      {
+        "id": "J115",
+        "x": 2677.673200744888,
+        "y": 461.3902321527231,
+        "type": "junction"
+      },
+      {
+        "id": "D116",
+        "x": 2678,
+        "y": 417,
+        "roomId": "Meeting Room 5",
+        "doorId": "39",
+        "type": "door"
+      },
+      {
+        "id": "J117",
+        "x": 2824.6505108684687,
+        "y": 462.47227369964514,
+        "type": "junction"
+      },
+      {
+        "id": "D118",
+        "x": 2825,
+        "y": 415,
+        "roomId": "Meeting Room 6",
+        "doorId": "40",
+        "type": "door"
+      },
+      {
+        "id": "J119",
+        "x": 3093.790525109859,
+        "y": 464.4536725774959,
+        "type": "junction"
+      },
+      {
+        "id": "D120",
+        "x": 3094,
+        "y": 436,
+        "roomId": "Workspace 6",
+        "doorId": "41",
+        "type": "door"
+      },
+      {
+        "id": "J121",
+        "x": 3828,
+        "y": 454,
+        "type": "junction"
+      },
+      {
+        "id": "D122",
+        "x": 3838,
+        "y": 455,
+        "roomId": "Design Thinking Room",
+        "doorId": "45",
+        "type": "door"
+      },
+      {
+        "id": "J123",
+        "x": 3701.8003245256577,
+        "y": 459.75378459609465,
+        "type": "junction"
+      },
+      {
+        "id": "D124",
+        "x": 3704,
+        "y": 508,
+        "roomId": "Seating Area 2",
+        "doorId": "44",
+        "type": "door"
+      },
+      {
+        "id": "J125",
+        "x": 3696.5983718400234,
+        "y": 459.99095569118435,
+        "type": "junction"
+      },
+      {
+        "id": "D126",
+        "x": 3694,
+        "y": 403,
+        "roomId": "Seating Area 1",
+        "doorId": "43",
+        "type": "door"
+      },
+      {
+        "id": "J127",
+        "x": 463.1498915326607,
+        "y": 1076.8761406287663,
+        "type": "junction"
+      },
+      {
+        "id": "D128",
+        "x": 493,
+        "y": 1077,
+        "roomId": "Training room",
+        "doorId": "45",
+        "type": "door"
+      }
+    ],
+    "edges": [
+      {
+        "from": "N1",
+        "to": "N2",
+        "distance": 1892.01
+      },
+      {
+        "from": "N2",
+        "to": "N1",
+        "distance": 1892.01
+      },
+      {
+        "from": "N2",
+        "to": "N3",
+        "distance": 2811
+      },
+      {
+        "from": "N3",
+        "to": "N2",
+        "distance": 2811
+      },
+      {
+        "from": "N3",
+        "to": "N4",
+        "distance": 257.05
+      },
+      {
+        "from": "N4",
+        "to": "N3",
+        "distance": 257.05
+      },
+      {
+        "from": "N4",
+        "to": "N5",
+        "distance": 329.34
+      },
+      {
+        "from": "N5",
+        "to": "N4",
+        "distance": 329.34
+      },
+      {
+        "from": "N2",
+        "to": "N6",
+        "distance": 246.07
+      },
+      {
+        "from": "N6",
+        "to": "N2",
+        "distance": 246.07
+      },
+      {
+        "from": "N6",
+        "to": "N7",
+        "distance": 103
+      },
+      {
+        "from": "N7",
+        "to": "N6",
+        "distance": 103
+      },
+      {
+        "from": "N8",
+        "to": "N9",
+        "distance": 145
+      },
+      {
+        "from": "N9",
+        "to": "N8",
+        "distance": 145
+      },
+      {
+        "from": "N9",
+        "to": "N10",
+        "distance": 70.01
+      },
+      {
+        "from": "N10",
+        "to": "N9",
+        "distance": 70.01
+      },
+      {
+        "from": "N10",
+        "to": "N11",
+        "distance": 83.02
+      },
+      {
+        "from": "N11",
+        "to": "N10",
+        "distance": 83.02
+      },
+      {
+        "from": "N11",
+        "to": "N12",
+        "distance": 482
+      },
+      {
+        "from": "N12",
+        "to": "N11",
+        "distance": 482
+      },
+      {
+        "from": "N12",
+        "to": "N13",
+        "distance": 204.02
+      },
+      {
+        "from": "N13",
+        "to": "N12",
+        "distance": 204.02
+      },
+      {
+        "from": "N13",
+        "to": "N14",
+        "distance": 240.01
+      },
+      {
+        "from": "N14",
+        "to": "N13",
+        "distance": 240.01
+      },
+      {
+        "from": "N15",
+        "to": "N16",
+        "distance": 37
+      },
+      {
+        "from": "N16",
+        "to": "N15",
+        "distance": 37
+      },
+      {
+        "from": "N16",
+        "to": "N17",
+        "distance": 19
+      },
+      {
+        "from": "N17",
+        "to": "N16",
+        "distance": 19
+      },
+      {
+        "from": "N18",
+        "to": "N19",
+        "distance": 35
+      },
+      {
+        "from": "N19",
+        "to": "N18",
+        "distance": 35
+      },
+      {
+        "from": "N19",
+        "to": "N20",
+        "distance": 22
+      },
+      {
+        "from": "N20",
+        "to": "N19",
+        "distance": 22
+      },
+      {
+        "from": "N11",
+        "to": "N21",
+        "distance": 216
+      },
+      {
+        "from": "N21",
+        "to": "N11",
+        "distance": 216
+      },
+      {
+        "from": "N21",
+        "to": "N22",
+        "distance": 220.01
+      },
+      {
+        "from": "N22",
+        "to": "N21",
+        "distance": 220.01
+      },
+      {
+        "from": "N22",
+        "to": "N23",
+        "distance": 78
+      },
+      {
+        "from": "N23",
+        "to": "N22",
+        "distance": 78
+      },
+      {
+        "from": "N22",
+        "to": "N24",
+        "distance": 407
+      },
+      {
+        "from": "N24",
+        "to": "N22",
+        "distance": 407
+      },
+      {
+        "from": "N24",
+        "to": "N13",
+        "distance": 292.21
+      },
+      {
+        "from": "N13",
+        "to": "N24",
+        "distance": 292.21
+      },
+      {
+        "from": "N25",
+        "to": "N26",
+        "distance": 267
+      },
+      {
+        "from": "N26",
+        "to": "N25",
+        "distance": 267
+      },
+      {
+        "from": "N26",
+        "to": "N27",
+        "distance": 1048
+      },
+      {
+        "from": "N27",
+        "to": "N26",
+        "distance": 1048
+      },
+      {
+        "from": "N27",
+        "to": "N28",
+        "distance": 54
+      },
+      {
+        "from": "N28",
+        "to": "N27",
+        "distance": 54
+      },
+      {
+        "from": "N28",
+        "to": "N29",
+        "distance": 56.01
+      },
+      {
+        "from": "N29",
+        "to": "N28",
+        "distance": 56.01
+      },
+      {
+        "from": "N30",
+        "to": "N31",
+        "distance": 117
+      },
+      {
+        "from": "N31",
+        "to": "N30",
+        "distance": 117
+      },
+      {
+        "from": "N31",
+        "to": "N32",
+        "distance": 152
+      },
+      {
+        "from": "N32",
+        "to": "N31",
+        "distance": 152
+      },
+      {
+        "from": "N33",
+        "to": "N34",
+        "distance": 268
+      },
+      {
+        "from": "N34",
+        "to": "N33",
+        "distance": 268
+      },
+      {
+        "from": "N34",
+        "to": "N35",
+        "distance": 815.02
+      },
+      {
+        "from": "N35",
+        "to": "N34",
+        "distance": 815.02
+      },
+      {
+        "from": "N35",
+        "to": "N36",
+        "distance": 35
+      },
+      {
+        "from": "N36",
+        "to": "N35",
+        "distance": 35
+      },
+      {
+        "from": "N36",
+        "to": "N37",
+        "distance": 206.02
+      },
+      {
+        "from": "N37",
+        "to": "N36",
+        "distance": 206.02
+      },
+      {
+        "from": "N37",
+        "to": "N38",
+        "distance": 223
+      },
+      {
+        "from": "N38",
+        "to": "N37",
+        "distance": 223
+      },
+      {
+        "from": "N26",
+        "to": "J39",
+        "distance": 824.07
+      },
+      {
+        "from": "J39",
+        "to": "N26",
+        "distance": 824.07
+      },
+      {
+        "from": "J39",
+        "to": "N27",
+        "distance": 223.93
+      },
+      {
+        "from": "N27",
+        "to": "J39",
+        "distance": 223.93
+      },
+      {
+        "from": "D40",
+        "to": "J39",
+        "distance": 37.43
+      },
+      {
+        "from": "J39",
+        "to": "D40",
+        "distance": 37.43
+      },
+      {
+        "from": "N34",
+        "to": "J41",
+        "distance": 123.61
+      },
+      {
+        "from": "J41",
+        "to": "N34",
+        "distance": 123.61
+      },
+      {
+        "from": "J41",
+        "to": "N35",
+        "distance": 691.41
+      },
+      {
+        "from": "N35",
+        "to": "J41",
+        "distance": 691.41
+      },
+      {
+        "from": "D42",
+        "to": "J41",
+        "distance": 52.91
+      },
+      {
+        "from": "J41",
+        "to": "D42",
+        "distance": 52.91
+      },
+      {
+        "from": "N21",
+        "to": "J43",
+        "distance": 64.51
+      },
+      {
+        "from": "J43",
+        "to": "N21",
+        "distance": 64.51
+      },
+      {
+        "from": "J43",
+        "to": "N22",
+        "distance": 155.5
+      },
+      {
+        "from": "N22",
+        "to": "J43",
+        "distance": 155.5
+      },
+      {
+        "from": "D44",
+        "to": "J43",
+        "distance": 54.59
+      },
+      {
+        "from": "J43",
+        "to": "D44",
+        "distance": 54.59
+      },
+      {
+        "from": "N21",
+        "to": "J45",
+        "distance": 22.52
+      },
+      {
+        "from": "J45",
+        "to": "N21",
+        "distance": 22.52
+      },
+      {
+        "from": "J45",
+        "to": "N22",
+        "distance": 197.49
+      },
+      {
+        "from": "N22",
+        "to": "J45",
+        "distance": 197.49
+      },
+      {
+        "from": "D46",
+        "to": "J45",
+        "distance": 53.21
+      },
+      {
+        "from": "J45",
+        "to": "D46",
+        "distance": 53.21
+      },
+      {
+        "from": "N22",
+        "to": "J47",
+        "distance": 39
+      },
+      {
+        "from": "J47",
+        "to": "N22",
+        "distance": 39
+      },
+      {
+        "from": "J47",
+        "to": "N23",
+        "distance": 39
+      },
+      {
+        "from": "N23",
+        "to": "J47",
+        "distance": 39
+      },
+      {
+        "from": "D48",
+        "to": "J47",
+        "distance": 23
+      },
+      {
+        "from": "J47",
+        "to": "D48",
+        "distance": 23
+      },
+      {
+        "from": "N22",
+        "to": "J49",
+        "distance": 72
+      },
+      {
+        "from": "J49",
+        "to": "N22",
+        "distance": 72
+      },
+      {
+        "from": "J49",
+        "to": "N23",
+        "distance": 6
+      },
+      {
+        "from": "N23",
+        "to": "J49",
+        "distance": 6
+      },
+      {
+        "from": "D50",
+        "to": "J49",
+        "distance": 25
+      },
+      {
+        "from": "J49",
+        "to": "D50",
+        "distance": 25
+      },
+      {
+        "from": "N10",
+        "to": "J51",
+        "distance": 33.82
+      },
+      {
+        "from": "J51",
+        "to": "N10",
+        "distance": 33.82
+      },
+      {
+        "from": "J51",
+        "to": "N11",
+        "distance": 49.2
+      },
+      {
+        "from": "N11",
+        "to": "J51",
+        "distance": 49.2
+      },
+      {
+        "from": "D52",
+        "to": "J51",
+        "distance": 7.82
+      },
+      {
+        "from": "J51",
+        "to": "D52",
+        "distance": 7.82
+      },
+      {
+        "from": "N11",
+        "to": "J53",
+        "distance": 247.86
+      },
+      {
+        "from": "J53",
+        "to": "N11",
+        "distance": 247.86
+      },
+      {
+        "from": "J53",
+        "to": "N12",
+        "distance": 234.14
+      },
+      {
+        "from": "N12",
+        "to": "J53",
+        "distance": 234.14
+      },
+      {
+        "from": "D54",
+        "to": "J53",
+        "distance": 34.03
+      },
+      {
+        "from": "J53",
+        "to": "D54",
+        "distance": 34.03
+      },
+      {
+        "from": "N24",
+        "to": "J55",
+        "distance": 35.92
+      },
+      {
+        "from": "J55",
+        "to": "N24",
+        "distance": 35.92
+      },
+      {
+        "from": "J55",
+        "to": "N13",
+        "distance": 256.29
+      },
+      {
+        "from": "N13",
+        "to": "J55",
+        "distance": 256.29
+      },
+      {
+        "from": "D56",
+        "to": "J55",
+        "distance": 29.37
+      },
+      {
+        "from": "J55",
+        "to": "D56",
+        "distance": 29.37
+      },
+      {
+        "from": "N13",
+        "to": "J57",
+        "distance": 240.01
+      },
+      {
+        "from": "J57",
+        "to": "N13",
+        "distance": 240.01
+      },
+      {
+        "from": "J57",
+        "to": "N14",
+        "distance": 0
+      },
+      {
+        "from": "N14",
+        "to": "J57",
+        "distance": 0
+      },
+      {
+        "from": "D58",
+        "to": "J57",
+        "distance": 11.66
+      },
+      {
+        "from": "J57",
+        "to": "D58",
+        "distance": 11.66
+      },
+      {
+        "from": "N26",
+        "to": "J59",
+        "distance": 107.08
+      },
+      {
+        "from": "J59",
+        "to": "N26",
+        "distance": 107.08
+      },
+      {
+        "from": "J59",
+        "to": "N27",
+        "distance": 940.92
+      },
+      {
+        "from": "N27",
+        "to": "J59",
+        "distance": 940.92
+      },
+      {
+        "from": "D60",
+        "to": "J59",
+        "distance": 40.8
+      },
+      {
+        "from": "J59",
+        "to": "D60",
+        "distance": 40.8
+      },
+      {
+        "from": "N24",
+        "to": "J61",
+        "distance": 66.38
+      },
+      {
+        "from": "J61",
+        "to": "N24",
+        "distance": 66.38
+      },
+      {
+        "from": "J61",
+        "to": "N13",
+        "distance": 225.82
+      },
+      {
+        "from": "N13",
+        "to": "J61",
+        "distance": 225.82
+      },
+      {
+        "from": "D62",
+        "to": "J61",
+        "distance": 35.53
+      },
+      {
+        "from": "J61",
+        "to": "D62",
+        "distance": 35.53
+      },
+      {
+        "from": "N13",
+        "to": "J63",
+        "distance": 112.3
+      },
+      {
+        "from": "J63",
+        "to": "N13",
+        "distance": 112.3
+      },
+      {
+        "from": "J63",
+        "to": "N14",
+        "distance": 127.71
+      },
+      {
+        "from": "N14",
+        "to": "J63",
+        "distance": 127.71
+      },
+      {
+        "from": "D64",
+        "to": "J63",
+        "distance": 35.07
+      },
+      {
+        "from": "J63",
+        "to": "D64",
+        "distance": 35.07
+      },
+      {
+        "from": "N22",
+        "to": "J65",
+        "distance": 403.89
+      },
+      {
+        "from": "J65",
+        "to": "N22",
+        "distance": 403.89
+      },
+      {
+        "from": "J65",
+        "to": "N24",
+        "distance": 3.12
+      },
+      {
+        "from": "N24",
+        "to": "J65",
+        "distance": 3.12
+      },
+      {
+        "from": "D66",
+        "to": "J65",
+        "distance": 23.98
+      },
+      {
+        "from": "J65",
+        "to": "D66",
+        "distance": 23.98
+      },
+      {
+        "from": "N22",
+        "to": "J67",
+        "distance": 144.89
+      },
+      {
+        "from": "J67",
+        "to": "N22",
+        "distance": 144.89
+      },
+      {
+        "from": "J67",
+        "to": "N24",
+        "distance": 262.12
+      },
+      {
+        "from": "N24",
+        "to": "J67",
+        "distance": 262.12
+      },
+      {
+        "from": "D68",
+        "to": "J67",
+        "distance": 23.71
+      },
+      {
+        "from": "J67",
+        "to": "D68",
+        "distance": 23.71
+      },
+      {
+        "from": "N24",
+        "to": "J69",
+        "distance": 142.88
+      },
+      {
+        "from": "J69",
+        "to": "N24",
+        "distance": 142.88
+      },
+      {
+        "from": "J69",
+        "to": "N13",
+        "distance": 149.33
+      },
+      {
+        "from": "N13",
+        "to": "J69",
+        "distance": 149.33
+      },
+      {
+        "from": "D70",
+        "to": "J69",
+        "distance": 32.4
+      },
+      {
+        "from": "J69",
+        "to": "D70",
+        "distance": 32.4
+      },
+      {
+        "from": "N19",
+        "to": "J71",
+        "distance": 22
+      },
+      {
+        "from": "J71",
+        "to": "N19",
+        "distance": 22
+      },
+      {
+        "from": "J71",
+        "to": "N20",
+        "distance": 0
+      },
+      {
+        "from": "N20",
+        "to": "J71",
+        "distance": 0
+      },
+      {
+        "from": "D72",
+        "to": "J71",
+        "distance": 7.28
+      },
+      {
+        "from": "J71",
+        "to": "D72",
+        "distance": 7.28
+      },
+      {
+        "from": "N8",
+        "to": "J73",
+        "distance": 81.67
+      },
+      {
+        "from": "J73",
+        "to": "N8",
+        "distance": 81.67
+      },
+      {
+        "from": "J73",
+        "to": "N9",
+        "distance": 63.34
+      },
+      {
+        "from": "N9",
+        "to": "J73",
+        "distance": 63.34
+      },
+      {
+        "from": "D74",
+        "to": "J73",
+        "distance": 48.56
+      },
+      {
+        "from": "J73",
+        "to": "D74",
+        "distance": 48.56
+      },
+      {
+        "from": "N11",
+        "to": "J75",
+        "distance": 216
+      },
+      {
+        "from": "J75",
+        "to": "N11",
+        "distance": 216
+      },
+      {
+        "from": "J75",
+        "to": "N21",
+        "distance": 0
+      },
+      {
+        "from": "N21",
+        "to": "J75",
+        "distance": 0
+      },
+      {
+        "from": "D76",
+        "to": "J75",
+        "distance": 39.62
+      },
+      {
+        "from": "J75",
+        "to": "D76",
+        "distance": 39.62
+      },
+      {
+        "from": "N25",
+        "to": "J77",
+        "distance": 124
+      },
+      {
+        "from": "J77",
+        "to": "N25",
+        "distance": 124
+      },
+      {
+        "from": "J77",
+        "to": "N26",
+        "distance": 143
+      },
+      {
+        "from": "N26",
+        "to": "J77",
+        "distance": 143
+      },
+      {
+        "from": "D78",
+        "to": "J77",
+        "distance": 57
+      },
+      {
+        "from": "J77",
+        "to": "D78",
+        "distance": 57
+      },
+      {
+        "from": "N25",
+        "to": "J79",
+        "distance": 170
+      },
+      {
+        "from": "J79",
+        "to": "N25",
+        "distance": 170
+      },
+      {
+        "from": "J79",
+        "to": "N26",
+        "distance": 97
+      },
+      {
+        "from": "N26",
+        "to": "J79",
+        "distance": 97
+      },
+      {
+        "from": "D80",
+        "to": "J79",
+        "distance": 49
+      },
+      {
+        "from": "J79",
+        "to": "D80",
+        "distance": 49
+      },
+      {
+        "from": "N25",
+        "to": "J81",
+        "distance": 267
+      },
+      {
+        "from": "J81",
+        "to": "N25",
+        "distance": 267
+      },
+      {
+        "from": "J81",
+        "to": "N26",
+        "distance": 0
+      },
+      {
+        "from": "N26",
+        "to": "J81",
+        "distance": 0
+      },
+      {
+        "from": "D82",
+        "to": "J81",
+        "distance": 50.64
+      },
+      {
+        "from": "J81",
+        "to": "D82",
+        "distance": 50.64
+      },
+      {
+        "from": "N26",
+        "to": "J83",
+        "distance": 36.08
+      },
+      {
+        "from": "J83",
+        "to": "N26",
+        "distance": 36.08
+      },
+      {
+        "from": "J83",
+        "to": "N27",
+        "distance": 1011.92
+      },
+      {
+        "from": "N27",
+        "to": "J83",
+        "distance": 1011.92
+      },
+      {
+        "from": "D84",
+        "to": "J83",
+        "distance": 42.93
+      },
+      {
+        "from": "J83",
+        "to": "D84",
+        "distance": 42.93
+      },
+      {
+        "from": "N26",
+        "to": "J85",
+        "distance": 317.95
+      },
+      {
+        "from": "J85",
+        "to": "N26",
+        "distance": 317.95
+      },
+      {
+        "from": "J85",
+        "to": "N27",
+        "distance": 730.05
+      },
+      {
+        "from": "N27",
+        "to": "J85",
+        "distance": 730.05
+      },
+      {
+        "from": "D86",
+        "to": "J85",
+        "distance": 27.61
+      },
+      {
+        "from": "J85",
+        "to": "D86",
+        "distance": 27.61
+      },
+      {
+        "from": "N30",
+        "to": "J87",
+        "distance": 61
+      },
+      {
+        "from": "J87",
+        "to": "N30",
+        "distance": 61
+      },
+      {
+        "from": "J87",
+        "to": "N31",
+        "distance": 56
+      },
+      {
+        "from": "N31",
+        "to": "J87",
+        "distance": 56
+      },
+      {
+        "from": "D88",
+        "to": "J87",
+        "distance": 60
+      },
+      {
+        "from": "J87",
+        "to": "D88",
+        "distance": 60
+      },
+      {
+        "from": "N28",
+        "to": "J89",
+        "distance": 40.48
+      },
+      {
+        "from": "J89",
+        "to": "N28",
+        "distance": 40.48
+      },
+      {
+        "from": "J89",
+        "to": "N29",
+        "distance": 15.53
+      },
+      {
+        "from": "N29",
+        "to": "J89",
+        "distance": 15.53
+      },
+      {
+        "from": "D90",
+        "to": "J89",
+        "distance": 29.73
+      },
+      {
+        "from": "J89",
+        "to": "D90",
+        "distance": 29.73
+      },
+      {
+        "from": "N28",
+        "to": "J91",
+        "distance": 40.62
+      },
+      {
+        "from": "J91",
+        "to": "N28",
+        "distance": 40.62
+      },
+      {
+        "from": "J91",
+        "to": "N29",
+        "distance": 15.39
+      },
+      {
+        "from": "N29",
+        "to": "J91",
+        "distance": 15.39
+      },
+      {
+        "from": "D92",
+        "to": "J91",
+        "distance": 34.28
+      },
+      {
+        "from": "J91",
+        "to": "D92",
+        "distance": 34.28
+      },
+      {
+        "from": "N26",
+        "to": "J93",
+        "distance": 900.08
+      },
+      {
+        "from": "J93",
+        "to": "N26",
+        "distance": 900.08
+      },
+      {
+        "from": "J93",
+        "to": "N27",
+        "distance": 147.93
+      },
+      {
+        "from": "N27",
+        "to": "J93",
+        "distance": 147.93
+      },
+      {
+        "from": "D94",
+        "to": "J93",
+        "distance": 39.28
+      },
+      {
+        "from": "J93",
+        "to": "D94",
+        "distance": 39.28
+      },
+      {
+        "from": "N26",
+        "to": "J95",
+        "distance": 781.08
+      },
+      {
+        "from": "J95",
+        "to": "N26",
+        "distance": 781.08
+      },
+      {
+        "from": "J95",
+        "to": "N27",
+        "distance": 266.93
+      },
+      {
+        "from": "N27",
+        "to": "J95",
+        "distance": 266.93
+      },
+      {
+        "from": "D96",
+        "to": "J95",
+        "distance": 39.51
+      },
+      {
+        "from": "J95",
+        "to": "D96",
+        "distance": 39.51
+      },
+      {
+        "from": "N26",
+        "to": "J97",
+        "distance": 713.08
+      },
+      {
+        "from": "J97",
+        "to": "N26",
+        "distance": 713.08
+      },
+      {
+        "from": "J97",
+        "to": "N27",
+        "distance": 334.92
+      },
+      {
+        "from": "N27",
+        "to": "J97",
+        "distance": 334.92
+      },
+      {
+        "from": "D98",
+        "to": "J97",
+        "distance": 39.64
+      },
+      {
+        "from": "J97",
+        "to": "D98",
+        "distance": 39.64
+      },
+      {
+        "from": "N26",
+        "to": "J99",
+        "distance": 562.08
+      },
+      {
+        "from": "J99",
+        "to": "N26",
+        "distance": 562.08
+      },
+      {
+        "from": "J99",
+        "to": "N27",
+        "distance": 485.92
+      },
+      {
+        "from": "N27",
+        "to": "J99",
+        "distance": 485.92
+      },
+      {
+        "from": "D100",
+        "to": "J99",
+        "distance": 39.93
+      },
+      {
+        "from": "J99",
+        "to": "D100",
+        "distance": 39.93
+      },
+      {
+        "from": "N26",
+        "to": "J101",
+        "distance": 458.08
+      },
+      {
+        "from": "J101",
+        "to": "N26",
+        "distance": 458.08
+      },
+      {
+        "from": "J101",
+        "to": "N27",
+        "distance": 589.92
+      },
+      {
+        "from": "N27",
+        "to": "J101",
+        "distance": 589.92
+      },
+      {
+        "from": "D102",
+        "to": "J101",
+        "distance": 41.13
+      },
+      {
+        "from": "J101",
+        "to": "D102",
+        "distance": 41.13
+      },
+      {
+        "from": "N26",
+        "to": "J103",
+        "distance": 214.08
+      },
+      {
+        "from": "J103",
+        "to": "N26",
+        "distance": 214.08
+      },
+      {
+        "from": "J103",
+        "to": "N27",
+        "distance": 833.93
+      },
+      {
+        "from": "N27",
+        "to": "J103",
+        "distance": 833.93
+      },
+      {
+        "from": "D104",
+        "to": "J103",
+        "distance": 39.59
+      },
+      {
+        "from": "J103",
+        "to": "D104",
+        "distance": 39.59
+      },
+      {
+        "from": "N26",
+        "to": "J105",
+        "distance": 313.08
+      },
+      {
+        "from": "J105",
+        "to": "N26",
+        "distance": 313.08
+      },
+      {
+        "from": "J105",
+        "to": "N27",
+        "distance": 734.92
+      },
+      {
+        "from": "N27",
+        "to": "J105",
+        "distance": 734.92
+      },
+      {
+        "from": "D106",
+        "to": "J105",
+        "distance": 41.4
+      },
+      {
+        "from": "J105",
+        "to": "D106",
+        "distance": 41.4
+      },
+      {
+        "from": "N34",
+        "to": "J107",
+        "distance": 425.16
+      },
+      {
+        "from": "J107",
+        "to": "N34",
+        "distance": 425.16
+      },
+      {
+        "from": "J107",
+        "to": "N35",
+        "distance": 389.86
+      },
+      {
+        "from": "N35",
+        "to": "J107",
+        "distance": 389.86
+      },
+      {
+        "from": "D108",
+        "to": "J107",
+        "distance": 19.87
+      },
+      {
+        "from": "J107",
+        "to": "D108",
+        "distance": 19.87
+      },
+      {
+        "from": "N16",
+        "to": "J109",
+        "distance": 19
+      },
+      {
+        "from": "J109",
+        "to": "N16",
+        "distance": 19
+      },
+      {
+        "from": "J109",
+        "to": "N17",
+        "distance": 0
+      },
+      {
+        "from": "N17",
+        "to": "J109",
+        "distance": 0
+      },
+      {
+        "from": "D110",
+        "to": "J109",
+        "distance": 6.32
+      },
+      {
+        "from": "J109",
+        "to": "D110",
+        "distance": 6.32
+      },
+      {
+        "from": "N34",
+        "to": "J111",
+        "distance": 24.65
+      },
+      {
+        "from": "J111",
+        "to": "N34",
+        "distance": 24.65
+      },
+      {
+        "from": "J111",
+        "to": "N35",
+        "distance": 790.37
+      },
+      {
+        "from": "N35",
+        "to": "J111",
+        "distance": 790.37
+      },
+      {
+        "from": "D112",
+        "to": "J111",
+        "distance": 47.18
+      },
+      {
+        "from": "J111",
+        "to": "D112",
+        "distance": 47.18
+      },
+      {
+        "from": "N34",
+        "to": "J113",
+        "distance": 216.68
+      },
+      {
+        "from": "J113",
+        "to": "N34",
+        "distance": 216.68
+      },
+      {
+        "from": "J113",
+        "to": "N35",
+        "distance": 598.34
+      },
+      {
+        "from": "N35",
+        "to": "J113",
+        "distance": 598.34
+      },
+      {
+        "from": "D114",
+        "to": "J113",
+        "distance": 44.6
+      },
+      {
+        "from": "J113",
+        "to": "D114",
+        "distance": 44.6
+      },
+      {
+        "from": "N34",
+        "to": "J115",
+        "distance": 324.68
+      },
+      {
+        "from": "J115",
+        "to": "N34",
+        "distance": 324.68
+      },
+      {
+        "from": "J115",
+        "to": "N35",
+        "distance": 490.34
+      },
+      {
+        "from": "N35",
+        "to": "J115",
+        "distance": 490.34
+      },
+      {
+        "from": "D116",
+        "to": "J115",
+        "distance": 44.39
+      },
+      {
+        "from": "J115",
+        "to": "D116",
+        "distance": 44.39
+      },
+      {
+        "from": "N34",
+        "to": "J117",
+        "distance": 471.66
+      },
+      {
+        "from": "J117",
+        "to": "N34",
+        "distance": 471.66
+      },
+      {
+        "from": "J117",
+        "to": "N35",
+        "distance": 343.36
+      },
+      {
+        "from": "N35",
+        "to": "J117",
+        "distance": 343.36
+      },
+      {
+        "from": "D118",
+        "to": "J117",
+        "distance": 47.47
+      },
+      {
+        "from": "J117",
+        "to": "D118",
+        "distance": 47.47
+      },
+      {
+        "from": "N34",
+        "to": "J119",
+        "distance": 740.81
+      },
+      {
+        "from": "J119",
+        "to": "N34",
+        "distance": 740.81
+      },
+      {
+        "from": "J119",
+        "to": "N35",
+        "distance": 74.21
+      },
+      {
+        "from": "N35",
+        "to": "J119",
+        "distance": 74.21
+      },
+      {
+        "from": "D120",
+        "to": "J119",
+        "distance": 28.45
+      },
+      {
+        "from": "J119",
+        "to": "D120",
+        "distance": 28.45
+      },
+      {
+        "from": "N4",
+        "to": "J121",
+        "distance": 329.34
+      },
+      {
+        "from": "J121",
+        "to": "N4",
+        "distance": 329.34
+      },
+      {
+        "from": "J121",
+        "to": "N5",
+        "distance": 0
+      },
+      {
+        "from": "N5",
+        "to": "J121",
+        "distance": 0
+      },
+      {
+        "from": "D122",
+        "to": "J121",
+        "distance": 10.05
+      },
+      {
+        "from": "J121",
+        "to": "D122",
+        "distance": 10.05
+      },
+      {
+        "from": "N4",
+        "to": "J123",
+        "distance": 203.01
+      },
+      {
+        "from": "J123",
+        "to": "N4",
+        "distance": 203.01
+      },
+      {
+        "from": "J123",
+        "to": "N5",
+        "distance": 126.33
+      },
+      {
+        "from": "N5",
+        "to": "J123",
+        "distance": 126.33
+      },
+      {
+        "from": "D124",
+        "to": "J123",
+        "distance": 48.3
+      },
+      {
+        "from": "J123",
+        "to": "D124",
+        "distance": 48.3
+      },
+      {
+        "from": "N4",
+        "to": "J125",
+        "distance": 197.8
+      },
+      {
+        "from": "J125",
+        "to": "N4",
+        "distance": 197.8
+      },
+      {
+        "from": "J125",
+        "to": "N5",
+        "distance": 131.54
+      },
+      {
+        "from": "N5",
+        "to": "J125",
+        "distance": 131.54
+      },
+      {
+        "from": "D126",
+        "to": "J125",
+        "distance": 57.05
+      },
+      {
+        "from": "J125",
+        "to": "D126",
+        "distance": 57.05
+      },
+      {
+        "from": "N11",
+        "to": "J127",
+        "distance": 204.88
+      },
+      {
+        "from": "J127",
+        "to": "N11",
+        "distance": 204.88
+      },
+      {
+        "from": "J127",
+        "to": "N12",
+        "distance": 277.13
+      },
+      {
+        "from": "N12",
+        "to": "J127",
+        "distance": 277.13
+      },
+      {
+        "from": "D128",
+        "to": "J127",
+        "distance": 29.85
+      },
+      {
+        "from": "J127",
+        "to": "D128",
+        "distance": 29.85
+      }
+    ]
+  }
+}

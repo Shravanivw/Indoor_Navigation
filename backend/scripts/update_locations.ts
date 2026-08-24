@@ -4,7 +4,8 @@ const prisma = new PrismaClient();
 
 async function main() {
   await prisma.$executeRawUnsafe("UPDATE buildings SET location = 'Pune' WHERE id IN ('building-hudson', 'building-ganges')");
-  await prisma.$executeRawUnsafe("UPDATE buildings SET location = 'Bangalore' WHERE id = 'building-jupiter'");
+  await prisma.$executeRawUnsafe("UPDATE buildings SET location = 'Bangalore' WHERE id IN ('building-jupiter', 'building-gravity')");
+  await prisma.$executeRawUnsafe("UPDATE buildings SET location = 'Gurugram' WHERE id = 'building-gurugram'");
   const buildings = await prisma.$queryRawUnsafe("SELECT id, name, location FROM buildings");
   console.log('Updated Buildings in DB:');
   console.log(buildings);

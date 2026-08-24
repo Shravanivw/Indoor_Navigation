@@ -10,6 +10,7 @@ export function getBuildingLocation(building) {
   if (building.location) return building.location;
   const lower = (building.name || building.id || "").toLowerCase();
   if (lower.includes("jupiter") || lower.includes("gravity") || lower.includes("bangalore")) return "Bangalore";
+  if (lower.includes("gurugram")) return "Gurugram";
   return "Pune";
 }
 
@@ -40,6 +41,9 @@ export default function LocationPicker({
   if (!locations.includes("Pune")) locations.unshift("Pune");
   if (!locations.includes("Bangalore") && buildings.some(b => getBuildingLocation(b) === "Bangalore")) {
     locations.push("Bangalore");
+  }
+  if (!locations.includes("Gurugram") && buildings.some(b => getBuildingLocation(b) === "Gurugram")) {
+    locations.push("Gurugram");
   }
   const uniqueLocations = Array.from(new Set(locations));
 

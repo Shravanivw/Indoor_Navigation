@@ -25,9 +25,9 @@ function layoutGenericPod(cx, cz, wM, hM, colsCount, resources) {
   const spacingX = podW + 1.4;
   const spacingZ = podD + 1.2;
 
-  // Determine how many pods fit
-  const numPodsX = Math.max(1, Math.floor((wM - 0.4) / spacingX));
-  const numPodsZ = Math.max(1, Math.floor((hM - 0.4) / spacingZ));
+  // Determine how many pods fit (safely clamped)
+  const numPodsX = Math.min(4, Math.max(1, Math.floor((wM - 0.4) / spacingX)));
+  const numPodsZ = Math.min(4, Math.max(1, Math.floor((hM - 0.4) / spacingZ)));
 
   const startX = cx - ((numPodsX - 1) * spacingX) / 2;
   const startZ = cz - ((numPodsZ - 1) * spacingZ) / 2;
@@ -74,8 +74,8 @@ export function layoutBenchHorizontal(cx, cz, wM, hM, resources) {
   const gapX  = 0.4;
   const gapZ  = 0.4;
 
-  const cols = Math.floor((wM - 0.6) / (deskW + gapX)) || 1;
-  const rows = Math.floor((hM - 0.6) / (deskD + gapZ)) || 1;
+  const cols = Math.min(8, Math.max(1, Math.floor((wM - 0.6) / (deskW + gapX))));
+  const rows = Math.min(8, Math.max(1, Math.floor((hM - 0.6) / (deskD + gapZ))));
 
   const startX = cx - ((cols - 1) * (deskW + gapX)) / 2;
   const startZ = cz - ((rows - 1) * (deskD + gapZ)) / 2;
@@ -115,8 +115,8 @@ export function layoutBenchVertical(cx, cz, wM, hM, resources) {
   const gapX  = 0.4;
   const gapZ  = 0.4;
 
-  const cols = Math.floor((wM - 0.6) / (deskD + gapX)) || 1;
-  const rows = Math.floor((hM - 0.6) / (deskW + gapZ)) || 1;
+  const cols = Math.min(8, Math.max(1, Math.floor((wM - 0.6) / (deskD + gapX))));
+  const rows = Math.min(8, Math.max(1, Math.floor((hM - 0.6) / (deskW + gapZ))));
 
   const startX = cx - ((cols - 1) * (deskD + gapX)) / 2;
   const startZ = cz - ((rows - 1) * (deskW + gapZ)) / 2;
@@ -174,8 +174,8 @@ export function layoutCollabIsland(cx, cz, wM, hM, resources) {
   const { materials } = resources;
 
   // Desks on the Left (West)
-  const deskCountX = Math.floor((wM / 2 - 0.8) / 1.4) || 1;
-  const deskCountZ = Math.floor((hM - 1.2) / 1.4) || 1;
+  const deskCountX = Math.min(6, Math.max(1, Math.floor((wM / 2 - 0.8) / 1.4)));
+  const deskCountZ = Math.min(6, Math.max(1, Math.floor((hM - 1.2) / 1.4)));
   const deskStartX = cx - wM / 4 - ((deskCountX - 1) * 1.4) / 2;
   const deskStartZ = cz - ((deskCountZ - 1) * 1.4) / 2;
 
@@ -270,7 +270,7 @@ export function layoutPantrySeating(cx, cz, wM, hM, resources) {
   const { geometries, materials } = resources;
 
   const tableSpace = 1.8;
-  const numTables = Math.max(1, Math.floor((wM - 1.2) / tableSpace));
+  const numTables = Math.min(6, Math.max(1, Math.floor((wM - 1.2) / tableSpace)));
   const startTableX = cx - ((numTables - 1) * tableSpace) / 2;
 
   const createDiningTableSetup = (tX, tZ) => {
