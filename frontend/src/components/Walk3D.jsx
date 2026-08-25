@@ -1091,20 +1091,56 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       const d = pathPoints[i].distanceTo(pathPoints[i-1]);
       cumDist.push(cumDist[i-1] + (isFinite(d) ? d : 0));
     }
-    for (let i = 1; i < pathPoints.length; i++) cumDist.push(cumDist[i - 1] + pathPoints[i].distanceTo(pathPoints[i - 1]));
     const pathLengthM = cumDist[cumDist.length - 1] || 0.001;
 
     stateRef.current.pathPoints = pathPoints;
     stateRef.current.cumDist    = cumDist;
     stateRef.current.pathLengthM = pathLengthM;
 
-    if (pathPoints.length >= 2) {
-      const curve = new THREE.CatmullRomCurve3(pathPoints);
-      scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(30, pathPoints.length * 6), 0.18, 8, false), materials.pathArrows));
-      const startDot = new THREE.Mesh(new THREE.SphereGeometry(0.24, 24, 24), new THREE.MeshStandardMaterial({ color: 0x1d4ed8, emissive: 0x1d4ed8, emissiveIntensity: 0.5 }));
-      startDot.position.copy(pathPoints[0]); startDot.position.y = 0.3; scene.add(startDot);
-      const endDot = new THREE.Mesh(new THREE.SphereGeometry(0.24, 24, 24), new THREE.MeshStandardMaterial({ color: 0x059669, emissive: 0x059669, emissiveIntensity: 0.5 }));
-      endDot.position.copy(pathPoints[pathPoints.length-1]); endDot.position.y = 0.3; scene.add(endDot);
+    if (pathPoints.length >= 1) {
+      // Configure chevrons repeat count relative to length
+      const arrowTex = resources.textures?.arrowTex;
+      if (arrowTex) {
+        arrowTex.repeat.set(pathLengthM * 1.5, 1);
+      }
+
+      // Render flowing tube path as a single continuous curve using straight LineCurve3 segments
+      if (pathPoints.length >= 2) {
+        const curve = new THREE.CurvePath();
+        for (let i = 1; i < pathPoints.length; i++) {
+          if (pathPoints[i].distanceTo(pathPoints[i-1]) > 0.001) {
+            curve.add(new THREE.LineCurve3(pathPoints[i-1], pathPoints[i]));
+          }
+        }
+        if (curve.curves.length > 0) {
+          const tube = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, Math.max(10, pathPoints.length * 2), 0.16, 8, false),
+            materials.pathArrows
+          );
+          scene.add(tube);
+        }
+      }
+
+      // User starting position dot (blue)
+      const startDot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 24, 24),
+        new THREE.MeshStandardMaterial({ color: 0x1d4ed8, emissive: 0x1d4ed8, emissiveIntensity: 0.5 }),
+      );
+      startDot.position.copy(pathPoints[0]);
+      startDot.position.y = 0.3;
+      scene.add(startDot);
+
+      // Route destination position dot (green)
+      if (pathPoints.length >= 2) {
+        const endDot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.24, 24, 24),
+          new THREE.MeshStandardMaterial({ color: 0x059669, emissive: 0x059669, emissiveIntensity: 0.5 }),
+        );
+        const end = pathPoints[pathPoints.length-1];
+        endDot.position.copy(end);
+        endDot.position.y = 0.3;
+        scene.add(endDot);
+      }
     }
 
     function sampleAt(progress) {
@@ -1151,6 +1187,11 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
       try {
         const dt = Math.min(0.05, (t - (s.lastT || t)) / 1000);
         s.lastT = t;
+
+        // 1. Flowing navigation arrows animation
+        if (materials.pathArrows?.map) {
+          materials.pathArrows.map.offset.x -= 0.4 * dt * speedMulRef.current;
+        }
 
         if (destinationPin) {
           destinationPin.position.y = 1.35 + Math.sin(t * 0.003) * 0.12;
@@ -1208,7 +1249,7 @@ export default function Walk3D({ floorMap, pathGridCells = [], destination, user
   const hasPath = pathGridCells.length >= 2;
 
   return (
-    <div className="walk3d-wrap">
+    <div className="walk3d-wrap" onClick={togglePaused} style={{ cursor: "pointer" }}>
       <div ref={mountRef} className="walk3d-mount" />
 
       {hasPath && (
