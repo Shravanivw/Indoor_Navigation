@@ -171,7 +171,7 @@ function splitInlineEdges(
           const projY = nA.gridY + t * dy;
           const dist = Math.hypot(nN.gridX - projX, nN.gridY - projY);
 
-          if (dist < 35) { // Node lies within 35 grid units of segment AB
+          if (dist <= 1.5) { // Node lies within 1.5 grid units (~1m) of segment AB
             inlineNodes.push({ node: nN, t });
           }
         }
