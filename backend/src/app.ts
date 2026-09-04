@@ -30,7 +30,7 @@ export function createApp(prisma: PrismaClient) {
     methods: ['GET', 'POST', 'OPTIONS'],
   }));
   app.use(compression());
-  app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '10mb' }));
   app.use(morgan('dev'));
 
   // Rate limiting — 200 req/min per IP
@@ -44,7 +44,13 @@ export function createApp(prisma: PrismaClient) {
 
   // ─── ROUTES ─────────────────────────────────────────────────────────────────
   console.log("MOUNTING ROUTER");
-  app.use('/api/v1', createRouter(prisma));
+  const apiRouter = createRouter(prisma);
+  app.use('/api/v1', apiRouter);
+  // Direct endpoint aliases for POST /layouts/publish and POST /api/layouts/publish
+  app.post(['/layouts/publish', '/api/layouts/publish'], (req, res, next) => {
+    req.url = '/layouts/publish';
+    apiRouter(req, res, next);
+  });
   console.log("ROUTER MOUNTED");
 
   // ─── 404 ────────────────────────────────────────────────────────────────────

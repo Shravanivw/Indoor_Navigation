@@ -84,6 +84,23 @@ export async function buildGraphCache(prisma: PrismaClient): Promise<void> {
   }
 }
 
+/**
+ * Explicitly invalidates the in-memory graph cache.
+ * Must only be called after database transaction commits when publishing new layouts.
+ */
+export function invalidateGraphCache(): void {
+  globalGraph = null;
+  graphCache.clear();
+  console.log('[RoutingService] Navigation graph cache invalidated.');
+}
+
+/**
+ * Returns true if the in-memory global navigation graph is warm.
+ */
+export function isGraphCacheWarm(): boolean {
+  return globalGraph !== null;
+}
+
 
 function getRoomCandidates(
   roomId: string,

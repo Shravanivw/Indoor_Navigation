@@ -17,4 +17,7 @@ backend/src/data/Ganges_9th_Floor_Clean_Cleaned.json
 *.db
 *.db-journal
 
+# Archives
+*.zip
+
 

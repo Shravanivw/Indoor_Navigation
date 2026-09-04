@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { getRoute, getRoomByQR } from '../../services/routingService';
 import { getFloorMap, getFloorGeometry, getAllFloors, searchRooms, getRoomById } from '../../services/mapService';
+import { publishLayoutDefinition, layoutPublishSchema } from '../../services/layoutPublishService';
 import type { ApiResponse } from '../../types';
 
 console.log("ROUTES INDEX LOADED");
@@ -254,5 +255,30 @@ export function createRouter(prisma: PrismaClient): Router {
       res.status(500).json(err(e.message));
     }
   });
+
+  /**
+   * POST /layouts/publish
+   * Publishes an editor floor definition (rooms, paths, graph) into the database.
+   * Performs strict syntactic and semantic validation, updates DB atomically in a transaction,
+   * creates synthetic door nodes, and invalidates the routing graph cache.
+   */
+  router.post('/layouts/publish', async (req, res) => {
+    const parseResult = layoutPublishSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const issueMessages = parseResult.error.issues.map(
+        (issue) => `${issue.path.join('.')}: ${issue.message}`
+      );
+      return res.status(400).json(err(`Validation failed: ${issueMessages.join('; ')}`));
+    }
+
+    try {
+      const stats = await publishLayoutDefinition(prisma, parseResult.data);
+      res.json(ok(stats));
+    } catch (e: any) {
+      console.error('[LayoutPublish] Error publishing layout:', e);
+      res.status(500).json(err(e.message || 'Failed to publish layout definition'));
+    }
+  });
+
   return router;
 }

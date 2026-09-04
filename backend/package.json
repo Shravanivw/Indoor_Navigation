@@ -12,7 +12,8 @@
     "db:setup": "npx prisma db push --skip-generate && ts-node scripts/seed_all.ts",
     "import:editor": "ts-node scripts/importEditorFloorDefinition.ts",
     "parse:dwg": "ts-node scripts/parseDxf.ts",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "test:publish": "ts-node scripts/test_layout_publish.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",

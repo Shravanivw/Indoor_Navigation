@@ -509,7 +509,7 @@
       ]
     },
     {
-      "id": "4 Pax Meeting Room",
+      "id": "4 Pax Meeting Room (North)",
       "type": "Closed Room",
       "polygon": [
         {
@@ -543,27 +543,18 @@
       ],
       "doors": [
         {
-          "id": "3",
-          "x": 3297,
-          "y": 2629,
-          "width": 12,
-          "doorWidth": 12,
-          "roomId": "4 Pax Meeting Room",
-          "roomName": "4 Pax Meeting Room"
-        },
-        {
           "id": "31",
           "x": 2041,
           "y": 1368,
           "width": 12,
           "doorWidth": 12,
-          "roomId": "4 Pax Meeting Room",
-          "roomName": "4 Pax Meeting Room"
+          "roomId": "4 Pax Meeting Room (North)",
+          "roomName": "4 Pax Meeting Room (North)"
         }
       ]
     },
     {
-      "id": "Cabin 1",
+      "id": "Cabin 1 (North)",
       "type": "Closed Room",
       "polygon": [
         {
@@ -589,22 +580,13 @@
       ],
       "doors": [
         {
-          "id": "25",
-          "x": 2050,
-          "y": 2649,
-          "width": 12,
-          "doorWidth": 12,
-          "roomId": "Cabin 1",
-          "roomName": "Cabin 1"
-        },
-        {
           "id": "32",
           "x": 1846,
           "y": 1370,
           "width": 12,
           "doorWidth": 12,
-          "roomId": "Cabin 1",
-          "roomName": "Cabin 1"
+          "roomId": "Cabin 1 (North)",
+          "roomName": "Cabin 1 (North)"
         }
       ]
     },
@@ -1937,7 +1919,7 @@
       ]
     },
     {
-      "id": "Cabin 1",
+      "id": "Cabin 1 (South)",
       "type": "Closed Room",
       "polygon": [
         {
@@ -1961,7 +1943,17 @@
           "y": 2640
         }
       ],
-      "doors": []
+      "doors": [
+        {
+          "id": "25",
+          "x": 2050,
+          "y": 2649,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "Cabin 1 (South)",
+          "roomName": "Cabin 1 (South)"
+        }
+      ]
     },
     {
       "id": "Cabin 2",
@@ -2550,7 +2542,7 @@
       ]
     },
     {
-      "id": "4 Pax Meeting Room",
+      "id": "4 Pax Meeting Room (South)",
       "type": "Closed Room",
       "polygon": [
         {
@@ -2574,7 +2566,17 @@
           "y": 2481
         }
       ],
-      "doors": []
+      "doors": [
+        {
+          "id": "3",
+          "x": 3297,
+          "y": 2629,
+          "width": 12,
+          "doorWidth": 12,
+          "roomId": "4 Pax Meeting Room (South)",
+          "roomName": "4 Pax Meeting Room (South)"
+        }
+      ]
     },
     {
       "id": "Staircase 2",
@@ -3346,7 +3348,7 @@
         "id": "D65",
         "x": 3297,
         "y": 2629,
-        "roomId": "4 Pax Meeting Room",
+        "roomId": "4 Pax Meeting Room (South)",
         "doorId": "3",
         "type": "door"
       },
@@ -3360,7 +3362,7 @@
         "id": "D67",
         "x": 2041,
         "y": 1368,
-        "roomId": "4 Pax Meeting Room",
+        "roomId": "4 Pax Meeting Room (North)",
         "doorId": "31",
         "type": "door"
       },
@@ -3374,7 +3376,7 @@
         "id": "D69",
         "x": 2050,
         "y": 2649,
-        "roomId": "Cabin 1",
+        "roomId": "Cabin 1 (South)",
         "doorId": "25",
         "type": "door"
       },
@@ -3388,7 +3390,7 @@
         "id": "D71",
         "x": 1846,
         "y": 1370,
-        "roomId": "Cabin 1",
+        "roomId": "Cabin 1 (North)",
         "doorId": "32",
         "type": "door"
       },
