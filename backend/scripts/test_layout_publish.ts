@@ -149,7 +149,7 @@ async function runTests() {
     assert(res.body.error.includes('Room polygon must contain at least 3 points'), 'Polygon message mismatch');
     console.log('  [PASS] B2: Incomplete polygon rejected');
 
-    // B3: Duplicate room ID
+    // B3: Duplicate room ID (allowed and disambiguated)
     res = await requestHttp(server, 'POST', '/api/v1/layouts/publish', {
       building: { id: 'b-test', name: 'Test' },
       floor: { id: 'f-test', name: 'Test Floor', level: 1 },
@@ -161,9 +161,9 @@ async function runTests() {
         graph: { nodes: [{ id: 'n1', x: 0, y: 0 }], edges: [] },
       },
     });
-    assert(res.status === 400, 'Duplicate room ID should return 400');
-    assert(res.body.error.includes('Duplicate room id detected'), 'Duplicate room message mismatch');
-    console.log('  [PASS] B3: Duplicate room ID rejected');
+    assert(res.status === 200, 'Duplicate room ID should succeed with disambiguation');
+    assert(res.body.data.roomsImported === 2, 'Both duplicate rooms should be imported');
+    console.log('  [PASS] B3: Duplicate room ID supported and disambiguated');
 
     // B4: Duplicate node ID
     res = await requestHttp(server, 'POST', '/api/v1/layouts/publish', {

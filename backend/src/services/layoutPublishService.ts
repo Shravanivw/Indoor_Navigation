@@ -154,21 +154,13 @@ export const layoutPublishSchema = z.object({
 }).superRefine((data, ctx) => {
   // ─── SEMANTIC VALIDATION ───────────────────────────────────────────────────
 
-  // 1. Unique room IDs & unique door IDs within each room
-  const roomIds = new Set<string>();
-  const roomMap = new Map<string, z.infer<typeof editorRoomSchema>>();
+  // 1. Room map supporting multiple rooms with the same label/id (common in layout definitions)
+  const roomMap = new Map<string, z.infer<typeof editorRoomSchema>[]>();
 
   data.definition.rooms.forEach((room, roomIdx) => {
-    if (roomIds.has(room.id)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['definition', 'rooms', roomIdx, 'id'],
-        message: `Duplicate room id detected: "${room.id}"`,
-      });
-    } else {
-      roomIds.add(room.id);
-      roomMap.set(room.id, room);
-    }
+    const list = roomMap.get(room.id) || [];
+    list.push(room);
+    roomMap.set(room.id, list);
 
     if (room.doors && room.doors.length > 0) {
       const doorIds = new Set<string>();
@@ -201,16 +193,16 @@ export const layoutPublishSchema = z.object({
 
     // 3. Node roomId references an existing room
     if (node.roomId) {
-      const targetRoom = roomMap.get(node.roomId);
-      if (!targetRoom) {
+      const matchingRooms = roomMap.get(node.roomId);
+      if (!matchingRooms || matchingRooms.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['definition', 'graph', 'nodes', nodeIdx, 'roomId'],
           message: `Graph node "${node.id}" references non-existent roomId "${node.roomId}"`,
         });
       } else if (node.doorId) {
-        // 4. Graph node doorId is valid on the referenced room
-        const hasDoor = targetRoom.doors?.some(d => d.id === node.doorId);
+        // 4. Graph node doorId is valid on at least one matching room
+        const hasDoor = matchingRooms.some(r => r.doors?.some(d => d.id === node.doorId));
         if (!hasDoor) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -495,13 +487,23 @@ export async function publishLayoutDefinition(
 
     // 2.4 Import rooms
     const roomIdMap = new Map<string, string>();
+    const doorToRoomDbId = new Map<string, string>();
+    const roomInstanceDbIds: string[] = [];
+    const roomOccurrences = new Map<string, number>();
     const qrPrefix = options.qrPrefix ?? `LOC-F${codeify(levelStr)}`;
 
-    for (const room of definition.rooms) {
+    for (let roomIdx = 0; roomIdx < definition.rooms.length; roomIdx++) {
+      const room = definition.rooms[roomIdx];
       const roomBounds = bounds(room.polygon);
       const centre = centroid(room.polygon);
-      const id = roomDbId(floor.id, room.id);
-      const code = `${codeify(bData.name)}_${codeify(levelStr)}_${codeify(room.id)}`;
+
+      const count = (roomOccurrences.get(room.id) ?? 0) + 1;
+      roomOccurrences.set(room.id, count);
+
+      const suffix = count > 1 ? `-${count}` : '';
+      const id = `${roomDbId(floor.id, room.id)}${suffix}`;
+      const code = `${codeify(bData.name)}_${codeify(levelStr)}_${codeify(room.id)}${count > 1 ? `_${count}` : ''}`;
+      const qrCode = `${qrPrefix}-${codeify(room.id)}${count > 1 ? `-${count}` : ''}`;
 
       await tx.room.upsert({
         where: { id },
@@ -517,7 +519,7 @@ export async function publishLayoutDefinition(
           gridH: Math.round(roomBounds.height),
           centreX: Math.round(centre.x * 100) / 100,
           centreY: Math.round(centre.y * 100) / 100,
-          qrCode: `${qrPrefix}-${codeify(room.id)}`,
+          qrCode,
           isAccessible: true,
         },
         update: {
@@ -529,11 +531,19 @@ export async function publishLayoutDefinition(
           gridH: Math.round(roomBounds.height),
           centreX: Math.round(centre.x * 100) / 100,
           centreY: Math.round(centre.y * 100) / 100,
-          qrCode: `${qrPrefix}-${codeify(room.id)}`,
+          qrCode,
         },
       });
 
-      roomIdMap.set(room.id, id);
+      roomInstanceDbIds[roomIdx] = id;
+      if (!roomIdMap.has(room.id)) {
+        roomIdMap.set(room.id, id);
+      }
+      if (room.doors) {
+        for (const door of room.doors) {
+          doorToRoomDbId.set(`${room.id}:${door.id}`, id);
+        }
+      }
       roomsImported++;
     }
 
@@ -544,7 +554,14 @@ export async function publishLayoutDefinition(
 
     for (const node of definition.graph.nodes) {
       const id = nodeDbId(floor.id, node.id);
-      const roomId = node.roomId ? roomIdMap.get(node.roomId) ?? null : null;
+      let roomId: string | null = null;
+      if (node.roomId) {
+        if (node.doorId) {
+          roomId = doorToRoomDbId.get(`${node.roomId}:${node.doorId}`) ?? roomIdMap.get(node.roomId) ?? null;
+        } else {
+          roomId = roomIdMap.get(node.roomId) ?? null;
+        }
+      }
       graphNodeByEditorId.set(node.id, node);
       graphNodeIdMap.set(node.id, id);
 
@@ -644,8 +661,9 @@ export async function publishLayoutDefinition(
     // 2.7 Create synthetic door entry nodes and connectors
     const graphNodes = definition.graph.nodes;
 
-    for (const room of definition.rooms) {
-      const roomId = roomIdMap.get(room.id);
+    for (let roomIdx = 0; roomIdx < definition.rooms.length; roomIdx++) {
+      const room = definition.rooms[roomIdx];
+      const roomId = roomInstanceDbIds[roomIdx] ?? roomIdMap.get(room.id);
       if (!roomId) continue;
 
       const roomDoors: EditorDoor[] = room.doors && room.doors.length > 0 ? [...room.doors] : [];
@@ -674,7 +692,8 @@ export async function publishLayoutDefinition(
 
         if (!nearest) continue;
 
-        const doorDbId = doorNodeDbId(floor.id, room.id, door.id);
+        const roomSlug = slugify(roomId.replace(`editor-${floor.id}-room-`, ''));
+        const doorDbId = `editor-${floor.id}-door-${roomSlug}-${slugify(door.id)}`;
         const nearestDbId = graphNodeIdMap.get(nearest.id);
         if (!nearestDbId) continue;
 
@@ -701,7 +720,7 @@ export async function publishLayoutDefinition(
           },
         });
 
-        const edgeId = `editor-${floor.id}-edge-door-${slugify(room.id)}-${slugify(door.id)}-to-${slugify(nearest.id)}`;
+        const edgeId = `editor-${floor.id}-edge-door-${roomSlug}-${slugify(door.id)}-to-${slugify(nearest.id)}`;
         await tx.edge.upsert({
           where: { id: edgeId },
           create: {
